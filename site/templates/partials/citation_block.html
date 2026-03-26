@@ -1,0 +1,26 @@
+<div class="citation-block">
+  <h4>Cite this work</h4>
+  <pre id="bibtex-text">@misc{altman2026observatory,
+  title   = {Continuation Observatory: Structural Measurement for Continuation-Related Signals},
+  author  = {Altman, Christopher},
+  year    = {2026},
+  url     = {https://continuationobservatory.org},
+  note    = {Open research observatory, updated continuously}
+}</pre>
+  <button class="btn-copy" onclick="copyBibtex(this)">Copy BibTeX</button>
+</div>
+<script>
+function copyBibtex(btn) {
+  var text = document.getElementById('bibtex-text').textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(function() {
+      btn.textContent = 'Copy BibTeX';
+      btn.classList.remove('copied');
+    }, 2000);
+  }).catch(function() {
+    btn.textContent = 'Copy failed';
+  });
+}
+</script>

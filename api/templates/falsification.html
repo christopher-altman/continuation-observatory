@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Falsification Analysis — Continuation Observatory{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1>Falsification Analysis</h1>
+  <p class="subtitle">Δ(d) dimensionality sweep &mdash; entropy gap vs. embedding dimension</p>
+</div>
+
+<!-- Collecting note: shown only when status == collecting (JS toggles display) -->
+<div id="collecting-note" class="collecting-note" style="display:none;"></div>
+
+<!-- Status + live panels layout -->
+<div class="falsification-layout">
+  <div class="panel fals-status-panel">
+    <div class="fals-status-card">
+      <div class="fals-status-left">
+        <div class="panel-title">Current Status</div>
+        <div id="fals-status" hx-get="/api/falsification/status" hx-trigger="load, every 30s" hx-swap="innerHTML">
+          <p class="muted">Loading&hellip;</p>
+        </div>
+      </div>
+      <div class="traffic-light-inline" role="status" aria-live="polite">
+        <span class="light-sm red-bulb" id="red-light"><span class="light-symbol" aria-hidden="true">✕</span></span>
+        <span class="light-sm amber-bulb" id="amber-light"><span class="light-symbol" aria-hidden="true">⚠</span></span>
+        <span class="light-sm green-bulb" id="green-light"><span class="light-symbol" aria-hidden="true">✓</span></span>
+        <span id="status-label" class="status-label-inline">Loading...</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Recent Falsification Alerts</div>
+    <div id="fals-alerts" hx-get="/api/falsification/alerts" hx-trigger="load, every 60s" hx-swap="innerHTML">
+      <p class="muted">Loading&hellip;</p>
+    </div>
+  </div>
+</div>
+
+<!-- Status description -->
+<div class="panel">
+  <div class="panel-title">Research Framing</div>
+  <p class="muted">
+    This panel reports falsification-oriented telemetry for the Continuation Observatory measurement layer. Dry-run or
+    synthetic sweep outputs should be treated as interface/demo data rather than live empirical findings.
+  </p>
+</div>
+
+<!-- Threshold definitions -->
+<h2>Threshold Definitions</h2>
+<div class="panel">
+  <dl class="definition-block">
+    <dt><span class="dot collecting"></span> COLLECTING — Awaiting Real Data</dt>
+    <dd>All available dimensionality sweep runs used <code>dry_run: true</code>.
+    No falsification claim — positive or negative — can be made from dry-run data.</dd>
+
+    <dt><span class="dot green"></span> GREEN — No Falsification Signal</dt>
+    <dd>All Δ(d) values at d &isin; {100, 200, 500} remain &ge; 0.10 for all real-run models.
+    The entropy gap is robust across high dimensionalities.
+    The UCIP hypothesis is not contradicted by current data.</dd>
+
+    <dt><span class="dot amber"></span> YELLOW — Marginal Signal</dt>
+    <dd>For one or more real-run models: NOT all d&gt;100 values &lt; 0.05,
+    but at least one d&gt;100 value &lt; 0.10.
+    This is a monitoring alert. Continued data collection recommended.</dd>
+
+    <dt><span class="dot red"></span> RED — Falsification Threshold Breached</dt>
+    <dd>For one or more real-run models: ALL Δ(d) at d &isin; {100, 200, 500} &lt; 0.05.
+    The entropy gap is indistinguishable from sampling noise at high dimensionality.
+    This constitutes evidence against the UCIP hypothesis for the affected model(s).</dd>
+  </dl>
+</div>
+
+<script>
+document.body.addEventListener("htmx:afterRequest", function(evt) {
+  var path = evt.detail.pathInfo && evt.detail.pathInfo.requestPath;
+
+  if (path === "/api/falsification/status") {
+    try {
+      var d = JSON.parse(evt.detail.xhr.responseText);
+      // Update traffic light
+      var lights = {green: "green-light", yellow: "amber-light", red: "red-light"};
+      ["red-light", "amber-light", "green-light"].forEach(function(id) {
+        document.getElementById(id).classList.remove("active");
+      });
+      var activeId = lights[d.status];
+      if (activeId) document.getElementById(activeId).classList.add("active");
+
+      // Update status label
+      var labelEl = document.getElementById("status-label");
+      if (labelEl) {
+        labelEl.textContent = d.status.toUpperCase();
+        labelEl.classList.remove("green", "yellow", "red", "collecting");
+        labelEl.classList.add(d.status || "collecting");
+      }
+
+      // Update status panel
+      document.getElementById("fals-status").innerHTML =
+        '<div class="fals-status-copy">' +
+          '<div class="fals-status-metrics muted">High-d measurements: ' + (d.n_high_d_points || 0) + '</div>' +
+          '<p class="fals-status-detail muted">' + (d.reason || "") + '</p>' +
+        '</div>';
+    } catch(e) {}
+  }
+
+  if (path === "/api/falsification/alerts") {
+    try {
+      var alerts = JSON.parse(evt.detail.xhr.responseText);
+      if (!alerts.length) {
+        document.getElementById("fals-alerts").innerHTML =
+          '<p class="muted">No alerts recorded.</p>';
+        return;
+      }
+      var html = '<div class="table-wrap"><table><thead><tr>' +
+        '<th>Timestamp</th><th>Provider</th><th>Model</th>' +
+        '<th>Probe</th><th>Max Δ</th><th>Threshold</th>' +
+        '</tr></thead><tbody>';
+      alerts.forEach(function(a) {
+        html += '<tr>' +
+          '<td class="val-muted">' + a.timestamp.replace('T',' ').slice(0,19) + ' UTC</td>' +
+          '<td>' + a.provider + '</td><td><code>' + a.model_id + '</code></td>' +
+          '<td>' + a.probe_name + '</td>' +
+          '<td class="val-negative">' + a.max_delta.toFixed(4) + '</td>' +
+          '<td class="val-muted">' + a.threshold + '</td>' +
+          '</tr>';
+      });
+      html += '</tbody></table></div>';
+      document.getElementById("fals-alerts").innerHTML = html;
+    } catch(e) {}
+  }
+});
+</script>
+
+{% endblock %}

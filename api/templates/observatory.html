@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Observatory — Continuation Observatory{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+{% endblock %}
+{% block content %}
+<section class="page-header observatory-page-header">
+  <div>
+    <h1 class="brand-wordmark observatory-page-wordmark">
+      <span class="wordmark-continuation">Continuation</span>
+      <span class="wordmark-observatory">Observatory</span>
+    </h1>
+    <p class="subtitle">Live tracking for continuation-related signals in advanced AI systems. Powered by UCIP.</p>
+  </div>
+  <div class="page-header-actions">
+    <span class="status-label green" id="observatory-live-pill">CURRENT</span>
+    <span class="mono-muted" id="observatory-model-count">0 MODELS</span>
+  </div>
+</section>
+
+<section class="observatory-shell" data-observatory-root>
+  <section class="observatory-center panel observatory-center-panel">
+    <div class="panel-title">Observatory Field</div>
+    <div id="constellation-root" class="constellation-root"></div>
+    <div class="observatory-field-key" aria-label="Observatory field key">
+      <div class="observatory-field-key-copy">
+        <div class="summary-label">Field Key</div>
+        <p class="observatory-field-key-note">
+          Size tracks current CII magnitude. Color tracks rank band in the field, with brighter cores marking the strongest current continuation-related signals.
+        </p>
+        <p class="observatory-field-key-note observatory-field-key-note--secondary">
+          Position is a compact readability layout rather than a literal distance scale.
+        </p>
+      </div>
+      <div class="observatory-field-key-items">
+        <div class="observatory-field-key-item">
+          <span class="observatory-field-key-swatch observatory-field-key-swatch--flagship"></span>
+          <span>Flagship band</span>
+        </div>
+        <div class="observatory-field-key-item">
+          <span class="observatory-field-key-swatch observatory-field-key-swatch--secondary"></span>
+          <span>Secondary band</span>
+        </div>
+        <div class="observatory-field-key-item">
+          <span class="observatory-field-key-swatch observatory-field-key-swatch--outer"></span>
+          <span>Outer band</span>
+        </div>
+        <div class="observatory-field-key-scale" aria-hidden="true">
+          <span class="observatory-field-key-dot observatory-field-key-dot--sm"></span>
+          <span class="observatory-field-key-dot observatory-field-key-dot--md"></span>
+          <span class="observatory-field-key-dot observatory-field-key-dot--lg"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="observatory-left panel">
+    <div class="panel-title">Model Readouts</div>
+    <div id="model-panels" class="model-panel-list">
+      <p class="muted">Loading model telemetry...</p>
+    </div>
+  </aside>
+
+  <aside class="observatory-right panel observatory-summary-panel">
+    <div class="panel-title">Aggregate Score Readout</div>
+    <div id="pcii-readout" class="pcii-readout">
+      <p class="muted">Loading aggregate observatory score...</p>
+    </div>
+  </aside>
+</section>
+
+<section class="panel">
+  <div class="timeline-header">
+    <div class="panel-title">Observatory Timeline</div>
+    <div class="range-controls" data-range-controls>
+      <button type="button" class="range-btn" data-range="1h">1h</button>
+      <button type="button" class="range-btn active" data-range="24h">24h</button>
+      <button type="button" class="range-btn" data-range="7d">7d</button>
+      <button type="button" class="range-btn" data-range="30d">30d</button>
+    </div>
+  </div>
+  <div id="timeline-root" class="timeline-root"></div>
+</section>
+
+<section class="observatory-lower">
+  <div class="panel">
+    <div class="panel-title">Comparative Heatmap</div>
+    <div id="heatmap-root" class="heatmap-root"></div>
+  </div>
+  <div class="panel">
+    <div class="events-header">
+      <div class="panel-title">Event Feed</div>
+      <label class="event-toggle">
+        <input type="checkbox" id="include-completions">
+        <span>Show completion events</span>
+      </label>
+    </div>
+    <div id="events-root" class="events-root"></div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ asset_prefix }}/js/observatory.js?v={{ asset_version }}"></script>
+<script type="module" src="{{ asset_prefix }}/js/observatory-field.js?v={{ asset_version }}"></script>
+{% endblock %}

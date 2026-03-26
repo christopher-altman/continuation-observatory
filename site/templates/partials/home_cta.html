@@ -1,0 +1,23 @@
+{% if is_live %}
+  {% set data_href = "/data" %}
+  {% set research_href = "/manifesto" %}
+{% else %}
+  {% set data_href = "data.html" %}
+  {% set research_href = "manifesto.html" %}
+{% endif %}
+<section class="story-section final-cta">
+  <div class="final-cta-inner reveal">
+    <p class="section-kicker">Research links</p>
+    <h2>Read the paper, inspect the method, and download the data.</h2>
+    <p>
+      The UCIP paper establishes the theoretical framework, falsification criteria, and measurement approach.
+      The observatory applies it across frontier models and keeps the evidence surface public.
+    </p>
+    <div class="hero-actions">
+      <a href="https://arxiv.org/abs/2603.11382" class="button button-primary" target="_blank" rel="noopener">Read the paper on arXiv</a>
+      <a href="{{ research_href }}" class="button button-secondary">Research primer</a>
+      <a href="{{ data_href }}" class="button button-tertiary">Open the data</a>
+      <a href="{{ github_href if github_href is defined else 'https://github.com/christopher-altman/continuation-observatory' }}" class="button button-tertiary" target="_blank" rel="noopener">View GitHub</a>
+    </div>
+  </div>
+</section>

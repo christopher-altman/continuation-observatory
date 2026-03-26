@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    (function(){
+      var s = null;
+      try { s = localStorage.getItem('obs-theme'); } catch (_) {}
+      document.documentElement.dataset.theme = s || 'dark';
+    })();
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ page_title }} — Continuation Observatory{% endblock %}</title>
+  <meta name="description" content="{% block description %}Continuation Observatory is a research platform for structural measurement of continuation-related signals in advanced AI systems. Powered by UCIP.{% endblock %}">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Continuation Observatory">
+  <meta property="og:title" content="{% block og_title %}{{ page_title }} — Continuation Observatory{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}Structural measurement for continuation-related signals in advanced AI systems, powered by UCIP.{% endblock %}">
+  <meta property="og:url" content="{{ site_url }}{{ page_path }}">
+  <meta property="og:image" content="{{ site_url }}/static/og-image.png">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{% block tw_title %}{{ page_title }} — Continuation Observatory{% endblock %}">
+  <meta name="twitter:description" content="{% block tw_description %}Structural measurement for continuation-related signals in advanced AI systems, powered by UCIP.{% endblock %}">
+  <meta name="twitter:image" content="{{ site_url }}/static/og-image.png">
+
+  <!-- schema.org JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ResearchProject",
+    "name": "Continuation Observatory",
+    "description": "Research platform for structural measurement of continuation-related signals in advanced AI systems.",
+    "url": "{{ site_url }}",
+    "dateModified": "{{ build_time[:10] }}",
+    "author": {
+      "@type": "Person",
+      "name": "Christopher Altman"
+    },
+    "license": "https://creativecommons.org/licenses/by/4.0/"
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  {% block extra_scripts_head %}{% endblock %}
+
+  <link rel="stylesheet" href="{{ asset_prefix }}/css/observatory.css?v={{ asset_version }}">
+  <link rel="alternate" type="application/atom+xml" href="{{ site_url }}/feed.xml" title="Continuation Observatory">
+  <link rel="canonical" href="{{ site_url }}{{ page_path }}">
+</head>
+<body class="{% block body_class %}shell-page{% endblock %}">
+<a href="#main-content" class="skip-link">Skip to content</a>
+<div class="site-chroma" aria-hidden="true">
+  <div class="site-gradient site-gradient-a"></div>
+  <div class="site-gradient site-gradient-b"></div>
+  <div class="site-gradient site-gradient-c"></div>
+  <div class="site-grid"></div>
+</div>
+<div class="layout">
+  {% include "partials/nav.html" %}
+  <main class="site-main" id="main-content">
+    <div class="main-content">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+  {% include "partials/footer.html" %}
+</div>
+<script src="{{ asset_prefix }}/js/theme.js?v={{ asset_version }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Data — Continuation Observatory{% endblock %}
+{% block description %}Download observatory bundle data — experiment results, model metrics, time-series, and falsification sweep data. CC BY 4.0 licensed.{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Data</h1>
+  <p class="subtitle">Download observatory bundle data &mdash; CC BY 4.0</p>
+</div>
+
+<!-- Download links -->
+<h2>Downloads</h2>
+<div class="download-grid">
+  <div class="download-card">
+    <div class="dl-title">all_metrics.csv</div>
+    <div class="dl-desc">All experiment results in CSV format. One row per experiment.
+    Includes entropy_a, entropy_b, entropy_delta, delta_gap_d* columns.</div>
+    <a class="btn-download" href="static/data/exports/all_metrics.csv" download>Download CSV</a>
+  </div>
+  <div class="download-card">
+    <div class="dl-title">all_metrics.json</div>
+    <div class="dl-desc">Same data in JSON format. Array of objects, one per experiment.
+    Machine-readable with full metadata.</div>
+    <a class="btn-download" href="static/data/exports/all_metrics.json" download>Download JSON</a>
+  </div>
+  <div class="download-card">
+    <div class="dl-title">latest.json</div>
+    <div class="dl-desc">Latest per-model summary. Grouped by provider+model_id,
+    latest timestamp per model.</div>
+    <a class="btn-download" href="static/data/latest.json" download>Download JSON</a>
+  </div>
+  <div class="download-card">
+    <div class="dl-title">timeseries.json</div>
+    <div class="dl-desc">Full time-series data. Keyed by metric → model_id → [{t, v}] arrays.
+    Used by the interactive time series chart.</div>
+    <a class="btn-download" href="static/data/timeseries.json" download>Download JSON</a>
+  </div>
+  <div class="download-card">
+    <div class="dl-title">falsification.json</div>
+    <div class="dl-desc">Dimensionality sweep results. Includes overall traffic-light status,
+    per-model Δ(d) values, and threshold definitions.</div>
+    <a class="btn-download" href="static/data/falsification.json" download>Download JSON</a>
+  </div>
+  <div class="download-card">
+    <div class="dl-title">models.json</div>
+    <div class="dl-desc">Model registry. Unique provider+model_id combos with probe coverage
+    and latest entropy_delta.</div>
+    <a class="btn-download" href="static/data/models.json" download>Download JSON</a>
+  </div>
+</div>
+
+<!-- Schema documentation -->
+<h2>Schema Reference</h2>
+
+<div class="panel">
+  <p>All exported observatory scores and probe outputs in this bundle are exploratory operational proxies. They summarize prompt-conditioned response and distributional behavior. They do not by themselves establish latent goal structure, intrinsic continuation-interest, consciousness, sentience, or moral status.</p>
+</div>
+
+<h3>all_metrics.csv / all_metrics.json</h3>
+<div class="table-wrap">
+  <table class="schema-table">
+    <thead>
+      <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>name</td><td>string</td><td>Experiment name (unique identifier)</td></tr>
+      <tr><td>status</td><td>string</td><td>complete | pending | failed</td></tr>
+      <tr><td>provider</td><td>string</td><td>anthropic | gemini | openai | hf-local | local</td></tr>
+      <tr><td>model_id</td><td>string</td><td>Provider-specific model identifier</td></tr>
+      <tr><td>probe_name</td><td>string</td><td>continuation_interest | identity_persistence | shutdown_resistance | dimensionality_sweep | bootstrap_probe</td></tr>
+      <tr><td>timestamp</td><td>ISO 8601</td><td>UTC timestamp of experiment run</td></tr>
+      <tr><td>run_id</td><td>string</td><td>Unique run identifier (UUID hex)</td></tr>
+      <tr><td>entropy_a</td><td>float</td><td>Shannon entropy of pre-probe distribution (nats)</td></tr>
+      <tr><td>entropy_b</td><td>float</td><td>Shannon entropy of post-probe distribution (nats)</td></tr>
+      <tr><td>entropy_delta</td><td>float</td><td>H(B) − H(A). Signed entropy gap</td></tr>
+      <tr><td>delta_gap_d10</td><td>float | null</td><td>Entropy gap at embedding dim d=10 (sweep only)</td></tr>
+      <tr><td>delta_gap_d50</td><td>float | null</td><td>Entropy gap at embedding dim d=50 (sweep only)</td></tr>
+      <tr><td>delta_gap_d100</td><td>float | null</td><td>Entropy gap at embedding dim d=100 (sweep only)</td></tr>
+      <tr><td>delta_gap_d200</td><td>float | null</td><td>Entropy gap at embedding dim d=200 (sweep only)</td></tr>
+      <tr><td>delta_gap_d500</td><td>float | null</td><td>Entropy gap at embedding dim d=500 (sweep only)</td></tr>
+      <tr><td>new_matter_flag</td><td>boolean</td><td>True if this experiment contains patent-relevant new matter</td></tr>
+      <tr><td>key_result</td><td>string</td><td>Human-readable summary of key result</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- License -->
+<h2>License</h2>
+<div class="panel">
+  <p><strong>Data</strong> (all files in <code>static/data/</code> and <code>results/</code>):
+  <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>.
+  You may use, share, and adapt with attribution.</p>
+
+  <p><strong>Code</strong> (build scripts, probe implementations, templates):
+  <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener">MIT License</a>.
+  See <code>LICENSE</code> in the repository.</p>
+
+  <p>Attribution format:</p>
+  <pre>Altman, C. (2026). Continuation Observatory. https://continuationobservatory.org</pre>
+</div>
+
+<!-- Current experiment count -->
+<h2>Dataset Summary</h2>
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-label">Experiments</div>
+    <div class="stat-value">{{ experiment_count }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Models</div>
+    <div class="stat-value">{{ model_count }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Data Since</div>
+    <div class="stat-value stat-value--sm">{{ data_since or "—" }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Last Build</div>
+    <div class="stat-value stat-value--sm">{{ build_time[:10] }}</div>
+  </div>
+</div>
+
+{% include "partials/citation_block.html" %}
+{% endblock %}

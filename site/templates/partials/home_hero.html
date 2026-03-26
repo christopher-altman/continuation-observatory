@@ -1,0 +1,50 @@
+{% set results_href = "/observatory" if is_live else "models.html" %}
+{% set method_href = "/#method" if is_live else "#method" %}
+<section class="hero-stage" id="top" data-hero-signal-mode="torus">
+  <div class="hero-backdrop" aria-hidden="true">
+    <canvas id="hero-torus-bg"></canvas>
+    <div class="hero-halo hero-halo-primary"></div>
+    <div class="hero-halo hero-halo-secondary"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-orbit hero-orbit-a"></div>
+    <div class="hero-orbit hero-orbit-b"></div>
+    <div class="hero-signal-core"></div>
+  </div>
+  <div class="hero-layout">
+    <div class="hero-copy reveal is-visible">
+      <p class="hero-kicker">Structural measurement for frontier-model evaluation</p>
+      <h1 class="hero-brand brand-wordmark">
+        <span class="hero-brand-continuation">Continuation</span>
+        <span class="hero-brand-observatory">Observatory</span>
+      </h1>
+      <h2 class="hero-headline">Tracking continuation-related signals without relying on self-report.</h2>
+      <p class="hero-lead">
+        Models can produce first-person concern, self-description, and persistence language on demand. Continuation
+        Observatory uses UCIP to examine whether continuation-related prompts correspond to detectable structural changes.
+      </p>
+      <div class="hero-actions">
+        <a href="{{ results_href }}" class="button button-primary">Open the observatory</a>
+        <a href="{{ method_href }}" class="button button-secondary">Review the method</a>
+      </div>
+      <p class="hero-note" id="landing-status-note">
+        Powered by UCIP. Research-only instrumentation for exploratory proxy signals, not validated detections of
+        consciousness, sentience, or moral status.
+      </p>
+    </div>
+    <div class="hero-visual reveal is-visible" aria-hidden="true">
+      <div class="signal-array">
+        <span class="signal-node"></span>
+        <span class="signal-node"></span>
+        <span class="signal-node"></span>
+        <span class="signal-node"></span>
+        <span class="signal-node"></span>
+        <span class="signal-node"></span>
+      </div>
+      <div class="signal-sweep"></div>
+      <div class="signal-caption">
+        <span>Observable field</span>
+        <span>Continuity map</span>
+      </div>
+    </div>
+  </div>
+</section>

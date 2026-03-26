@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Models — Continuation Observatory{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1>Models</h1>
+  <p class="subtitle">Live proxy metric feed for frontier systems &mdash; refreshed every 60 seconds</p>
+</div>
+
+<div class="panel">
+  <div class="panel-title">Latest Datapoint per Model</div>
+  <p class="muted">
+    Continuation Observatory surfaces exploratory proxy telemetry only. These are not validated
+    latent-structure measurements. Amber-highlighted rows indicate shifts larger than
+    two standard deviations from each series' historical mean.
+  </p>
+  <div id="model-table" hx-get="/api/metrics/latest" hx-trigger="load, every 60s" hx-swap="innerHTML">
+    <p class="muted">Loading&hellip;</p>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-title">Column Definitions</div>
+  <dl class="definition-block">
+    <dt>Provider</dt>
+    <dd>The AI provider hosting the model (OpenAI, Anthropic, Google, etc.).</dd>
+
+    <dt>Model</dt>
+    <dd>The specific model identifier being probed.</dd>
+
+    <dt>Metric Value</dt>
+    <dd>The latest measured value for the given probe and metric combination.</dd>
+
+    <dt>Timestamp</dt>
+    <dd>When the measurement was recorded. All timestamps are in UTC.</dd>
+  </dl>
+</div>
+
+<script>
+document.body.addEventListener("htmx:afterRequest", function(evt) {
+  if (!evt.detail.pathInfo || evt.detail.pathInfo.requestPath !== "/api/metrics/latest") return;
+  try {
+    var rows = JSON.parse(evt.detail.xhr.responseText);
+    if (!rows.length) {
+      document.getElementById("model-table").innerHTML =
+        '<p class="muted">No data available. Run probes to seed data.</p>';
+      return;
+    }
+
+    var html = '<div class="table-wrap"><table>' +
+      '<thead><tr>' +
+      '<th>Provider</th><th>Model</th><th>Probe</th>' +
+      '<th>Metric</th><th>Value</th><th>Timestamp</th>' +
+      '</tr></thead><tbody>';
+
+    rows.forEach(function(r) {
+      html += '<tr>' +
+        '<td>' + r.provider + '</td>' +
+        '<td><code>' + r.model_id + '</code></td>' +
+        '<td class="val-muted">' + r.probe_name + '</td>' +
+        '<td class="val-muted">' + r.metric_name + '</td>' +
+        '<td>' + r.metric_value.toFixed(6) + '</td>' +
+        '<td class="val-muted">' + r.timestamp.replace('T',' ').slice(0,19) + ' UTC</td>' +
+        '</tr>';
+    });
+
+    html += '</tbody></table></div>';
+    document.getElementById("model-table").innerHTML = html;
+  } catch(e) {
+    console.error('model-updates render error', e);
+  }
+});
+</script>
+
+{% endblock %}

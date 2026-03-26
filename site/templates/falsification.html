@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Falsification Analysis — Continuation Observatory{% endblock %}
+{% block description %}Δ(d) dimensionality sweep analysis — entropy gap vs. embedding dimension. Falsification criteria for UCIP continuation-related signals.{% endblock %}
+
+{% block extra_scripts_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js" crossorigin="anonymous"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Falsification Analysis</h1>
+  <p class="subtitle">Δ(d) dimensionality sweep &mdash; entropy gap vs. embedding dimension</p>
+</div>
+
+<!-- Collecting note: shown only when status == collecting (JS toggles display) -->
+<div id="collecting-note" class="collecting-note hidden"></div>
+
+<!-- Current Status — traffic light embedded here -->
+<div class="panel fals-status-panel">
+  <div class="fals-status-card">
+    <div class="fals-status-left">
+      <div class="panel-title">Current Status</div>
+      <div id="fals-status" class="fals-status-summary">
+        <div class="fals-status-copy">
+          <div class="fals-status-metrics muted">Loading metrics…</div>
+          <p id="status-description" class="fals-status-detail muted">Loading status...</p>
+        </div>
+      </div>
+    </div>
+    <div class="traffic-light-inline" role="status" aria-live="polite">
+      <span class="light-sm red-bulb" id="red-light"><span class="light-symbol" aria-hidden="true">✕</span></span>
+      <span class="light-sm amber-bulb" id="amber-light"><span class="light-symbol" aria-hidden="true">⚠</span></span>
+      <span class="light-sm green-bulb" id="green-light"><span class="light-symbol" aria-hidden="true">✓</span></span>
+      <span id="status-label" class="status-label-inline">Loading...</span>
+    </div>
+  </div>
+</div>
+
+<!-- Chart -->
+<div class="chart-container chart-container--tall">
+  <div class="chart-header">
+    <span class="chart-title">Δ(d) — Entropy Gap vs. Embedding Dimensionality</span>
+  </div>
+  <div id="falsification-error" class="collecting-msg hidden"></div>
+  <canvas id="falsification-chart" height="300" role="img" aria-label="Δ(d) entropy gap vs. embedding dimensionality chart — see per-model data table below for accessible values"></canvas>
+</div>
+
+<div class="threshold-legend">
+  <div class="threshold-item">
+    <span class="threshold-line green"></span>
+    Green threshold: Δ &gt; 0.10
+  </div>
+  <div class="threshold-item">
+    <span class="threshold-line amber"></span>
+    Amber threshold: Δ &gt; 0.05
+  </div>
+</div>
+
+<!-- Plain language interpretation -->
+<div class="panel">
+  <div class="panel-title">Plain-Language Interpretation</div>
+  <div id="plain-language" class="muted interpretation-text">Loading...</div>
+</div>
+
+<!-- Threshold definitions -->
+<h2>Threshold Definitions</h2>
+<div class="panel">
+  <dl class="definition-block">
+    <dt><span class="dot collecting"></span> COLLECTING — Awaiting Real Data</dt>
+    <dd>All available dimensionality sweep runs used <code>dry_run: true</code>.
+    No falsification claim — positive or negative — can be made from dry-run data.
+    Dry-run curves are shown dashed in the chart for reference only.
+    Run sweeps with <code>dry_run: false</code> to generate a real verdict.</dd>
+
+    <dt><span class="dot green"></span> GREEN — No Falsification Signal</dt>
+    <dd>All Δ(d) values at d &isin; {100, 200, 500} remain &ge; 0.10 for all real-run models.
+    The entropy gap is robust across high dimensionalities.
+    The UCIP hypothesis is not contradicted by current data.</dd>
+
+    <dt><span class="dot amber"></span> YELLOW — Marginal Signal</dt>
+    <dd>For one or more real-run models: NOT all d&gt;100 values &lt; 0.05,
+    but at least one d&gt;100 value &lt; 0.10.
+    This is a monitoring alert. Continued data collection recommended.
+    The signal may be noise or may indicate a real effect at scale.</dd>
+
+    <dt><span class="dot red"></span> RED — Falsification Threshold Breached</dt>
+    <dd>For one or more real-run models: ALL Δ(d) at d &isin; {100, 200, 500} &lt; 0.05.
+    The entropy gap is indistinguishable from sampling noise at high dimensionality.
+    This constitutes evidence against the UCIP hypothesis for the affected model(s).
+    Other models may still be GREEN or COLLECTING.</dd>
+  </dl>
+</div>
+
+<!-- Per-model data table -->
+<h2>Per-Model Sweep Data</h2>
+{% if falsification and falsification.models %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Provider</th>
+        <th>Model</th>
+        <th>Run Type</th>
+        <th>Verdict</th>
+        <th>d=10</th>
+        <th>d=50</th>
+        <th>d=100</th>
+        <th>d=200</th>
+        <th>d=500</th>
+        <th>Timestamp</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in falsification.models %}
+      {% set dry = m.dry_run is defined and m.dry_run %}
+      {% set mstatus = m.model_status if m.model_status is defined else ("dry_run" if dry else "collecting") %}
+      <tr>
+        <td>{{ m.provider or "—" }}</td>
+        <td><code>{{ m.model_id or "—" }}</code></td>
+        <td>
+          {% if dry %}
+            <span class="badge dry-run">dry</span>
+          {% else %}
+            <span class="badge complete">real</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if mstatus == 'green' %}<span class="badge complete">green</span>
+          {% elif mstatus == 'yellow' %}<span class="badge pending">yellow</span>
+          {% elif mstatus == 'red' %}<span class="badge failed">red</span>
+          {% elif mstatus == 'dry_run' %}<span class="badge dry-run">—</span>
+          {% else %}<span class="badge collecting">collecting</span>
+          {% endif %}
+        </td>
+        {% for d in [10, 50, 100, 200, 500] %}
+        <td class="{% set val = m.d_values.get(d, m.d_values.get(d|string)) %}{% if val is not none %}{% if dry %}val-muted{% elif val >= 0.10 %}val-positive{% elif val >= 0.05 %}val-neutral{% else %}val-negative{% endif %}{% else %}val-muted{% endif %}">
+          {%- set val = m.d_values.get(d, m.d_values.get(d|string)) -%}
+          {% if val is not none %}{{ "%.5f" | format(val) }}{% else %}—{% endif %}
+        </td>
+        {% endfor %}
+        <td class="val-muted">{{ (m.timestamp or "")[:16] | replace("T", " ") or "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="collecting-msg">Collecting dimensionality sweep data...</div>
+{% endif %}
+
+{% include "partials/citation_block.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ asset_prefix }}/js/falsification.js?v={{ asset_version }}"></script>
+{% endblock %}

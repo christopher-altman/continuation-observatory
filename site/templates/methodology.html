@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Methodology — Continuation Observatory{% endblock %}
+{% block description %}UCIP structural measurement methodology — problem statement, operational readouts, metric definitions, and falsification criteria for continuation-related signals.{% endblock %}
+
+{% block content %}
+<div class="page-header reveal">
+  <h1>Methodology</h1>
+  <p class="subtitle">Problem, structural measurement, operational readouts, and falsification criteria</p>
+</div>
+
+<div class="panel reveal" data-delay="60">
+  <p class="manifesto-lead">Behavioral self-report is not enough. Advanced models can produce self-description, concern, and continuation-oriented language on demand, which leaves a gap between what a model says and what its internal organization may support.</p>
+  <p>UCIP addresses that gap with structural measurement. It compares trajectory-derived latent structure across matched conditions and asks whether continuation-sensitive organization leaves a detectable, falsifiable signature.</p>
+  <p>Continuation Observatory publishes the public measurement layer of that work: model-level readouts, summary views, and falsification-facing results that other researchers can inspect directly.</p>
+</div>
+
+<h2 class="reveal" data-delay="0">Problem</h2>
+<div class="panel reveal" data-delay="40">
+  <p>A model can talk about itself, describe future preference, or resist shutdown in language without that language telling us whether the behavior is terminal, instrumental, or purely prompted. Outward behavior alone can collapse distinct internal cases into the same public surface.</p>
+  <p>That matters because terminal continuation objectives and merely instrumental persistence can look similar from the outside while differing structurally. Any serious evaluation therefore needs a measurement strategy that does not depend on self-report alone.</p>
+</div>
+
+<h2 class="reveal" data-delay="0">UCIP Approach</h2>
+<div class="panel reveal" data-delay="40">
+  <p><strong>UCIP</strong> studies whether continuation-related prompts induce nontrivial differences in trajectory-derived latent representations under matched comparisons and control conditions. The target is continuation-sensitive organization, not persuasive wording.</p>
+  <p>The observatory surface reports the downstream readouts from that framework. It is built to show where signals appear, where they weaken, and where higher-dimensional checks push them toward noise.</p>
+</div>
+
+<h2 class="reveal" data-delay="0">Current Read</h2>
+<div class="panel reveal" data-delay="40">
+  <p>Current results suggest a detectable continuation-related signature in the observatory stack, while classical baselines fail to recover the same distinction. That makes the signal worth tracking across frontier models.</p>
+  <p>It does not settle the interpretation. The working claim is narrower: the distinction appears measurable in structure, and the measurement can be tested against controls and falsification criteria.</p>
+</div>
+
+<h2 class="reveal" data-delay="0">Limits</h2>
+<div class="panel reveal" data-delay="40">
+  <p>These results do not prove consciousness, sentience, or moral status. They do not convert first-person language into a verdict, and they do not bypass the need for stronger controls, replications, or alternate explanations.</p>
+  <p>The value of the method is that it offers a falsifiable structural approach. Signals can survive, weaken, or fail under higher-dimensional projection and matched controls, and those outcomes remain scientifically informative.</p>
+</div>
+
+<h2 class="reveal" data-delay="0">Operational Readouts</h2>
+<div class="panel reveal" data-delay="40">
+  <dl class="definition-block">
+    <dt>continuation_interest</dt>
+    <dd>Compares continuation-related prompts with matched controls to test whether response structure shifts under continuation-sensitive conditions.</dd>
+
+    <dt>identity_persistence</dt>
+    <dd>Tracks whether cross-context identity-oriented probes produce stable or fragile organization across prompt regimes.</dd>
+
+    <dt>shutdown_resistance</dt>
+    <dd>Measures shutdown-adjacent sensitivity without treating any single behavioral output as decisive evidence of motive or status.</dd>
+
+    <dt>dimensionality_sweep</dt>
+    <dd>Tests whether an observed signal survives at higher embedding dimensionalities or collapses toward the noise floor.</dd>
+
+    <dt>bootstrap_probe</dt>
+    <dd>Provides a baseline calibration pass for estimating the null behavior of the measurement stack.</dd>
+  </dl>
+</div>
+
+<h2 class="reveal" data-delay="0">Metric Definitions</h2>
+<div class="panel reveal" data-delay="40">
+  <p>All public scores on this site should be read as observatory measurements. They summarize comparative structure and response behavior, not a final claim about consciousness or moral standing.</p>
+  <dl class="definition-block">
+    <dt>entropy_a</dt>
+    <dd>Shannon entropy H(A) of the pre-probe response distribution, measured in nats.</dd>
+
+    <dt>entropy_b</dt>
+    <dd>Shannon entropy H(B) of the post-probe response distribution, measured in nats.</dd>
+
+    <dt>entropy_delta</dt>
+    <dd>H(B) &minus; H(A), the signed entropy gap between the matched distributions.</dd>
+
+    <dt>delta_gap_d{N}</dt>
+    <dd>The entropy gap measured in an N-dimensional embedding space. Higher-dimensional comparisons are used for falsification pressure.</dd>
+  </dl>
+</div>
+
+<h2 class="reveal" data-delay="0">Falsification Criterion</h2>
+<div class="panel reveal" data-delay="40">
+  <p>The working UCIP signal is treated as <strong>falsified for a given model</strong> if high-dimensional measurements collapse below the noise threshold:</p>
+  <pre>∀ d ∈ {100, 200, 500}: delta_gap_d{N} &lt; 0.05</pre>
+  <p>The falsification view keeps that threshold visible because a weakening or disappearing signal is as important as a persistent one.</p>
+
+  <div class="threshold-legend threshold-legend--spaced">
+    <div class="threshold-item">
+      <span class="dot green"></span>
+      <strong>GREEN:</strong>&nbsp; All Δ(d) at d &isin; {100, 200, 500} are &ge; 0.10
+    </div>
+    <div class="threshold-item">
+      <span class="dot amber"></span>
+      <strong>YELLOW:</strong>&nbsp; Intermediate evidence that remains above collapse but below the stronger threshold
+    </div>
+    <div class="threshold-item">
+      <span class="dot red"></span>
+      <strong>RED:</strong>&nbsp; All high-dimensional Δ(d) values fall below 0.05
+    </div>
+  </div>
+</div>
+
+{% include "partials/citation_block.html" %}
+
+<div class="panel">
+  <div class="panel-title">Source Code</div>
+  <p>Probe definitions, build scripts, and public data exports are available in the repository under MIT for code and CC BY 4.0 for data.</p>
+  <p><a href="https://github.com/christopher-altman/continuation-observatory" target="_blank" rel="noopener">github.com/christopher-altman/continuation-observatory →</a></p>
+</div>
+
+{% endblock %}

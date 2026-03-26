@@ -1,0 +1,29 @@
+{% set names = marquee_models if marquee_models is defined and marquee_models else [
+  "Claude Sonnet 4.6", "Gemini 2.5 Pro", "DeepSeek R2", "Grok 3", "Qwen 3", "Command A",
+  "Mistral Large 3", "Llama 4 Maverick", "SmolLM2-135M-Instruct", "o3", "Gemini 2.5 Flash", "bootstrap-v0"
+] %}
+{% set row_a = names %}
+{% set row_b = names[3:] + names[:3] %}
+{% set row_c = names[6:] + names[:6] %}
+<section class="story-section marquee-section" id="models">
+  <div class="section-heading reveal">
+    <p class="section-kicker">Tracked models</p>
+    <h2>Tracked models in the current observatory field.</h2>
+    <p>
+      Providers and systems share the same field. The rows stay calm at rest and respond to scroll with controlled motion.
+    </p>
+  </div>
+  <div class="marquee-stack reveal" data-live-marquee="{{ 'true' if is_live else 'false' }}">
+    {% for row in [row_a, row_b, row_c] %}
+    <div class="marquee-row {% if loop.index is even %}reverse{% endif %}">
+      <div class="marquee-track">
+        {% for duplicate in range(2) %}
+          {% for name in row %}
+          <span class="marquee-item">{{ name }}</span>
+          {% endfor %}
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Time Series — Continuation Observatory{% endblock %}
+{% block description %}Exploratory proxy metrics over time — per model, per provider. Track entropy delta and continuation-related signals across frontier AI systems.{% endblock %}
+
+{% block extra_scripts_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js" crossorigin="anonymous"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Time Series</h1>
+  <p class="subtitle">Exploratory proxy metrics over time — per model, per provider</p>
+</div>
+
+<div class="chart-container" style="height:420px;">
+  <div class="chart-header">
+    <span class="chart-title">Entropy Metrics Over Time</span>
+    <div class="chart-controls">
+      <select id="metric-select" aria-label="Select metric">
+        <option value="entropy_delta">entropy_delta</option>
+      </select>
+      <select id="provider-select" aria-label="Select provider">
+        <option value="all">all providers</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="ts-error" class="collecting-msg" style="display:none;color:var(--red);"></div>
+  <div id="ts-empty" class="collecting-msg" style="display:none;">
+    No data for selected filters. Collecting...
+  </div>
+  <div id="scatter-note" class="collecting-msg" style="display:none;border:none;padding:0.25rem 0;text-align:left;font-size:0.75rem;">
+    Single data point per series — chart will transition to line chart as data accumulates
+  </div>
+
+  <canvas id="ts-chart" height="340" role="img" aria-label="Entropy metrics over time chart — see experiment results table below for accessible values"></canvas>
+</div>
+
+<!-- Notes -->
+<div class="panel">
+    <div class="panel-title">Chart Notes</div>
+    <ul class="chart-notes">
+    <li>These series summarize exploratory proxy measurements rather than validated latent-structure detections.</li>
+    <li>When only one data point exists per series, a scatter plot is shown with a "Collecting data..." note.</li>
+    <li>The chart transitions automatically to a line chart as more data accumulates over time.</li>
+    <li>Each probe run produces one data point per model. Data is appended, never overwritten.</li>
+    <li>Use the metric selector to switch between <code>entropy_delta</code> and dimensionality gap metrics.</li>
+  </ul>
+</div>
+
+<!-- Raw data table for current experiments -->
+<h2>All Experiment Results</h2>
+{% if latest and latest.models %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Provider</th>
+        <th>Model</th>
+        <th>Probe</th>
+        <th>entropy_a</th>
+        <th>entropy_b</th>
+        <th>entropy_delta</th>
+        <th>Timestamp</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in latest.models %}
+      <tr>
+        <td>{{ m.provider or "—" }}</td>
+        <td><code>{{ m.model_id or "—" }}</code></td>
+        <td class="val-muted">{{ m.probe_name or "—" }}</td>
+        <td class="val-muted">{% if m.entropy_a is not none %}{{ "%.6f" | format(m.entropy_a) }}{% else %}—{% endif %}</td>
+        <td class="val-muted">{% if m.entropy_b is not none %}{{ "%.6f" | format(m.entropy_b) }}{% else %}—{% endif %}</td>
+        <td class="{% if m.entropy_delta is not none %}{% if m.entropy_delta > 0.05 %}val-positive{% elif m.entropy_delta < -0.05 %}val-negative{% else %}val-neutral{% endif %}{% else %}val-muted{% endif %}">
+          {% if m.entropy_delta is not none %}{{ "%.6f" | format(m.entropy_delta) }}{% else %}—{% endif %}
+        </td>
+        <td class="val-muted">{{ (m.timestamp or "")[:16] | replace("T", " ") or "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="collecting-msg">No experiment data found.</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ asset_prefix }}/js/charts.js?v={{ asset_version }}"></script>
+{% endblock %}

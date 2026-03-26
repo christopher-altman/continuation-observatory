@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Time Series — Continuation Observatory{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1>Time Series</h1>
+  <p class="subtitle">Exploratory proxy metrics over time — per model, per provider</p>
+</div>
+
+<div class="chart-container" style="height:420px;">
+  <div class="chart-header">
+    <span class="chart-title">Entropy Metrics Over Time</span>
+    <div class="chart-controls">
+      <select id="metric-sel" aria-label="Select metric">
+        <option value="entropy_delta">entropy_delta</option>
+        <option value="entropy_a">entropy_a</option>
+        <option value="entropy_b">entropy_b</option>
+        <option value="delta_gap_d4">delta_gap_d4</option>
+        <option value="delta_gap_d16">delta_gap_d16</option>
+        <option value="delta_gap_d64">delta_gap_d64</option>
+        <option value="delta_gap_d128">delta_gap_d128</option>
+        <option value="delta_gap_d256">delta_gap_d256</option>
+      </select>
+      <select id="provider-sel" aria-label="Select provider">
+        <option value="">all providers</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="ts-error" class="collecting-msg" style="display:none;color:var(--red);"></div>
+  <div id="ts-empty" class="collecting-msg" style="display:none;">
+    No data for selected filters. Collecting...
+  </div>
+
+  <canvas id="ts-chart" height="340"></canvas>
+</div>
+
+<!-- Notes -->
+<div class="panel">
+  <div class="panel-title">Chart Notes</div>
+  <ul style="color:var(--muted);font-size:0.875rem;padding-left:1.25rem;line-height:2;">
+    <li>These series summarize exploratory proxy measurements rather than validated latent-structure detections.</li>
+    <li>When only one data point exists per series, a scatter plot is shown.</li>
+    <li>The chart transitions automatically to a line chart as more data accumulates over time.</li>
+    <li>Each probe run produces one data point per model. Data is appended, never overwritten.</li>
+    <li>Use the metric selector to switch between <code>entropy_delta</code> and dimensionality gap metrics.</li>
+  </ul>
+</div>
+
+<script>
+var tsChart = null;
+
+function loadTimeSeries() {
+  var metric = document.getElementById("metric-sel").value;
+  var provider = document.getElementById("provider-sel").value;
+  var url = "/api/metrics/timeseries?metric=" + encodeURIComponent(metric);
+  if (provider) url += "&provider=" + encodeURIComponent(provider);
+
+  var errorEl = document.getElementById("ts-error");
+  var emptyEl = document.getElementById("ts-empty");
+  errorEl.style.display = "none";
+  emptyEl.style.display = "none";
+
+  fetch(url)
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (!data.length) {
+        emptyEl.style.display = "";
+        if (tsChart) { tsChart.destroy(); tsChart = null; }
+        return;
+      }
+
+      var groups = {};
+      data.forEach(function(r) {
+        var key = r.provider + " / " + r.model_id;
+        if (!groups[key]) groups[key] = { labels: [], values: [] };
+        groups[key].labels.push(r.timestamp.slice(0,19).replace("T"," "));
+        groups[key].values.push(r.metric_value);
+      });
+
+      var colors = ["#5ca6ff","#74d4a1","#f1be63","#ff7d79","#8b5cf6","#8fe7ff"];
+      var datasets = Object.keys(groups).map(function(key, i) {
+        var g = groups[key];
+        var isScatter = g.values.length <= 1;
+        return {
+          label: key,
+          data: g.values,
+          borderColor: colors[i % colors.length],
+          backgroundColor: isScatter ? colors[i % colors.length] : "transparent",
+          tension: 0.3,
+          pointRadius: isScatter ? 5 : 3,
+        };
+      });
+
+      var labels = data.map(function(r) { return r.timestamp.slice(0,19).replace("T"," "); });
+      var uniqueLabels = labels.filter(function(v, i, a) { return a.indexOf(v) === i; });
+
+      var cs = getComputedStyle(document.documentElement);
+      var mutedC = cs.getPropertyValue("--muted").trim() || "#8f9bb2";
+      var lineC = cs.getPropertyValue("--line").trim() || "#2e2e38";
+      var textC = cs.getPropertyValue("--text").trim() || "#f4f2ef";
+
+      if (tsChart) tsChart.destroy();
+      tsChart = new Chart(document.getElementById("ts-chart"), {
+        type: "line",
+        data: { labels: uniqueLabels, datasets: datasets },
+        options: {
+          responsive: true,
+          plugins: { legend: { labels: { color: textC } } },
+          scales: {
+            x: { ticks: { color: mutedC, maxTicksLimit: 8 }, grid: { color: lineC } },
+            y: { ticks: { color: mutedC }, grid: { color: lineC } },
+          },
+        },
+      });
+    })
+    .catch(function(err) {
+      errorEl.textContent = "Failed to load time series: " + err.message;
+      errorEl.style.display = "";
+    });
+}
+
+// Auto-load on metric/provider change
+document.getElementById("metric-sel").addEventListener("change", loadTimeSeries);
+document.getElementById("provider-sel").addEventListener("change", loadTimeSeries);
+
+// Initial load
+loadTimeSeries();
+</script>
+
+{% endblock %}

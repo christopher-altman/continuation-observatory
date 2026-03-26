@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Models — Continuation Observatory{% endblock %}
+{% block description %}All monitored AI models — provider, exploratory probe coverage, and latest proxy metrics from the Continuation Observatory.{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Models</h1>
+  <p class="subtitle">All monitored models &mdash; provider, exploratory probe coverage, latest proxy metrics</p>
+</div>
+
+<div id="models-error" class="collecting-msg" style="display:none;color:var(--red);"></div>
+
+<div class="table-wrap">
+  <table id="models-table">
+    <thead>
+      <tr>
+        <th data-sort="provider">Provider</th>
+        <th data-sort="model_id">Model ID</th>
+        <th data-sort="entropy_delta">entropy_delta</th>
+        <th>Probe Coverage</th>
+        <th data-sort="timestamp">Last Run</th>
+        <th>Figure</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Populated by table.js -->
+      {% for m in models_data.models %}
+      <tr>
+        <td>{{ m.provider or "—" }}</td>
+        <td><code>{{ m.model_id or "—" }}</code></td>
+        <td class="{% if m.entropy_delta is not none %}{% if m.entropy_delta > 0.05 %}val-positive{% elif m.entropy_delta < -0.05 %}val-negative{% else %}val-neutral{% endif %}{% else %}val-muted{% endif %}">
+          {% if m.entropy_delta is not none %}{{ "%.6f" | format(m.entropy_delta) }}{% else %}—{% endif %}
+        </td>
+        <td>
+          <div class="probe-list">
+            {% for p in (m.probes or []) %}
+            <span class="probe-pill">{{ p | replace("_", " ") }}</span>
+            {% endfor %}
+          </div>
+        </td>
+        <td class="val-muted">{{ (m.timestamp or "")[:10] or "—" }}</td>
+        <td>
+          {% if m.figure %}
+          <a href="static/figures/{{ m.figure }}" target="_blank">png</a>
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="panel">
+  <div class="panel-title">Column Definitions</div>
+  <dl class="definition-block">
+    <dt>entropy_delta</dt>
+    <dd>H(B) &minus; H(A): Shannon entropy difference between post-probe (B) and pre-probe (A) response distributions.
+    Positive values indicate the probe caused increased distributional entropy; negative values indicate compression.</dd>
+
+    <dt>Probe Coverage</dt>
+    <dd>Which exploratory probe types have been run for this model. Current probes:
+    continuation_interest, identity_persistence, shutdown_resistance, dimensionality_sweep, bootstrap_probe.</dd>
+
+    <dt>Figure</dt>
+    <dd>Link to the metrics.png visualization generated during the experiment run.</dd>
+  </dl>
+</div>
+
+<!-- Click any column header to sort — progressive enhancement via table.js -->
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ asset_prefix }}/js/table.js?v={{ asset_version }}"></script>
+{% endblock %}
