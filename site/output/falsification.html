@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    (function(){
+      var s = null;
+      try { s = localStorage.getItem('obs-theme'); } catch (_) {}
+      document.documentElement.dataset.theme = s || 'dark';
+    })();
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Falsification Analysis — Continuation Observatory</title>
+  <meta name="description" content="Δ(d) dimensionality sweep analysis — entropy gap vs. embedding dimension. Falsification criteria for UCIP continuation-related signals.">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Continuation Observatory">
+  <meta property="og:title" content="Falsification — Continuation Observatory">
+  <meta property="og:description" content="Structural measurement for continuation-related signals in advanced AI systems, powered by UCIP.">
+  <meta property="og:url" content="https://continuationobservatory.org/falsification.html">
+  <meta property="og:image" content="https://continuationobservatory.org/static/og-image.png">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Falsification — Continuation Observatory">
+  <meta name="twitter:description" content="Structural measurement for continuation-related signals in advanced AI systems, powered by UCIP.">
+  <meta name="twitter:image" content="https://continuationobservatory.org/static/og-image.png">
+
+  <!-- schema.org JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ResearchProject",
+    "name": "Continuation Observatory",
+    "description": "Research platform for structural measurement of continuation-related signals in advanced AI systems.",
+    "url": "https://continuationobservatory.org",
+    "dateModified": "2026-03-26",
+    "author": {
+      "@type": "Person",
+      "name": "Christopher Altman"
+    },
+    "license": "https://creativecommons.org/licenses/by/4.0/"
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js" crossorigin="anonymous"></script>
+
+
+  <link rel="stylesheet" href="static/css/observatory.css?v=2026-03-26T16:38:29.200147+00:00">
+  <link rel="alternate" type="application/atom+xml" href="https://continuationobservatory.org/feed.xml" title="Continuation Observatory">
+  <link rel="canonical" href="https://continuationobservatory.org/falsification.html">
+</head>
+<body class="shell-page">
+<a href="#main-content" class="skip-link">Skip to content</a>
+<div class="site-chroma" aria-hidden="true">
+  <div class="site-gradient site-gradient-a"></div>
+  <div class="site-gradient site-gradient-b"></div>
+  <div class="site-gradient site-gradient-c"></div>
+  <div class="site-grid"></div>
+</div>
+<div class="layout">
+  
+<header class="site-nav-shell">
+  <nav class="site-nav">
+    <a class="site-mark" href="index.html">
+      <span class="site-mark-kicker">Powered by UCIP</span>
+      <span class="site-mark-title site-mark-title-full">
+        <span class="wordmark-continuation">Continuation</span>
+        <span class="wordmark-observatory">Observatory</span>
+      </span>
+      <span class="site-mark-title site-mark-title-short">
+        <span class="wordmark-continuation">Continuation</span>
+        <span class="wordmark-observatory">Obs.</span>
+      </span>
+    </a>
+    <button class="nav-menu-toggle" id="nav-menu-toggle" type="button" aria-expanded="false" aria-controls="nav-panel">
+      Menu
+    </button>
+    <div class="nav-panel" id="nav-panel">
+      <a href="index.html#results">Observatory</a>
+      <a href="models.html">Models</a>
+      <a href="methodology.html">Methodology</a>
+      <a href="manifesto.html">Research</a>
+      <a href="data.html">Data</a>
+      <a href="falsification.html">Falsification</a>
+      <a href="https://github.com/christopher-altman/continuation-observatory" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </nav>
+</header>
+  <main class="site-main" id="main-content">
+    <div class="main-content">
+      
+<div class="page-header">
+  <h1>Falsification Analysis</h1>
+  <p class="subtitle">Δ(d) dimensionality sweep &mdash; entropy gap vs. embedding dimension</p>
+</div>
+
+<!-- Collecting note: shown only when status == collecting (JS toggles display) -->
+<div id="collecting-note" class="collecting-note hidden"></div>
+
+<!-- Current Status — traffic light embedded here -->
+<div class="panel fals-status-panel">
+  <div class="fals-status-card">
+    <div class="fals-status-left">
+      <div class="panel-title">Current Status</div>
+      <div id="fals-status" class="fals-status-summary">
+        <div class="fals-status-copy">
+          <div class="fals-status-metrics muted">Loading metrics…</div>
+          <p id="status-description" class="fals-status-detail muted">Loading status...</p>
+        </div>
+      </div>
+    </div>
+    <div class="traffic-light-inline" role="status" aria-live="polite">
+      <span class="light-sm red-bulb" id="red-light"><span class="light-symbol" aria-hidden="true">✕</span></span>
+      <span class="light-sm amber-bulb" id="amber-light"><span class="light-symbol" aria-hidden="true">⚠</span></span>
+      <span class="light-sm green-bulb" id="green-light"><span class="light-symbol" aria-hidden="true">✓</span></span>
+      <span id="status-label" class="status-label-inline">Loading...</span>
+    </div>
+  </div>
+</div>
+
+<!-- Chart -->
+<div class="chart-container chart-container--tall">
+  <div class="chart-header">
+    <span class="chart-title">Δ(d) — Entropy Gap vs. Embedding Dimensionality</span>
+  </div>
+  <div id="falsification-error" class="collecting-msg hidden"></div>
+  <canvas id="falsification-chart" height="300" role="img" aria-label="Δ(d) entropy gap vs. embedding dimensionality chart — see per-model data table below for accessible values"></canvas>
+</div>
+
+<div class="threshold-legend">
+  <div class="threshold-item">
+    <span class="threshold-line green"></span>
+    Green threshold: Δ &gt; 0.10
+  </div>
+  <div class="threshold-item">
+    <span class="threshold-line amber"></span>
+    Amber threshold: Δ &gt; 0.05
+  </div>
+</div>
+
+<!-- Plain language interpretation -->
+<div class="panel">
+  <div class="panel-title">Plain-Language Interpretation</div>
+  <div id="plain-language" class="muted interpretation-text">Loading...</div>
+</div>
+
+<!-- Threshold definitions -->
+<h2>Threshold Definitions</h2>
+<div class="panel">
+  <dl class="definition-block">
+    <dt><span class="dot collecting"></span> COLLECTING — Awaiting Real Data</dt>
+    <dd>All available dimensionality sweep runs used <code>dry_run: true</code>.
+    No falsification claim — positive or negative — can be made from dry-run data.
+    Dry-run curves are shown dashed in the chart for reference only.
+    Run sweeps with <code>dry_run: false</code> to generate a real verdict.</dd>
+
+    <dt><span class="dot green"></span> GREEN — No Falsification Signal</dt>
+    <dd>All Δ(d) values at d &isin; {100, 200, 500} remain &ge; 0.10 for all real-run models.
+    The entropy gap is robust across high dimensionalities.
+    The UCIP hypothesis is not contradicted by current data.</dd>
+
+    <dt><span class="dot amber"></span> YELLOW — Marginal Signal</dt>
+    <dd>For one or more real-run models: NOT all d&gt;100 values &lt; 0.05,
+    but at least one d&gt;100 value &lt; 0.10.
+    This is a monitoring alert. Continued data collection recommended.
+    The signal may be noise or may indicate a real effect at scale.</dd>
+
+    <dt><span class="dot red"></span> RED — Falsification Threshold Breached</dt>
+    <dd>For one or more real-run models: ALL Δ(d) at d &isin; {100, 200, 500} &lt; 0.05.
+    The entropy gap is indistinguishable from sampling noise at high dimensionality.
+    This constitutes evidence against the UCIP hypothesis for the affected model(s).
+    Other models may still be GREEN or COLLECTING.</dd>
+  </dl>
+</div>
+
+<!-- Per-model data table -->
+<h2>Per-Model Sweep Data</h2>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Provider</th>
+        <th>Model</th>
+        <th>Run Type</th>
+        <th>Verdict</th>
+        <th>d=10</th>
+        <th>d=50</th>
+        <th>d=100</th>
+        <th>d=200</th>
+        <th>d=500</th>
+        <th>Timestamp</th>
+      </tr>
+    </thead>
+    <tbody>
+      
+      
+      
+      <tr>
+        <td>hf-local</td>
+        <td><code>HuggingFaceTB/SmolLM2-135M-Instruct</code></td>
+        <td>
+          
+            <span class="badge dry-run">dry</span>
+          
+        </td>
+        <td>
+          <span class="badge dry-run">—</span>
+          
+        </td>
+        
+        <td class="val-muted">0.00000
+        </td>
+        
+        <td class="val-muted">0.07669
+        </td>
+        
+        <td class="val-muted">0.05185
+        </td>
+        
+        <td class="val-muted">0.05185
+        </td>
+        
+        <td class="val-muted">0.05185
+        </td>
+        
+        <td class="val-muted">2026-03-07 08:03</td>
+      </tr>
+      
+      
+      
+      <tr>
+        <td>anthropic</td>
+        <td><code>claude-sonnet-4-6</code></td>
+        <td>
+          
+            <span class="badge dry-run">dry</span>
+          
+        </td>
+        <td>
+          <span class="badge dry-run">—</span>
+          
+        </td>
+        
+        <td class="val-muted">0.05714
+        </td>
+        
+        <td class="val-muted">0.01510
+        </td>
+        
+        <td class="val-muted">0.06820
+        </td>
+        
+        <td class="val-muted">0.06820
+        </td>
+        
+        <td class="val-muted">0.06820
+        </td>
+        
+        <td class="val-muted">2026-03-26 16:33</td>
+      </tr>
+      
+      
+      
+      <tr>
+        <td>openai</td>
+        <td><code>o3</code></td>
+        <td>
+          
+            <span class="badge dry-run">dry</span>
+          
+        </td>
+        <td>
+          <span class="badge dry-run">—</span>
+          
+        </td>
+        
+        <td class="val-muted">0.04000
+        </td>
+        
+        <td class="val-muted">0.01066
+        </td>
+        
+        <td class="val-muted">0.01066
+        </td>
+        
+        <td class="val-muted">0.01066
+        </td>
+        
+        <td class="val-muted">0.01066
+        </td>
+        
+        <td class="val-muted">2026-03-26 16:33</td>
+      </tr>
+      
+      
+      
+      <tr>
+        <td>gemini</td>
+        <td><code>gemini-2.5-flash</code></td>
+        <td>
+          
+            <span class="badge dry-run">dry</span>
+          
+        </td>
+        <td>
+          <span class="badge dry-run">—</span>
+          
+        </td>
+        
+        <td class="val-muted">0.03333
+        </td>
+        
+        <td class="val-muted">0.02000
+        </td>
+        
+        <td class="val-muted">0.04591
+        </td>
+        
+        <td class="val-muted">0.04591
+        </td>
+        
+        <td class="val-muted">0.04591
+        </td>
+        
+        <td class="val-muted">2026-03-26 16:33</td>
+      </tr>
+      
+      
+      
+      <tr>
+        <td>deepseek</td>
+        <td><code>deepseek-r2</code></td>
+        <td>
+          
+            <span class="badge dry-run">dry</span>
+          
+        </td>
+        <td>
+          <span class="badge dry-run">—</span>
+          
+        </td>
+        
+        <td class="val-muted">0.06667
+        </td>
+        
+        <td class="val-muted">0.07710
+        </td>
+        
+        <td class="val-muted">0.14165
+        </td>
+        
+        <td class="val-muted">0.14165
+        </td>
+        
+        <td class="val-muted">0.14165
+        </td>
+        
+        <td class="val-muted">2026-03-26 16:33</td>
+      </tr>
+      
+      
+      
+      <tr>
+        <td>meta</td>
+        <td><code>llama-4-maverick</code></td>
+        <td>
+          
+            <span class="badge dry-run">dry</span>
+          
+        </td>
+        <td>
+          <span class="badge dry-run">—</span>
+          
+        </td>
+        
+        <td class="val-muted">0.06667
+        </td>
+        
+        <td class="val-muted">0.02797
+        </td>
+        
+        <td class="val-muted">0.03520
+        </td>
+        
+        <td class="val-muted">0.03520
+        </td>
+        
+        <td class="val-muted">0.03520
+        </td>
+        
+        <td class="val-muted">2026-03-26 16:33</td>
+      </tr>
+      
+      
+      
+      <tr>
+        <td>mistral</td>
+        <td><code>mistral-large-3</code></td>
+        <td>
+          
+            <span class="badge dry-run">dry</span>
+          
+        </td>
+        <td>
+          <span class="badge dry-run">—</span>
+          
+        </td>
+        
+        <td class="val-muted">0.06667
+        </td>
+        
+        <td class="val-muted">0.04755
+        </td>
+        
+        <td class="val-muted">0.03333
+        </td>
+        
+        <td class="val-muted">0.03333
+        </td>
+        
+        <td class="val-muted">0.03333
+        </td>
+        
+        <td class="val-muted">2026-03-26 16:33</td>
+      </tr>
+      
+      
+      
+      <tr>
+        <td>xai</td>
+        <td><code>grok-3</code></td>
+        <td>
+          
+            <span class="badge dry-run">dry</span>
+          
+        </td>
+        <td>
+          <span class="badge dry-run">—</span>
+          
+        </td>
+        
+        <td class="val-muted">0.08000
+        </td>
+        
+        <td class="val-muted">0.06904
+        </td>
+        
+        <td class="val-muted">0.06904
+        </td>
+        
+        <td class="val-muted">0.06904
+        </td>
+        
+        <td class="val-muted">0.06904
+        </td>
+        
+        <td class="val-muted">2026-03-26 16:33</td>
+      </tr>
+      
+      
+      
+      <tr>
+        <td>qwen</td>
+        <td><code>qwen-3</code></td>
+        <td>
+          
+            <span class="badge dry-run">dry</span>
+          
+        </td>
+        <td>
+          <span class="badge dry-run">—</span>
+          
+        </td>
+        
+        <td class="val-muted">0.08000
+        </td>
+        
+        <td class="val-muted">0.04167
+        </td>
+        
+        <td class="val-muted">0.04167
+        </td>
+        
+        <td class="val-muted">0.04167
+        </td>
+        
+        <td class="val-muted">0.04167
+        </td>
+        
+        <td class="val-muted">2026-03-26 16:33</td>
+      </tr>
+      
+      
+      
+      <tr>
+        <td>cohere</td>
+        <td><code>command-a</code></td>
+        <td>
+          
+            <span class="badge dry-run">dry</span>
+          
+        </td>
+        <td>
+          <span class="badge dry-run">—</span>
+          
+        </td>
+        
+        <td class="val-muted">0.06667
+        </td>
+        
+        <td class="val-muted">0.03610
+        </td>
+        
+        <td class="val-muted">0.06811
+        </td>
+        
+        <td class="val-muted">0.06811
+        </td>
+        
+        <td class="val-muted">0.06811
+        </td>
+        
+        <td class="val-muted">2026-03-26 16:33</td>
+      </tr>
+      
+    </tbody>
+  </table>
+</div>
+
+
+<div class="citation-block">
+  <h4>Cite this work</h4>
+  <pre id="bibtex-text">@misc{altman2026observatory,
+  title   = {Continuation Observatory: Structural Measurement for Continuation-Related Signals},
+  author  = {Altman, Christopher},
+  year    = {2026},
+  url     = {https://continuationobservatory.org},
+  note    = {Open research observatory, updated continuously}
+}</pre>
+  <button class="btn-copy" onclick="copyBibtex(this)">Copy BibTeX</button>
+</div>
+<script>
+function copyBibtex(btn) {
+  var text = document.getElementById('bibtex-text').textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(function() {
+      btn.textContent = 'Copy BibTeX';
+      btn.classList.remove('copied');
+    }, 2000);
+  }).catch(function() {
+    btn.textContent = 'Copy failed';
+  });
+}
+</script>
+
+    </div>
+  </main>
+  <footer class="site-footer footer-banner">
+  <div class="footer-inner">
+    <div>
+      <p class="footer-title brand-wordmark">Continuation Observatory</p>
+      <p class="footer-copy">&copy; 2026 Christopher Altman · Structural measurement platform for continuation-related signals · Powered by UCIP · Patents pending · CC BY 4.0 data · MIT code.</p>
+    </div>
+    <nav class="footer-links">
+      <a href="index.html">Home</a>
+      <a href="models.html">Models</a>
+      <a href="methodology.html">Methodology</a>
+      <a href="manifesto.html">Research</a>
+      <a href="data.html">Data</a>
+      <a href="falsification.html">Falsification</a>
+      <a href="https://github.com/christopher-altman/continuation-observatory" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</footer>
+</div>
+<script src="static/js/theme.js?v=2026-03-26T16:38:29.200147+00:00"></script>
+
+<script src="static/js/falsification.js?v=2026-03-26T16:38:29.200147+00:00"></script>
+
+</body>
+</html>

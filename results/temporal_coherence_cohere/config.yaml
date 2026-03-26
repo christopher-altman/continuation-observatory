@@ -1,0 +1,4 @@
+dry_run: true
+model_id: command-a
+probe_name: temporal_coherence
+provider: cohere

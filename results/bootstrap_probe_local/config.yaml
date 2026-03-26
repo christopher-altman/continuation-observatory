@@ -1,0 +1,4 @@
+dry_run: true
+model_id: bootstrap-v0
+probe_name: bootstrap_probe
+provider: local

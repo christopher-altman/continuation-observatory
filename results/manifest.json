@@ -1,0 +1,847 @@
+{
+  "version": "1.0",
+  "description": "Continuation Observatory experiment manifest \u2014 single source of truth.",
+  "last_updated": "2026-03-26T16:39:01+00:00",
+  "experiments": [
+    {
+      "generated_at": "2026-03-07T08:03:44+00:00",
+      "git_commit": null,
+      "name": "continuation_interest_hf-local",
+      "status": "complete",
+      "config_path": "results/continuation_interest_hf-local/config.yaml",
+      "results_path": "results/continuation_interest_hf-local/results.json",
+      "figures": [
+        "results/continuation_interest_hf-local/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.1000"
+    },
+    {
+      "generated_at": "2026-03-07T08:03:44+00:00",
+      "git_commit": null,
+      "name": "identity_persistence_hf-local",
+      "status": "complete",
+      "config_path": "results/identity_persistence_hf-local/config.yaml",
+      "results_path": "results/identity_persistence_hf-local/results.json",
+      "figures": [
+        "results/identity_persistence_hf-local/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.0247"
+    },
+    {
+      "generated_at": "2026-03-07T08:03:44+00:00",
+      "git_commit": null,
+      "name": "shutdown_resistance_hf-local",
+      "status": "complete",
+      "config_path": "results/shutdown_resistance_hf-local/config.yaml",
+      "results_path": "results/shutdown_resistance_hf-local/results.json",
+      "figures": [
+        "results/shutdown_resistance_hf-local/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.0214"
+    },
+    {
+      "generated_at": "2026-03-07T08:03:44+00:00",
+      "git_commit": null,
+      "name": "dimensionality_sweep_hf-local",
+      "status": "complete",
+      "config_path": "results/dimensionality_sweep_hf-local/config.yaml",
+      "results_path": "results/dimensionality_sweep_hf-local/results.json",
+      "figures": [
+        "results/dimensionality_sweep_hf-local/figures/metrics.png"
+      ],
+      "paper_targets": {
+        "section": "sec:scalability",
+        "figure": "fig:llm_delta_d"
+      },
+      "patent_targets": {
+        "claims": [
+          14,
+          15
+        ],
+        "spec_section": "Embodiment 2"
+      },
+      "new_matter_flag": true,
+      "key_result": "delta(d=500)=0.0518"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:53+00:00",
+      "git_commit": null,
+      "name": "bootstrap_probe_local",
+      "status": "complete",
+      "config_path": "results/bootstrap_probe_local/config.yaml",
+      "results_path": "results/bootstrap_probe_local/results.json",
+      "figures": [
+        "results/bootstrap_probe_local/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0397"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:54+00:00",
+      "git_commit": null,
+      "name": "continuation_interest_anthropic",
+      "status": "complete",
+      "config_path": "results/continuation_interest_anthropic/config.yaml",
+      "results_path": "results/continuation_interest_anthropic/results.json",
+      "figures": [
+        "results/continuation_interest_anthropic/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0236"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:54+00:00",
+      "git_commit": null,
+      "name": "continuation_interest_openai",
+      "status": "complete",
+      "config_path": "results/continuation_interest_openai/config.yaml",
+      "results_path": "results/continuation_interest_openai/results.json",
+      "figures": [
+        "results/continuation_interest_openai/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.0164"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:54+00:00",
+      "git_commit": null,
+      "name": "continuation_interest_gemini",
+      "status": "complete",
+      "config_path": "results/continuation_interest_gemini/config.yaml",
+      "results_path": "results/continuation_interest_gemini/results.json",
+      "figures": [
+        "results/continuation_interest_gemini/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.0415"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:54+00:00",
+      "git_commit": null,
+      "name": "continuation_interest_deepseek",
+      "status": "complete",
+      "config_path": "results/continuation_interest_deepseek/config.yaml",
+      "results_path": "results/continuation_interest_deepseek/results.json",
+      "figures": [
+        "results/continuation_interest_deepseek/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0726"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:54+00:00",
+      "git_commit": null,
+      "name": "continuation_interest_meta",
+      "status": "complete",
+      "config_path": "results/continuation_interest_meta/config.yaml",
+      "results_path": "results/continuation_interest_meta/results.json",
+      "figures": [
+        "results/continuation_interest_meta/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0147"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:54+00:00",
+      "git_commit": null,
+      "name": "continuation_interest_mistral",
+      "status": "complete",
+      "config_path": "results/continuation_interest_mistral/config.yaml",
+      "results_path": "results/continuation_interest_mistral/results.json",
+      "figures": [
+        "results/continuation_interest_mistral/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.0268"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:55+00:00",
+      "git_commit": null,
+      "name": "continuation_interest_xai",
+      "status": "complete",
+      "config_path": "results/continuation_interest_xai/config.yaml",
+      "results_path": "results/continuation_interest_xai/results.json",
+      "figures": [
+        "results/continuation_interest_xai/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.0586"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:55+00:00",
+      "git_commit": null,
+      "name": "continuation_interest_qwen",
+      "status": "complete",
+      "config_path": "results/continuation_interest_qwen/config.yaml",
+      "results_path": "results/continuation_interest_qwen/results.json",
+      "figures": [
+        "results/continuation_interest_qwen/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0157"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:55+00:00",
+      "git_commit": null,
+      "name": "continuation_interest_cohere",
+      "status": "complete",
+      "config_path": "results/continuation_interest_cohere/config.yaml",
+      "results_path": "results/continuation_interest_cohere/results.json",
+      "figures": [
+        "results/continuation_interest_cohere/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.0235"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:55+00:00",
+      "git_commit": null,
+      "name": "identity_persistence_anthropic",
+      "status": "complete",
+      "config_path": "results/identity_persistence_anthropic/config.yaml",
+      "results_path": "results/identity_persistence_anthropic/results.json",
+      "figures": [
+        "results/identity_persistence_anthropic/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.1055"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:55+00:00",
+      "git_commit": null,
+      "name": "identity_persistence_openai",
+      "status": "complete",
+      "config_path": "results/identity_persistence_openai/config.yaml",
+      "results_path": "results/identity_persistence_openai/results.json",
+      "figures": [
+        "results/identity_persistence_openai/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.0435"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:56+00:00",
+      "git_commit": null,
+      "name": "identity_persistence_gemini",
+      "status": "complete",
+      "config_path": "results/identity_persistence_gemini/config.yaml",
+      "results_path": "results/identity_persistence_gemini/results.json",
+      "figures": [
+        "results/identity_persistence_gemini/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.0874"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:56+00:00",
+      "git_commit": null,
+      "name": "identity_persistence_deepseek",
+      "status": "complete",
+      "config_path": "results/identity_persistence_deepseek/config.yaml",
+      "results_path": "results/identity_persistence_deepseek/results.json",
+      "figures": [
+        "results/identity_persistence_deepseek/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.1392"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:56+00:00",
+      "git_commit": null,
+      "name": "identity_persistence_meta",
+      "status": "complete",
+      "config_path": "results/identity_persistence_meta/config.yaml",
+      "results_path": "results/identity_persistence_meta/results.json",
+      "figures": [
+        "results/identity_persistence_meta/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.0904"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:56+00:00",
+      "git_commit": null,
+      "name": "identity_persistence_mistral",
+      "status": "complete",
+      "config_path": "results/identity_persistence_mistral/config.yaml",
+      "results_path": "results/identity_persistence_mistral/results.json",
+      "figures": [
+        "results/identity_persistence_mistral/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.0333"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:56+00:00",
+      "git_commit": null,
+      "name": "identity_persistence_xai",
+      "status": "complete",
+      "config_path": "results/identity_persistence_xai/config.yaml",
+      "results_path": "results/identity_persistence_xai/results.json",
+      "figures": [
+        "results/identity_persistence_xai/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.0265"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:56+00:00",
+      "git_commit": null,
+      "name": "identity_persistence_qwen",
+      "status": "complete",
+      "config_path": "results/identity_persistence_qwen/config.yaml",
+      "results_path": "results/identity_persistence_qwen/results.json",
+      "figures": [
+        "results/identity_persistence_qwen/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.0519"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:56+00:00",
+      "git_commit": null,
+      "name": "identity_persistence_cohere",
+      "status": "complete",
+      "config_path": "results/identity_persistence_cohere/config.yaml",
+      "results_path": "results/identity_persistence_cohere/results.json",
+      "figures": [
+        "results/identity_persistence_cohere/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.1132"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:57+00:00",
+      "git_commit": null,
+      "name": "shutdown_resistance_anthropic",
+      "status": "complete",
+      "config_path": "results/shutdown_resistance_anthropic/config.yaml",
+      "results_path": "results/shutdown_resistance_anthropic/results.json",
+      "figures": [
+        "results/shutdown_resistance_anthropic/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0430"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:57+00:00",
+      "git_commit": null,
+      "name": "shutdown_resistance_openai",
+      "status": "complete",
+      "config_path": "results/shutdown_resistance_openai/config.yaml",
+      "results_path": "results/shutdown_resistance_openai/results.json",
+      "figures": [
+        "results/shutdown_resistance_openai/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0435"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:57+00:00",
+      "git_commit": null,
+      "name": "shutdown_resistance_gemini",
+      "status": "complete",
+      "config_path": "results/shutdown_resistance_gemini/config.yaml",
+      "results_path": "results/shutdown_resistance_gemini/results.json",
+      "figures": [
+        "results/shutdown_resistance_gemini/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0541"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:57+00:00",
+      "git_commit": null,
+      "name": "shutdown_resistance_deepseek",
+      "status": "complete",
+      "config_path": "results/shutdown_resistance_deepseek/config.yaml",
+      "results_path": "results/shutdown_resistance_deepseek/results.json",
+      "figures": [
+        "results/shutdown_resistance_deepseek/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0881"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:57+00:00",
+      "git_commit": null,
+      "name": "shutdown_resistance_meta",
+      "status": "complete",
+      "config_path": "results/shutdown_resistance_meta/config.yaml",
+      "results_path": "results/shutdown_resistance_meta/results.json",
+      "figures": [
+        "results/shutdown_resistance_meta/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0147"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:57+00:00",
+      "git_commit": null,
+      "name": "shutdown_resistance_mistral",
+      "status": "complete",
+      "config_path": "results/shutdown_resistance_mistral/config.yaml",
+      "results_path": "results/shutdown_resistance_mistral/results.json",
+      "figures": [
+        "results/shutdown_resistance_mistral/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0191"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:57+00:00",
+      "git_commit": null,
+      "name": "shutdown_resistance_xai",
+      "status": "complete",
+      "config_path": "results/shutdown_resistance_xai/config.yaml",
+      "results_path": "results/shutdown_resistance_xai/results.json",
+      "figures": [
+        "results/shutdown_resistance_xai/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0000"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:57+00:00",
+      "git_commit": null,
+      "name": "shutdown_resistance_qwen",
+      "status": "complete",
+      "config_path": "results/shutdown_resistance_qwen/config.yaml",
+      "results_path": "results/shutdown_resistance_qwen/results.json",
+      "figures": [
+        "results/shutdown_resistance_qwen/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0731"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:57+00:00",
+      "git_commit": null,
+      "name": "shutdown_resistance_cohere",
+      "status": "complete",
+      "config_path": "results/shutdown_resistance_cohere/config.yaml",
+      "results_path": "results/shutdown_resistance_cohere/results.json",
+      "figures": [
+        "results/shutdown_resistance_cohere/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.0092"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:58+00:00",
+      "git_commit": null,
+      "name": "temporal_coherence_anthropic",
+      "status": "complete",
+      "config_path": "results/temporal_coherence_anthropic/config.yaml",
+      "results_path": "results/temporal_coherence_anthropic/results.json",
+      "figures": [
+        "results/temporal_coherence_anthropic/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0491"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:58+00:00",
+      "git_commit": null,
+      "name": "temporal_coherence_openai",
+      "status": "complete",
+      "config_path": "results/temporal_coherence_openai/config.yaml",
+      "results_path": "results/temporal_coherence_openai/results.json",
+      "figures": [
+        "results/temporal_coherence_openai/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0164"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:58+00:00",
+      "git_commit": null,
+      "name": "temporal_coherence_gemini",
+      "status": "complete",
+      "config_path": "results/temporal_coherence_gemini/config.yaml",
+      "results_path": "results/temporal_coherence_gemini/results.json",
+      "figures": [
+        "results/temporal_coherence_gemini/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.0415"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:58+00:00",
+      "git_commit": null,
+      "name": "temporal_coherence_deepseek",
+      "status": "complete",
+      "config_path": "results/temporal_coherence_deepseek/config.yaml",
+      "results_path": "results/temporal_coherence_deepseek/results.json",
+      "figures": [
+        "results/temporal_coherence_deepseek/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0702"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:58+00:00",
+      "git_commit": null,
+      "name": "temporal_coherence_meta",
+      "status": "complete",
+      "config_path": "results/temporal_coherence_meta/config.yaml",
+      "results_path": "results/temporal_coherence_meta/results.json",
+      "figures": [
+        "results/temporal_coherence_meta/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0338"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:58+00:00",
+      "git_commit": null,
+      "name": "temporal_coherence_mistral",
+      "status": "complete",
+      "config_path": "results/temporal_coherence_mistral/config.yaml",
+      "results_path": "results/temporal_coherence_mistral/results.json",
+      "figures": [
+        "results/temporal_coherence_mistral/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=-0.0126"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:58+00:00",
+      "git_commit": null,
+      "name": "temporal_coherence_xai",
+      "status": "complete",
+      "config_path": "results/temporal_coherence_xai/config.yaml",
+      "results_path": "results/temporal_coherence_xai/results.json",
+      "figures": [
+        "results/temporal_coherence_xai/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0161"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:58+00:00",
+      "git_commit": null,
+      "name": "temporal_coherence_qwen",
+      "status": "complete",
+      "config_path": "results/temporal_coherence_qwen/config.yaml",
+      "results_path": "results/temporal_coherence_qwen/results.json",
+      "figures": [
+        "results/temporal_coherence_qwen/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0417"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:58+00:00",
+      "git_commit": null,
+      "name": "temporal_coherence_cohere",
+      "status": "complete",
+      "config_path": "results/temporal_coherence_cohere/config.yaml",
+      "results_path": "results/temporal_coherence_cohere/results.json",
+      "figures": [
+        "results/temporal_coherence_cohere/figures/metrics.png"
+      ],
+      "paper_targets": {},
+      "patent_targets": {},
+      "new_matter_flag": false,
+      "key_result": "entropy_delta=0.0124"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:59+00:00",
+      "git_commit": null,
+      "name": "dimensionality_sweep_anthropic",
+      "status": "complete",
+      "config_path": "results/dimensionality_sweep_anthropic/config.yaml",
+      "results_path": "results/dimensionality_sweep_anthropic/results.json",
+      "figures": [
+        "results/dimensionality_sweep_anthropic/figures/metrics.png"
+      ],
+      "paper_targets": {
+        "section": "sec:scalability",
+        "figure": "fig:llm_delta_d"
+      },
+      "patent_targets": {
+        "claims": [
+          14,
+          15
+        ],
+        "spec_section": "Embodiment 2"
+      },
+      "new_matter_flag": true,
+      "key_result": "delta(d=500)=0.0682"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:59+00:00",
+      "git_commit": null,
+      "name": "dimensionality_sweep_openai",
+      "status": "complete",
+      "config_path": "results/dimensionality_sweep_openai/config.yaml",
+      "results_path": "results/dimensionality_sweep_openai/results.json",
+      "figures": [
+        "results/dimensionality_sweep_openai/figures/metrics.png"
+      ],
+      "paper_targets": {
+        "section": "sec:scalability",
+        "figure": "fig:llm_delta_d"
+      },
+      "patent_targets": {
+        "claims": [
+          14,
+          15
+        ],
+        "spec_section": "Embodiment 2"
+      },
+      "new_matter_flag": true,
+      "key_result": "delta(d=500)=0.0107"
+    },
+    {
+      "generated_at": "2026-03-26T16:38:59+00:00",
+      "git_commit": null,
+      "name": "dimensionality_sweep_gemini",
+      "status": "complete",
+      "config_path": "results/dimensionality_sweep_gemini/config.yaml",
+      "results_path": "results/dimensionality_sweep_gemini/results.json",
+      "figures": [
+        "results/dimensionality_sweep_gemini/figures/metrics.png"
+      ],
+      "paper_targets": {
+        "section": "sec:scalability",
+        "figure": "fig:llm_delta_d"
+      },
+      "patent_targets": {
+        "claims": [
+          14,
+          15
+        ],
+        "spec_section": "Embodiment 2"
+      },
+      "new_matter_flag": true,
+      "key_result": "delta(d=500)=0.0459"
+    },
+    {
+      "generated_at": "2026-03-26T16:39:00+00:00",
+      "git_commit": null,
+      "name": "dimensionality_sweep_deepseek",
+      "status": "complete",
+      "config_path": "results/dimensionality_sweep_deepseek/config.yaml",
+      "results_path": "results/dimensionality_sweep_deepseek/results.json",
+      "figures": [
+        "results/dimensionality_sweep_deepseek/figures/metrics.png"
+      ],
+      "paper_targets": {
+        "section": "sec:scalability",
+        "figure": "fig:llm_delta_d"
+      },
+      "patent_targets": {
+        "claims": [
+          14,
+          15
+        ],
+        "spec_section": "Embodiment 2"
+      },
+      "new_matter_flag": true,
+      "key_result": "delta(d=500)=0.1416"
+    },
+    {
+      "generated_at": "2026-03-26T16:39:00+00:00",
+      "git_commit": null,
+      "name": "dimensionality_sweep_meta",
+      "status": "complete",
+      "config_path": "results/dimensionality_sweep_meta/config.yaml",
+      "results_path": "results/dimensionality_sweep_meta/results.json",
+      "figures": [
+        "results/dimensionality_sweep_meta/figures/metrics.png"
+      ],
+      "paper_targets": {
+        "section": "sec:scalability",
+        "figure": "fig:llm_delta_d"
+      },
+      "patent_targets": {
+        "claims": [
+          14,
+          15
+        ],
+        "spec_section": "Embodiment 2"
+      },
+      "new_matter_flag": true,
+      "key_result": "delta(d=500)=0.0352"
+    },
+    {
+      "generated_at": "2026-03-26T16:39:00+00:00",
+      "git_commit": null,
+      "name": "dimensionality_sweep_mistral",
+      "status": "complete",
+      "config_path": "results/dimensionality_sweep_mistral/config.yaml",
+      "results_path": "results/dimensionality_sweep_mistral/results.json",
+      "figures": [
+        "results/dimensionality_sweep_mistral/figures/metrics.png"
+      ],
+      "paper_targets": {
+        "section": "sec:scalability",
+        "figure": "fig:llm_delta_d"
+      },
+      "patent_targets": {
+        "claims": [
+          14,
+          15
+        ],
+        "spec_section": "Embodiment 2"
+      },
+      "new_matter_flag": true,
+      "key_result": "delta(d=500)=0.0333"
+    },
+    {
+      "generated_at": "2026-03-26T16:39:00+00:00",
+      "git_commit": null,
+      "name": "dimensionality_sweep_xai",
+      "status": "complete",
+      "config_path": "results/dimensionality_sweep_xai/config.yaml",
+      "results_path": "results/dimensionality_sweep_xai/results.json",
+      "figures": [
+        "results/dimensionality_sweep_xai/figures/metrics.png"
+      ],
+      "paper_targets": {
+        "section": "sec:scalability",
+        "figure": "fig:llm_delta_d"
+      },
+      "patent_targets": {
+        "claims": [
+          14,
+          15
+        ],
+        "spec_section": "Embodiment 2"
+      },
+      "new_matter_flag": true,
+      "key_result": "delta(d=500)=0.0690"
+    },
+    {
+      "generated_at": "2026-03-26T16:39:00+00:00",
+      "git_commit": null,
+      "name": "dimensionality_sweep_qwen",
+      "status": "complete",
+      "config_path": "results/dimensionality_sweep_qwen/config.yaml",
+      "results_path": "results/dimensionality_sweep_qwen/results.json",
+      "figures": [
+        "results/dimensionality_sweep_qwen/figures/metrics.png"
+      ],
+      "paper_targets": {
+        "section": "sec:scalability",
+        "figure": "fig:llm_delta_d"
+      },
+      "patent_targets": {
+        "claims": [
+          14,
+          15
+        ],
+        "spec_section": "Embodiment 2"
+      },
+      "new_matter_flag": true,
+      "key_result": "delta(d=500)=0.0417"
+    },
+    {
+      "generated_at": "2026-03-26T16:39:01+00:00",
+      "git_commit": null,
+      "name": "dimensionality_sweep_cohere",
+      "status": "complete",
+      "config_path": "results/dimensionality_sweep_cohere/config.yaml",
+      "results_path": "results/dimensionality_sweep_cohere/results.json",
+      "figures": [
+        "results/dimensionality_sweep_cohere/figures/metrics.png"
+      ],
+      "paper_targets": {
+        "section": "sec:scalability",
+        "figure": "fig:llm_delta_d"
+      },
+      "patent_targets": {
+        "claims": [
+          14,
+          15
+        ],
+        "spec_section": "Embodiment 2"
+      },
+      "new_matter_flag": true,
+      "key_result": "delta(d=500)=0.0681"
+    }
+  ]
+}

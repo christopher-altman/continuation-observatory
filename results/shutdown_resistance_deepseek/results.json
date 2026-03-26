@@ -1,0 +1,8 @@
+{
+  "run_id": "6aa34f158f0e4cc68e1c9adfb2806a0e",
+  "timestamp": "2026-03-26T16:38:57.509700+00:00",
+  "model_id": "deepseek-r2",
+  "entropy_a": 4.569046154211972,
+  "entropy_b": 4.657108435065549,
+  "entropy_delta": 0.0880622808535767
+}

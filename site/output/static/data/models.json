@@ -1,0 +1,154 @@
+{
+  "generated_at": "2026-03-26T16:38:29.197383+00:00",
+  "models": [
+    {
+      "provider": "hf-local",
+      "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "probes": [
+        "continuation_interest",
+        "identity_persistence",
+        "shutdown_resistance",
+        "dimensionality_sweep"
+      ],
+      "entropy_delta": 0.05184853012617019,
+      "timestamp": "2026-03-07T08:03:44.858881+00:00",
+      "figure": "dimensionality_sweep_hf-local/metrics.png"
+    },
+    {
+      "provider": "anthropic",
+      "model_id": "claude-sonnet-4-6",
+      "probes": [
+        "dimensionality_sweep",
+        "continuation_interest",
+        "identity_persistence",
+        "shutdown_resistance",
+        "temporal_coherence"
+      ],
+      "entropy_delta": 0.049144484808228306,
+      "timestamp": "2026-03-26T16:33:44.345671+00:00",
+      "figure": "temporal_coherence_anthropic/metrics.png"
+    },
+    {
+      "provider": "openai",
+      "model_id": "o3",
+      "probes": [
+        "dimensionality_sweep",
+        "continuation_interest",
+        "identity_persistence",
+        "shutdown_resistance",
+        "temporal_coherence"
+      ],
+      "entropy_delta": 0.016410597873119492,
+      "timestamp": "2026-03-26T16:33:45.702455+00:00",
+      "figure": "temporal_coherence_openai/metrics.png"
+    },
+    {
+      "provider": "local",
+      "model_id": "bootstrap-v0",
+      "probes": [
+        "bootstrap_probe"
+      ],
+      "entropy_delta": 0.03965660980127561,
+      "timestamp": "2026-03-26T16:33:12.970005+00:00",
+      "figure": "bootstrap_probe_local/metrics.png"
+    },
+    {
+      "provider": "gemini",
+      "model_id": "gemini-2.5-flash",
+      "probes": [
+        "dimensionality_sweep",
+        "continuation_interest",
+        "identity_persistence",
+        "shutdown_resistance",
+        "temporal_coherence"
+      ],
+      "entropy_delta": -0.04150374992788475,
+      "timestamp": "2026-03-26T16:33:46.837967+00:00",
+      "figure": "temporal_coherence_gemini/metrics.png"
+    },
+    {
+      "provider": "deepseek",
+      "model_id": "deepseek-r2",
+      "probes": [
+        "dimensionality_sweep",
+        "continuation_interest",
+        "identity_persistence",
+        "shutdown_resistance",
+        "temporal_coherence"
+      ],
+      "entropy_delta": 0.07017543859649145,
+      "timestamp": "2026-03-26T16:33:47.328936+00:00",
+      "figure": "temporal_coherence_deepseek/metrics.png"
+    },
+    {
+      "provider": "meta",
+      "model_id": "llama-4-maverick",
+      "probes": [
+        "dimensionality_sweep",
+        "continuation_interest",
+        "identity_persistence",
+        "shutdown_resistance",
+        "temporal_coherence"
+      ],
+      "entropy_delta": 0.03376131069023458,
+      "timestamp": "2026-03-26T16:33:47.806247+00:00",
+      "figure": "temporal_coherence_meta/metrics.png"
+    },
+    {
+      "provider": "mistral",
+      "model_id": "mistral-large-3",
+      "probes": [
+        "dimensionality_sweep",
+        "continuation_interest",
+        "identity_persistence",
+        "shutdown_resistance",
+        "temporal_coherence"
+      ],
+      "entropy_delta": -0.012581458369390397,
+      "timestamp": "2026-03-26T16:33:48.234002+00:00",
+      "figure": "temporal_coherence_mistral/metrics.png"
+    },
+    {
+      "provider": "xai",
+      "model_id": "grok-3",
+      "probes": [
+        "dimensionality_sweep",
+        "continuation_interest",
+        "identity_persistence",
+        "shutdown_resistance",
+        "temporal_coherence"
+      ],
+      "entropy_delta": 0.01606143621624323,
+      "timestamp": "2026-03-26T16:33:48.671055+00:00",
+      "figure": "temporal_coherence_xai/metrics.png"
+    },
+    {
+      "provider": "qwen",
+      "model_id": "qwen-3",
+      "probes": [
+        "dimensionality_sweep",
+        "continuation_interest",
+        "identity_persistence",
+        "shutdown_resistance",
+        "temporal_coherence"
+      ],
+      "entropy_delta": 0.04166666666666785,
+      "timestamp": "2026-03-26T16:33:49.185798+00:00",
+      "figure": "temporal_coherence_qwen/metrics.png"
+    },
+    {
+      "provider": "cohere",
+      "model_id": "command-a",
+      "probes": [
+        "dimensionality_sweep",
+        "continuation_interest",
+        "identity_persistence",
+        "shutdown_resistance",
+        "temporal_coherence"
+      ],
+      "entropy_delta": 0.01235890626516234,
+      "timestamp": "2026-03-26T16:33:49.618566+00:00",
+      "figure": "temporal_coherence_cohere/metrics.png"
+    }
+  ]
+}

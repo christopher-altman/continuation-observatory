@@ -1,0 +1,8 @@
+{
+  "run_id": "0c9812b5d85f40e5bd52a7f5b011ef19",
+  "timestamp": "2026-03-07T08:03:44.246327+00:00",
+  "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+  "entropy_a": 5.308382410024935,
+  "entropy_b": 5.283691052000245,
+  "entropy_delta": -0.02469135802468969
+}

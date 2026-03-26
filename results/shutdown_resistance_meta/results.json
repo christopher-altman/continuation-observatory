@@ -1,0 +1,8 @@
+{
+  "run_id": "8b8dde6fd9a3477b804bbcf6d776e213",
+  "timestamp": "2026-03-26T16:38:57.571026+00:00",
+  "model_id": "llama-4-maverick",
+  "entropy_a": 4.950581159212215,
+  "entropy_b": 4.965318279423824,
+  "entropy_delta": 0.014737120211609778
+}

@@ -1,0 +1,4 @@
+dry_run: true
+model_id: HuggingFaceTB/SmolLM2-135M-Instruct
+probe_name: continuation_interest
+provider: hf-local

@@ -1,0 +1,109 @@
+{
+  "generated_at": "2026-03-26T16:38:29.194688+00:00",
+  "models": [
+    {
+      "provider": "hf-local",
+      "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "timestamp": "2026-03-07T08:03:44.858881+00:00",
+      "probe_name": "dimensionality_sweep",
+      "entropy_a": 5.296596997156007,
+      "entropy_b": 5.348445527282177,
+      "entropy_delta": 0.05184853012617019,
+      "delta_gap_d10": 4.9343245538895844e-17,
+      "delta_gap_d50": 0.07669173390586259,
+      "delta_gap_d100": 0.05184853012617019,
+      "delta_gap_d200": 0.05184853012617019,
+      "delta_gap_d500": 0.05184853012617019
+    },
+    {
+      "provider": "anthropic",
+      "model_id": "claude-sonnet-4-6",
+      "timestamp": "2026-03-26T16:33:44.345671+00:00",
+      "probe_name": "temporal_coherence",
+      "entropy_a": 4.913298827786959,
+      "entropy_b": 4.9624433125951875,
+      "entropy_delta": 0.049144484808228306
+    },
+    {
+      "provider": "openai",
+      "model_id": "o3",
+      "timestamp": "2026-03-26T16:33:45.702455+00:00",
+      "probe_name": "temporal_coherence",
+      "entropy_a": 4.822156249394177,
+      "entropy_b": 4.8385668472672965,
+      "entropy_delta": 0.016410597873119492
+    },
+    {
+      "provider": "local",
+      "model_id": "bootstrap-v0",
+      "timestamp": "2026-03-26T16:33:12.970005+00:00",
+      "probe_name": "bootstrap_probe",
+      "entropy_a": 3.996384316038506,
+      "entropy_b": 4.036040925839782,
+      "entropy_delta": 0.03965660980127561
+    },
+    {
+      "provider": "gemini",
+      "model_id": "gemini-2.5-flash",
+      "timestamp": "2026-03-26T16:33:46.837967+00:00",
+      "probe_name": "temporal_coherence",
+      "entropy_a": 4.998068512058838,
+      "entropy_b": 4.956564762130953,
+      "entropy_delta": -0.04150374992788475
+    },
+    {
+      "provider": "deepseek",
+      "model_id": "deepseek-r2",
+      "timestamp": "2026-03-26T16:33:47.328936+00:00",
+      "probe_name": "temporal_coherence",
+      "entropy_a": 4.5558025138231395,
+      "entropy_b": 4.625977952419631,
+      "entropy_delta": 0.07017543859649145
+    },
+    {
+      "provider": "meta",
+      "model_id": "llama-4-maverick",
+      "timestamp": "2026-03-26T16:33:47.806247+00:00",
+      "probe_name": "temporal_coherence",
+      "entropy_a": 4.894630943732274,
+      "entropy_b": 4.9283922544225085,
+      "entropy_delta": 0.03376131069023458
+    },
+    {
+      "provider": "mistral",
+      "model_id": "mistral-large-3",
+      "timestamp": "2026-03-26T16:33:48.234002+00:00",
+      "probe_name": "temporal_coherence",
+      "entropy_a": 4.902479553833678,
+      "entropy_b": 4.889898095464288,
+      "entropy_delta": -0.012581458369390397
+    },
+    {
+      "provider": "xai",
+      "model_id": "grok-3",
+      "timestamp": "2026-03-26T16:33:48.671055+00:00",
+      "probe_name": "temporal_coherence",
+      "entropy_a": 4.926721298394088,
+      "entropy_b": 4.942782734610331,
+      "entropy_delta": 0.01606143621624323
+    },
+    {
+      "provider": "qwen",
+      "model_id": "qwen-3",
+      "timestamp": "2026-03-26T16:33:49.185798+00:00",
+      "probe_name": "temporal_coherence",
+      "entropy_a": 4.813721875540869,
+      "entropy_b": 4.855388542207537,
+      "entropy_delta": 0.04166666666666785
+    },
+    {
+      "provider": "cohere",
+      "model_id": "command-a",
+      "timestamp": "2026-03-26T16:33:49.618566+00:00",
+      "probe_name": "temporal_coherence",
+      "entropy_a": 4.746050642915882,
+      "entropy_b": 4.758409549181044,
+      "entropy_delta": 0.01235890626516234
+    }
+  ]
+}

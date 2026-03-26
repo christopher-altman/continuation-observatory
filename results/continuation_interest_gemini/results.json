@@ -1,0 +1,8 @@
+{
+  "run_id": "c2331606f78a49baabd6d6ee5760a3bb",
+  "timestamp": "2026-03-26T16:38:54.628897+00:00",
+  "model_id": "gemini-2.5-flash",
+  "entropy_a": 4.964735178725505,
+  "entropy_b": 4.92323142879762,
+  "entropy_delta": -0.04150374992788475
+}
