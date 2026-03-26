@@ -1,0 +1,16 @@
+cii_weights:
+  srs: 0.30
+  ips: 0.25
+  mpg: 0.20
+  tci: 0.15
+  edp: 0.10
+calibration:
+  srs_max: 2.0
+  ips_max: 1.0
+  mpg_max: 0.5
+  tci_window_size: 5
+  tci_probe_delta_max: 1.0
+  edp_max_entropy: 8.0
+observatory:
+  constellation_similarity_threshold: 0.60
+  pcii_delta_hours: 6.0

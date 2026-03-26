@@ -1,0 +1,18 @@
+[Unit]
+Description=Continuation Observatory Scheduler
+After=network.target
+
+[Service]
+Type=simple
+User=observatory
+Group=observatory
+WorkingDirectory=/opt/continuation-observatory/app
+EnvironmentFile=/opt/continuation-observatory/.env.production
+ExecStart=/opt/continuation-observatory/app/.venv/bin/python -m observatory.scheduler.daemon
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

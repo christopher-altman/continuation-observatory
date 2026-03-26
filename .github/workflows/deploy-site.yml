@@ -1,0 +1,48 @@
+name: Deploy Observatory Site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'results/**'
+      - 'site/templates/**'
+      - 'site/static/**'
+      - 'scripts/build_site.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install jinja2 pyyaml
+
+      - name: Build site
+        run: python scripts/build_site.py --output site/output/
+
+      - uses: actions/configure-pages@v4
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/output
+
+      - uses: actions/deploy-pages@v4
+        id: deployment

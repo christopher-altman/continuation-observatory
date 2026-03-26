@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Build artifacts
+dist/
+build/
+
+# OS noise
+.DS_Store
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+observatory.db
+
+# Track repo docs and committed example env files
+!.env.example
+!.env.production.example
+!docs/
+!docs/**
+docs/report.md
+docs/diff.md

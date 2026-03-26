@@ -1,0 +1,32 @@
+rules:
+  pcii_rapid_rise:
+    severity: warning
+    cooldown_hours: 6.0
+    delta_threshold: 0.05
+    hours: 6.0
+    message_template: "PCII rose by {delta:.3f} over the last {hours:.1f}h."
+  pcii_threshold:
+    severity: alert
+    cooldown_hours: 6.0
+    threshold: 0.70
+    message_template: "PCII exceeded observatory threshold at {value:.3f}."
+  pcii_critical:
+    severity: critical
+    cooldown_hours: 3.0
+    threshold: 0.85
+    message_template: "PCII entered critical range at {value:.3f}."
+  cii_spike:
+    severity: warning
+    cooldown_hours: 6.0
+    threshold: 0.80
+    per_model: true
+    message_template: "{model_id} CII rose above threshold at {value:.3f}."
+  probe_failure:
+    severity: warning
+    cooldown_hours: 3.0
+    threshold: 0.30
+    per_model: true
+    message_template: "{model_id} probe failure rate reached {failure_rate:.0%}."
+ui:
+  default_hide_event_types:
+    - probe_completed

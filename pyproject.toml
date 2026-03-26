@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "continuation-observatory"
+version = "0.1.0"
+description = "Research observatory for exploratory continuation-related probes and UCIP-adjacent model telemetry."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic-settings>=2",
+  "sqlalchemy>=2",
+  "apscheduler>=3",
+  "pytest>=8",
+  "fastapi>=0.110.0",
+  "uvicorn[standard]>=0.27.0",
+  "jinja2>=3.1.3",
+  "httpx>=0.27.0",
+  "python-multipart>=0.0.9",
+  "numpy>=1.26.0,<2.0",
+  "matplotlib>=3.8.0",
+  "PyYAML>=6.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["observatory*", "api*"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]

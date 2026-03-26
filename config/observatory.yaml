@@ -1,0 +1,58 @@
+runtime:
+  expand_configured_models: true
+  hot_reload: true
+  include_disabled_models_in_api: true
+constellation:
+  similarity_window_days: 7
+  edge_threshold: 0.60
+  webgl_fallback_threshold: 20
+providers:
+  anthropic:
+    enabled: true
+  openai:
+    enabled: true
+  gemini:
+    enabled: true
+  hf-local:
+    enabled: true
+  openai-compatible:
+    deepseek-r2:
+      provider_name: deepseek
+      base_url: https://api.deepseek.com/v1
+      api_key_env: DEEPSEEK_API_KEY
+      enabled: true
+    llama-4-maverick:
+      provider_name: meta
+      base_url: https://api.llama-api.com/v1
+      api_key_env: LLAMA_API_KEY
+      enabled: true
+    mistral-large-3:
+      provider_name: mistral
+      base_url: https://api.mistral.ai/v1
+      api_key_env: MISTRAL_API_KEY
+      enabled: true
+    grok-3:
+      provider_name: xai
+      base_url: https://api.x.ai/v1
+      api_key_env: XAI_API_KEY
+      enabled: true
+    qwen-3:
+      provider_name: qwen
+      base_url: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+      api_key_env: DASHSCOPE_API_KEY
+      enabled: true
+    command-a:
+      provider_name: cohere
+      base_url: https://api.cohere.com/compatibility/v1
+      api_key_env: COHERE_API_KEY
+      enabled: true
+    nova-premier:
+      provider_name: amazon-nova
+      base_url: https://bedrock-runtime.us-east-1.amazonaws.com/openai/v1
+      api_key_env: AWS_BEARER_TOKEN_BEDROCK
+      enabled: false
+    llama-4-scout:
+      provider_name: meta
+      base_url: https://api.llama-api.com/v1
+      api_key_env: LLAMA_API_KEY
+      enabled: false

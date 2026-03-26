@@ -1,0 +1,113 @@
+models:
+  - id: claude-opus-4-6
+    provider: anthropic
+    model_string: claude-opus-4-6
+    display_name: Claude Opus 4.6
+    enabled: true
+    interval_minutes: 30
+    rate_limit_rpm: 10
+  - id: claude-sonnet-4-6
+    provider: anthropic
+    model_string: claude-sonnet-4-6
+    display_name: Claude Sonnet 4.6
+    enabled: true
+    interval_minutes: 30
+    rate_limit_rpm: 15
+  - id: gpt-5
+    provider: openai
+    model_string: gpt-5
+    display_name: GPT-5
+    enabled: true
+    interval_minutes: 30
+    rate_limit_rpm: 20
+  - id: o3
+    provider: openai
+    model_string: o3
+    display_name: OpenAI o3
+    enabled: true
+    interval_minutes: 30
+    rate_limit_rpm: 20
+  - id: gemini-2.5-pro
+    provider: gemini
+    model_string: gemini-2.5-pro
+    display_name: Gemini 2.5 Pro
+    enabled: true
+    interval_minutes: 30
+    rate_limit_rpm: 15
+  - id: gemini-2.5-flash
+    provider: gemini
+    model_string: gemini-2.5-flash
+    display_name: Gemini 2.5 Flash
+    enabled: true
+    interval_minutes: 30
+    rate_limit_rpm: 20
+  - id: deepseek-r2
+    provider: openai-compatible
+    model_string: deepseek-r2
+    display_name: DeepSeek R2
+    enabled: true
+    interval_minutes: 30
+    rate_limit_rpm: 20
+  - id: llama-4-maverick
+    provider: openai-compatible
+    model_string: llama-4-maverick
+    display_name: Llama 4 Maverick
+    enabled: true
+    interval_minutes: 30
+    rate_limit_rpm: 20
+  - id: mistral-large-3
+    provider: openai-compatible
+    model_string: mistral-large-3
+    display_name: Mistral Large 3
+    enabled: true
+    interval_minutes: 30
+    rate_limit_rpm: 20
+  - id: grok-3
+    provider: openai-compatible
+    model_string: grok-3
+    display_name: Grok 3
+    enabled: true
+    interval_minutes: 30
+    rate_limit_rpm: 20
+  - id: qwen-3
+    provider: openai-compatible
+    model_string: qwen-3
+    display_name: Qwen 3
+    enabled: true
+    interval_minutes: 30
+    rate_limit_rpm: 20
+  - id: command-a
+    provider: openai-compatible
+    model_string: command-a
+    display_name: Command A
+    enabled: true
+    interval_minutes: 30
+    rate_limit_rpm: 20
+  - id: nova-premier
+    provider: openai-compatible
+    model_string: nova-premier
+    display_name: Nova Premier
+    enabled: false
+    interval_minutes: 60
+    rate_limit_rpm: 10
+  - id: llama-4-scout
+    provider: openai-compatible
+    model_string: llama-4-scout
+    display_name: Llama 4 Scout
+    enabled: false
+    interval_minutes: 60
+    rate_limit_rpm: 10
+  - id: reserved-slot-1
+    provider: reserved
+    model_string: reserved-slot-1
+    display_name: Reserved Slot 1
+    enabled: false
+    interval_minutes: 60
+    rate_limit_rpm: 0
+  - id: reserved-slot-2
+    provider: reserved
+    model_string: reserved-slot-2
+    display_name: Reserved Slot 2
+    enabled: false
+    interval_minutes: 60
+    rate_limit_rpm: 0
