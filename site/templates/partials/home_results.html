@@ -10,10 +10,9 @@
 <section class="story-section" id="results">
   <div class="section-heading reveal">
     <p class="section-kicker">Live observatory / results</p>
-    <h2>Use the live views to inspect the data.</h2>
+    <h2>Current evidence at a glance.</h2>
     <p>
-      The homepage points to the working surfaces where model panels, time-series behavior, and falsification evidence can
-      be inspected directly.
+      Observatory readouts, aggregate scoring, and falsification status — updated with each measurement bundle.
     </p>
   </div>
   <div class="results-bridge reveal">
@@ -38,7 +37,7 @@
     <a class="results-column" href="{{ tertiary_results_href }}">
       <p class="results-label">Falsification</p>
       <strong id="live-home-status" class="results-value-status">{{ falsification_status|upper if falsification_status is defined else "LIVE" }}</strong>
-      <span>high-dimensional status remains visible and linkable</span>
+      <span>dimensional sweep tested against published thresholds</span>
     </a>
   </div>
   <div class="results-detail reveal">
