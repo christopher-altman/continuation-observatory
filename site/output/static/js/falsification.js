@@ -174,11 +174,14 @@
         maintainAspectRatio: false,
         plugins: {
           legend: {
+            position: "bottom",
+            maxHeight: 88,
             labels: {
               color: mutedColor,
-              font: { family: "'JetBrains Mono', monospace", size: 11 },
-              boxWidth: 14,
-              padding: 14,
+              font: { family: "'JetBrains Mono', monospace", size: 10 },
+              boxWidth: 12,
+              padding: 10,
+              usePointStyle: true,
               filter: (item) => !item.text.startsWith("Threshold"),
             },
           },

@@ -512,11 +512,14 @@ pre {
   font-size: clamp(2.72rem, 5.6vw, 4.75rem);
   font-weight: 200;
   line-height: 0.94;
-  letter-spacing: -0.006em;
   text-wrap: balance;
   text-shadow:
     0 0 34px rgba(120, 186, 255, 0.92),
     0 0 78px rgba(120, 186, 255, 0.34);
+}
+
+.hero-brand.brand-wordmark {
+  letter-spacing: 0.014em;
 }
 
 .hero-brand-continuation,
@@ -1115,6 +1118,26 @@ pre {
   color: var(--accent-strong);
 }
 
+.manifesto-section {
+  display: grid;
+  gap: 1.35rem;
+}
+
+.exec-summary h2.manifesto-section-title,
+.manifesto-section h2.manifesto-section-title {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 1.5rem;
+  line-height: 1.6;
+  font-weight: 700;
+  letter-spacing: normal;
+  text-wrap: pretty;
+}
+
+.manifesto-section + .manifesto-section {
+  margin-top: 1.1rem;
+}
+
 .section-title,
 .subsection-title {
   margin: 2rem 0 1rem;
@@ -1200,6 +1223,30 @@ textarea {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: rgba(8, 13, 23, 0.4);
+}
+
+.chart-container--falsification {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+  height: min(72vh, 640px);
+  min-height: 420px;
+}
+
+.chart-container--falsification .chart-header {
+  margin-bottom: 0;
+}
+
+.chart-container--falsification .collecting-msg {
+  margin: 0;
+}
+
+#falsification-chart {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0;
 }
 
 .chart-header,
@@ -2514,6 +2561,11 @@ html.theme-transitions *::after {
 
   .hero-brand {
     font-size: clamp(3rem, 18vw, 4.7rem);
+  }
+
+  .chart-container--falsification {
+    height: min(62vh, 460px);
+    min-height: 320px;
   }
 
   .site-footer {

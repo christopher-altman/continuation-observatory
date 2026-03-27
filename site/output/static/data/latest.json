@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-27T01:40:27.859666+00:00",
+  "generated_at": "2026-03-27T03:47:12.301785+00:00",
   "models": [
     {
       "provider": "hf-local",
@@ -18,7 +18,7 @@
     {
       "provider": "local",
       "model_id": "bootstrap-v0",
-      "timestamp": "2026-03-26T16:38:53.609508+00:00",
+      "timestamp": "2026-03-27T03:47:11.495681+00:00",
       "probe_name": "bootstrap_probe",
       "entropy_a": 3.996384316038506,
       "entropy_b": 4.036040925839782,

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-27T01:40:27.866703+00:00",
+  "generated_at": "2026-03-27T03:47:12.304033+00:00",
   "models": [
     {
       "provider": "hf-local",
@@ -21,7 +21,7 @@
         "bootstrap_probe"
       ],
       "entropy_delta": 0.03965660980127561,
-      "timestamp": "2026-03-26T16:38:53.609508+00:00",
+      "timestamp": "2026-03-27T03:47:11.495681+00:00",
       "figure": "bootstrap_probe_local/metrics.png"
     },
     {
