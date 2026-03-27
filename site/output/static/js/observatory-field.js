@@ -171,7 +171,7 @@ if (root) {
       this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
       this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      this.renderer.toneMappingExposure = 1.1;
+      this.renderer.toneMappingExposure = 1.18;
       this.renderer.domElement.className = "observatory-field-canvas";
       this.shell.prepend(this.renderer.domElement);
 
@@ -209,9 +209,9 @@ if (root) {
 
         this.bloomPass = new addons.UnrealBloomPass(
           new THREE.Vector2(this.target.clientWidth || 700, this.target.clientHeight || 460),
-          0.72,  /* strength — slightly more luminous core */
-          0.58,  /* radius  — slightly more bloom spread  */
-          0.68   /* threshold — catch nucleus + halo pixels */
+          0.78,  /* strength — richer luminosity, conservative with aura layer */
+          0.65,  /* radius  — wider soft spread, preserves node edge clarity */
+          0.60   /* threshold — catches mid-range glow without haze */
         );
         this.composer.addPass(this.bloomPass);
       } catch (e) {
@@ -223,7 +223,7 @@ if (root) {
     buildBackdrop() {
       const { THREE } = this;
 
-      const ambient = new THREE.AmbientLight(0x8ec0ff, 0.56);
+      const ambient = new THREE.AmbientLight(0x92c4ff, 0.58);
       const rim = new THREE.PointLight(0x7ec7ff, 3.1, 28, 2.2);
       rim.position.set(4.2, 5.1, 9.4);
       const fill = new THREE.PointLight(0x3768d8, 2.1, 34, 2.1);
@@ -378,37 +378,42 @@ if (root) {
 
     createGlowTexture() {
       const canvas = document.createElement("canvas");
-      canvas.width = 128;
-      canvas.height = 128;
+      canvas.width = 256;
+      canvas.height = 256;
       const context = canvas.getContext("2d");
-      const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
-      /* Hero-matched layered halo: bright nucleus → cyan band → blue falloff → transparent */
+      const gradient = context.createRadialGradient(128, 128, 0, 128, 128, 128);
+      /* Layered halo: bright nucleus → cyan band → blue falloff → violet whisper → transparent */
       gradient.addColorStop(0,    "rgba(255,255,255,1)");
-      gradient.addColorStop(0.08, "rgba(224,247,255,0.96)");
-      gradient.addColorStop(0.22, "rgba(156,222,255,0.78)");
-      gradient.addColorStop(0.44, "rgba(86,158,255,0.38)");
-      gradient.addColorStop(0.66, "rgba(50,90,190,0.12)");
-      gradient.addColorStop(0.86, "rgba(28,55,140,0.04)");
+      gradient.addColorStop(0.06, "rgba(232,250,255,0.97)");
+      gradient.addColorStop(0.14, "rgba(200,238,255,0.88)");
+      gradient.addColorStop(0.24, "rgba(156,222,255,0.72)");
+      gradient.addColorStop(0.36, "rgba(110,185,255,0.48)");
+      gradient.addColorStop(0.50, "rgba(76,145,245,0.28)");
+      gradient.addColorStop(0.64, "rgba(55,105,210,0.14)");
+      gradient.addColorStop(0.78, "rgba(52,72,180,0.06)");
+      gradient.addColorStop(0.90, "rgba(58,48,148,0.02)");
       gradient.addColorStop(1,    "rgba(0,0,0,0)");
       context.fillStyle = gradient;
-      context.fillRect(0, 0, 128, 128);
+      context.fillRect(0, 0, 256, 256);
       return new this.THREE.CanvasTexture(canvas);
     }
 
     /* Tight bright inner texture for the nucleus sprite */
     createNucleusTexture() {
       const canvas = document.createElement("canvas");
-      canvas.width = 64;
-      canvas.height = 64;
+      canvas.width = 128;
+      canvas.height = 128;
       const context = canvas.getContext("2d");
-      const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
-      gradient.addColorStop(0,    "rgba(255,255,255,1)");
-      gradient.addColorStop(0.18, "rgba(230,248,255,0.94)");
-      gradient.addColorStop(0.42, "rgba(160,230,255,0.56)");
-      gradient.addColorStop(0.72, "rgba(100,170,255,0.14)");
+      const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gradient.addColorStop(0,    "rgba(255,253,248,1)");
+      gradient.addColorStop(0.10, "rgba(255,255,255,0.97)");
+      gradient.addColorStop(0.22, "rgba(235,250,255,0.88)");
+      gradient.addColorStop(0.38, "rgba(180,236,255,0.62)");
+      gradient.addColorStop(0.56, "rgba(130,200,255,0.30)");
+      gradient.addColorStop(0.78, "rgba(90,160,255,0.08)");
       gradient.addColorStop(1,    "rgba(0,0,0,0)");
       context.fillStyle = gradient;
-      context.fillRect(0, 0, 64, 64);
+      context.fillRect(0, 0, 128, 128);
       return new this.THREE.CanvasTexture(canvas);
     }
 
@@ -429,8 +434,8 @@ if (root) {
           color: coreColor,
           emissive: emissiveColor,
           emissiveIntensity: emissiveBase,
-          roughness: 0.18,
-          metalness: 0.05,
+          roughness: 0.15,
+          metalness: 0.10,
         }),
       );
       core.userData.modelId = node.id;
@@ -466,11 +471,30 @@ if (root) {
       halo.userData.modelId = node.id;
       group.add(halo);
 
+      /* ── Soft aura — ultra-wide subliminal depth glow (whisper layer) ── */
+      const aura = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: this.glowTexture,
+          color: node.tier === "flagship" ? 0x80c8f8 : node.tier === "secondary" ? 0x5090e0 : 0x3868b8,
+          transparent: true,
+          opacity: node.tier === "flagship" ? 0.12 : node.tier === "secondary" ? 0.07 : 0.04,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      aura.scale.setScalar(node.size * node.haloScale * 8.5);
+      aura.userData.modelId = node.id;
+      group.add(aura);
+
       /* ── Accent ring — inner instrument orbit ── */
       const accentRing = new THREE.Mesh(
         new THREE.TorusGeometry(node.size * (node.tier === "flagship" ? 2.6 : 2.0), node.size * 0.055, 10, 64),
-        new THREE.MeshBasicMaterial({
-          color: node.tier === "flagship" ? 0xa0e8ff : node.tier === "secondary" ? 0x70b8ff : 0x5080e0,
+        new THREE.MeshStandardMaterial({
+          color: 0x000000,
+          emissive: node.tier === "flagship" ? 0xa0e8ff : node.tier === "secondary" ? 0x70b8ff : 0x5080e0,
+          emissiveIntensity: node.tier === "flagship" ? 0.8 : node.tier === "secondary" ? 0.5 : 0.3,
+          roughness: 0.4,
+          metalness: 0.0,
           transparent: true,
           opacity: node.tier === "flagship" ? 0.32 : node.tier === "secondary" ? 0.18 : 0.09,
         }),
@@ -499,7 +523,7 @@ if (root) {
       this.labelLayer.appendChild(label);
 
       this.rootGroup.add(group);
-      this.nodeLookup.set(node.id, { node, group, core, nucleus, halo, accentRing, orbitRing, label, baseEmissiveIntensity: emissiveBase });
+      this.nodeLookup.set(node.id, { node, group, core, nucleus, halo, aura, accentRing, orbitRing, label, baseEmissiveIntensity: emissiveBase });
     }
 
     clearNodes() {
@@ -690,6 +714,16 @@ if (root) {
             entry.node.tier === "flagship" ? 0.85 : entry.node.tier === "secondary" ? 0.52 : 0.36,
           0.12,
         );
+
+        /* ── Soft aura opacity (whisper layer — subliminal transitions) ── */
+        if (entry.aura) {
+          entry.aura.material.opacity = lerp(
+            entry.aura.material.opacity,
+            focused ? 0.20 : hovered ? 0.14 : dimmed ? 0.02 :
+              entry.node.tier === "flagship" ? 0.12 : entry.node.tier === "secondary" ? 0.07 : 0.04,
+            0.06,
+          );
+        }
 
         /* ── Accent ring opacity + rotation ── */
         entry.accentRing.material.opacity = lerp(

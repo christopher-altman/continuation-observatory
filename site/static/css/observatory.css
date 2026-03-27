@@ -1297,7 +1297,7 @@ textarea {
     radial-gradient(circle at 52% 72%, rgba(143, 231, 255, 0.12), transparent 30%),
     linear-gradient(180deg, rgba(5, 10, 19, 0.94), rgba(6, 11, 20, 0.72));
   border: 1px solid rgba(121, 174, 255, 0.16);
-  box-shadow: inset 0 0 0 1px rgba(146, 204, 255, 0.08), 0 28px 90px rgba(3, 11, 25, 0.4);
+  box-shadow: inset 0 0 0 1px rgba(146, 204, 255, 0.10), inset 0 0 60px rgba(80, 160, 255, 0.03), 0 28px 90px rgba(3, 11, 25, 0.44);
 }
 
 .observatory-field-shell,
@@ -1314,9 +1314,9 @@ textarea {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 22% 24%, rgba(101, 168, 255, 0.18), transparent 24%),
-    radial-gradient(circle at 76% 20%, rgba(111, 224, 255, 0.1), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 26%);
+    radial-gradient(circle at 22% 24%, rgba(101, 168, 255, 0.20), transparent 25%),
+    radial-gradient(circle at 76% 20%, rgba(111, 224, 255, 0.12), transparent 29%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 28%);
   pointer-events: none;
 }
 
@@ -1332,8 +1332,8 @@ textarea {
 
 .observatory-field-shell.is-active::after,
 .observatory-fallback-field.is-active::after {
-  border-color: rgba(143, 231, 255, 0.28);
-  box-shadow: inset 0 0 0 1px rgba(143, 231, 255, 0.08), 0 0 0 1px rgba(143, 231, 255, 0.08);
+  border-color: rgba(143, 231, 255, 0.30);
+  box-shadow: inset 0 0 0 1px rgba(143, 231, 255, 0.09), 0 0 0 1px rgba(143, 231, 255, 0.09), 0 0 20px rgba(120, 200, 255, 0.04);
 }
 
 .observatory-field-canvas,
