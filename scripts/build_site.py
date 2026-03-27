@@ -526,7 +526,7 @@ def build(output_dir: Path, exports_only: bool = False) -> None:
         "asset_prefix": "static",
         "asset_version": _now_iso(),
         "home_href": "index.html",
-        "github_href": "https://github.com/christopher-altman/continuation-observatory",
+        "github_href": "https://github.com/christopher-altman/persistence-signal-detector",
         "contact_href": "mailto:x@christopheraltman.com",
         "marquee_models": marquee_models,
         "home_signal_score": home_signal_score,

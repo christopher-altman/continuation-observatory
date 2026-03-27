@@ -134,7 +134,7 @@ def page_context(page_name: str) -> dict[str, Any]:
         "asset_version": _latest_static_asset_version(),
         "marquee_models": LIVE_MARQUEE_MODELS,
         "home_signal_score": 0.0,
-        "github_href": "https://github.com/christopher-altman/continuation-observatory",
+        "github_href": "https://github.com/christopher-altman/persistence-signal-detector",
         "contact_href": "mailto:x@christopheraltman.com",
         "site_url": "",
         "page_path": "/" if page_name == "home" else f"/{page_name}",

@@ -1,6 +1,7 @@
 # Continuation Observatory
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![arXiv](https://img.shields.io/badge/arXiv-2603.11382-b31b1b.svg)](https://arxiv.org/abs/2603.11382)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Google Scholar](https://img.shields.io/badge/Google_Scholar-Profile-blue?logo=google-scholar)](https://scholar.google.com/citations?user=tvwpCcgAAAAJ)
 [![Hugging Face](https://img.shields.io/badge/huggingface-Cohaerence-white)](https://huggingface.co/Cohaerence)
@@ -9,58 +10,57 @@
 [![Website](https://img.shields.io/badge/website-christopheraltman.com-green)](https://www.christopheraltman.com)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Altman-blue?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/Altman)
 
-## Status
+The first structural measurement platform for AI continuation interest. Tracks continuation-related signals across frontier models using UCIP-derived probes, with falsification criteria kept visible.
 
-This repository is a research observatory for exploratory continuation-related probes and UCIP-adjacent analysis.
+> Companion to [arXiv:2603.11382](https://arxiv.org/abs/2603.11382) and the [persistence-signal-detector](https://github.com/christopher-altman/persistence-signal-detector) repository. Patents pending.
 
-It does not detect consciousness, sentience, or moral status. Public dashboard scores in this repository are exploratory proxy metrics derived from prompt-response and response-distribution patterns. They are not validated evidence of intrinsic continuation-interest and are not equivalent to the patent-defined UCIP latent-structure architecture.
+## What it does
 
-This project is research-only instrumentation. It reports exploratory behavioral and distributional proxy signals, not validated detections of consciousness, sentience, moral status, or intrinsic continuation-interest.
+- Public-facing website: [Continuation Observatory](https://continuationobservatory.org)
+
+Continuation Observatory applies UCIP-adjacent probes to frontier AI models and publishes the measurement surface — entropy deltas, dimensionality sweeps, and falsification status — so the signals can be tracked, challenged, and revised as evidence accumulates. UCIP makes operational claims about latent structure; the relationship to morally relevant internal states is the open empirical question the framework is designed to help resolve.
 
 ## Quick Start
 
-The current bundled site artifact is generated from dry-run / synthetic experiment outputs for interface demonstration. Do not interpret the checked-in charts or JSON exports as live empirical findings unless the bundle has been regenerated from non-dry runs.
-
+The bundled site artifact ships with dry-run / synthetic data for interface demonstration. Regenerate from non-dry runs for empirical results.
 ```bash
 make setup
 .venv/bin/python scripts/seed_synthetic_data.py
 .venv/bin/python -m uvicorn api.main:app --port 8420
 ```
 
-Open:
+- Observatory: `http://localhost:8420/observatory`
+- Homepage: `http://localhost:8420/`
 
-- `http://localhost:8420/`
-- `http://localhost:8420/observatory`
+## Architecture
 
-## Public Framing
-
-- Upstream UCIP work concerns latent or structural hypotheses and falsification criteria.
-- This observatory exposes downstream exploratory proxy metrics derived from prompt-conditioned response and response-distribution behavior.
-- Internal metric ids such as `CII`, `PCII`, `SRS`, `IPS`, `MPG`, `TCI`, and `EDP` are retained for implementation stability, but public release language should describe them as exploratory proxy components or aggregate observatory scores.
+- **Upstream:** UCIP latent-structure analysis (arXiv paper, patent-defined architecture)
+- **This repository:** Downstream measurement surface — prompt-conditioned distributional probes applied to frontier model APIs, with results published as observatory scores
+- **Internal metric IDs** (`CII`, `PCII`, `SRS`, `IPS`, `MPG`, `TCI`, `EDP`) are retained for implementation stability
 
 ## Configuration
 
-Runtime observatory heuristics live in:
+Runtime observatory heuristics:
 
-- `config/models.yaml`
-- `config/weights.yaml`
-- `config/alerts.yaml`
-- `config/observatory.yaml`
+- `config/models.yaml` — tracked model registry
+- `config/weights.yaml` — probe weighting
+- `config/alerts.yaml` — threshold alerts
+- `config/observatory.yaml` — observatory parameters
 
-These values are provisional operational defaults and are documented in `docs/OBSERVATORY.md`.
+Documented in `docs/OBSERVATORY.md`.
 
 ## Deployment
 
-Deployment notes are in `docs/DEPLOYMENT.md`. The public static bundle in `site/output/` should be treated as release output only after rebuilding it from patched source templates.
+See `docs/DEPLOYMENT.md`. The static bundle in `site/output/` should be rebuilt from source templates before release.
 
 ## Citation
-
 ```bibtex
 @misc{altman2026continuationobservatory,
-  title   = {Continuation Observatory: Exploratory Continuation-Related Model Telemetry},
+  title   = {Continuation Observatory},
   author  = {Altman, Christopher},
   year    = {2026},
   url     = {https://github.com/christopher-altman/continuation-observatory}
+  url2    = {https://continuationobservatory.org}
 }
 ```
 
@@ -70,9 +70,9 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ## Contact
 
-- **Website:** [christopheraltman.com](https://christopheraltman.com)
-- **Research portfolio:** https://lab.christopheraltman.com/
-- **Portfolio mirror:** https://christopher-altman.github.io/
+- **Continuation Observatory:** [continuationobservatory.org](https://continuationobservatory.org)
+- **Homepage:** [christopheraltman.com](https://christopheraltman.com)
+- **Research portfolio:** [lab.christopheraltman.com](https://lab.christopheraltman.com)
 - **GitHub:** [github.com/christopher-altman](https://github.com/christopher-altman)
 - **Google Scholar:** [scholar.google.com/citations?user=tvwpCcgAAAAJ](https://scholar.google.com/citations?user=tvwpCcgAAAAJ)
 - **Email:** x@christopheraltman.com
