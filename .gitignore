@@ -23,10 +23,14 @@ build/
 *.sqlite3
 observatory.db
 
-# Track repo docs and committed example env files
+# Track assigned repo docs and committed example env files
 !.env.example
 !.env.production.example
-!docs/
-!docs/**
+
+!docs/DEPLOYMENT.md
+!docs/some-public-doc.md
+docs/*
 docs/report.md
 docs/diff.md
+docs/report_*.md
+docs/diff_*.md
