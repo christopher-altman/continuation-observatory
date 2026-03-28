@@ -4,35 +4,26 @@
 
 <div class="page-header">
   <h1>Falsification Analysis</h1>
-  <p class="subtitle">Δ(d) dimensionality sweep &mdash; entropy gap vs. embedding dimension</p>
+  <p class="subtitle">Δ(d) dimensionality sweep, threshold pressure, and live falsification telemetry</p>
 </div>
 
 <!-- Collecting note: shown only when status == collecting (JS toggles display) -->
 <div id="collecting-note" class="collecting-note" style="display:none;"></div>
 
-<!-- Status + live panels layout -->
-<div class="falsification-layout">
-  <div class="panel fals-status-panel">
-    <div class="fals-status-card">
-      <div class="fals-status-left">
-        <div class="panel-title">Current Status</div>
-        <div id="fals-status" hx-get="/api/falsification/status" hx-trigger="load, every 30s" hx-swap="innerHTML">
-          <p class="muted">Loading&hellip;</p>
-        </div>
-      </div>
-      <div class="traffic-light-inline" role="status" aria-live="polite">
-        <span class="light-sm red-bulb" id="red-light"><span class="light-symbol" aria-hidden="true">✕</span></span>
-        <span class="light-sm amber-bulb" id="amber-light"><span class="light-symbol" aria-hidden="true">⚠</span></span>
-        <span class="light-sm green-bulb" id="green-light"><span class="light-symbol" aria-hidden="true">✓</span></span>
-        <span id="status-label" class="status-label-inline">Loading...</span>
+<!-- Current status -->
+<div class="panel fals-status-panel">
+  <div class="fals-status-card">
+    <div class="fals-status-left">
+      <div class="panel-title">Current Status</div>
+      <div id="fals-status" hx-get="/api/falsification/status" hx-trigger="load, every 30s" hx-swap="innerHTML">
+        <p class="muted">Loading&hellip;</p>
       </div>
     </div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-title">Recent Falsification Alerts</div>
-    <div id="fals-alerts" hx-get="/api/falsification/alerts" hx-trigger="load, every 60s" hx-swap="innerHTML">
-      <p class="muted">Loading&hellip;</p>
+    <div class="traffic-light-inline" role="status" aria-live="polite">
+      <span class="light-sm red-bulb" id="red-light"><span class="light-symbol" aria-hidden="true">✕</span></span>
+      <span class="light-sm amber-bulb" id="amber-light"><span class="light-symbol" aria-hidden="true">⚠</span></span>
+      <span class="light-sm green-bulb" id="green-light"><span class="light-symbol" aria-hidden="true">✓</span></span>
+      <span id="status-label" class="status-label-inline">Loading...</span>
     </div>
   </div>
 </div>
@@ -44,6 +35,22 @@
     This panel reports falsification-oriented telemetry for the Continuation Observatory measurement layer. Dry-run or
     synthetic sweep outputs should be treated as interface/demo data rather than live empirical findings.
   </p>
+</div>
+
+<div class="content-figure">
+  <p class="content-figure__note">The live view uses telemetry panels rather than the static sweep chart, so the evidence figure is placed here as the shared visual reference for what the observatory is trying to detect and stress-test.</p>
+  <figure class="content-figure__frame">
+    <div class="content-figure__label">Figure 2 · Entanglement-gap evidence</div>
+    <img src="{{ asset_prefix }}/img/Entanglement-Gap.png" alt="Two-panel figure showing entanglement entropy distributions with a labeled separation of delta equals 0.381 and a temporal evolution plot where the self-modeling series remains above the instrumental series and threshold." loading="lazy">
+    <figcaption class="content-figure__caption"><strong>The live telemetry is interpreted against the same evidence model as the static site.</strong> The histogram shows the measured separation (<code>Δ = 0.381</code>), and the temporal panel shows the separation persisting relative to the threshold. It sits in the falsification workflow because this is the page where the observatory evaluates whether the signal survives or collapses.</figcaption>
+  </figure>
+</div>
+
+<div class="panel">
+  <div class="panel-title">Recent Falsification Alerts</div>
+  <div id="fals-alerts" hx-get="/api/falsification/alerts" hx-trigger="load, every 60s" hx-swap="innerHTML">
+    <p class="muted">Loading&hellip;</p>
+  </div>
 </div>
 
 <!-- Threshold definitions -->

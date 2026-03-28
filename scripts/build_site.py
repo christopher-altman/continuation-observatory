@@ -370,6 +370,7 @@ def render_templates(
 
     pages = [
         ("index.html", "index.html", "Home"),
+        ("observatory.html", "observatory.html", "Observatory"),
         ("timeseries.html", "timeseries.html", "Time Series"),
         ("falsification.html", "falsification.html", "Falsification"),
         ("models.html", "models.html", "Models"),

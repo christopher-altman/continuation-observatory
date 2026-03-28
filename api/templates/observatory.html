@@ -26,29 +26,40 @@
       <div class="observatory-field-key-copy">
         <div class="summary-label">Field Key</div>
         <p class="observatory-field-key-note">
-          Size tracks current CII magnitude. Color tracks rank band in the field, with brighter cores marking the strongest current continuation-related signals.
+          Size tracks current CII magnitude. Color tracks the model's current rank tier in the field, with brighter cores marking the strongest continuation-related signals in the latest snapshot.
         </p>
         <p class="observatory-field-key-note observatory-field-key-note--secondary">
-          Position is a compact readability layout rather than a literal distance scale.
+          Position is a compact readability layout rather than a literal distance scale. The bands are display tiers based on the current ordering, not fixed model categories.
         </p>
       </div>
       <div class="observatory-field-key-items">
         <div class="observatory-field-key-item">
-          <span class="observatory-field-key-swatch observatory-field-key-swatch--flagship"></span>
-          <span>Flagship band</span>
+          <span class="observatory-field-key-swatch observatory-field-key-swatch--flagship" aria-hidden="true"></span>
+          <div class="observatory-field-key-item-copy">
+            <span class="observatory-field-key-item-title">Flagship band</span>
+            <span class="observatory-field-key-item-note">Top 3 models by current CII, shown with the brightest cores and largest halos.</span>
+          </div>
         </div>
         <div class="observatory-field-key-item">
-          <span class="observatory-field-key-swatch observatory-field-key-swatch--secondary"></span>
-          <span>Secondary band</span>
+          <span class="observatory-field-key-swatch observatory-field-key-swatch--secondary" aria-hidden="true"></span>
+          <div class="observatory-field-key-item-copy">
+            <span class="observatory-field-key-item-title">Secondary band</span>
+            <span class="observatory-field-key-item-note">Next 4 models in the current field ordering, rendered with a mid-strength glow.</span>
+          </div>
         </div>
         <div class="observatory-field-key-item">
-          <span class="observatory-field-key-swatch observatory-field-key-swatch--outer"></span>
-          <span>Outer band</span>
+          <span class="observatory-field-key-swatch observatory-field-key-swatch--outer" aria-hidden="true"></span>
+          <div class="observatory-field-key-item-copy">
+            <span class="observatory-field-key-item-title">Outer band</span>
+            <span class="observatory-field-key-item-note">Remaining tracked models, placed in the outer layer with a quieter visual treatment.</span>
+          </div>
         </div>
-        <div class="observatory-field-key-scale" aria-hidden="true">
-          <span class="observatory-field-key-dot observatory-field-key-dot--sm"></span>
-          <span class="observatory-field-key-dot observatory-field-key-dot--md"></span>
-          <span class="observatory-field-key-dot observatory-field-key-dot--lg"></span>
+        <div class="observatory-field-key-scale" aria-label="CII size scale">
+          <span class="observatory-field-key-scale-label">Lower CII</span>
+          <span class="observatory-field-key-dot observatory-field-key-dot--sm" aria-hidden="true"></span>
+          <span class="observatory-field-key-dot observatory-field-key-dot--md" aria-hidden="true"></span>
+          <span class="observatory-field-key-dot observatory-field-key-dot--lg" aria-hidden="true"></span>
+          <span class="observatory-field-key-scale-label">Higher CII</span>
         </div>
       </div>
     </div>
@@ -87,13 +98,9 @@
     <div class="panel-title">Comparative Heatmap</div>
     <div id="heatmap-root" class="heatmap-root"></div>
   </div>
-  <div class="panel">
+  <div class="panel events-panel">
     <div class="events-header">
       <div class="panel-title">Event Feed</div>
-      <label class="event-toggle">
-        <input type="checkbox" id="include-completions">
-        <span>Show completion events</span>
-      </label>
     </div>
     <div id="events-root" class="events-root"></div>
   </div>

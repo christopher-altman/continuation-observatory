@@ -10,20 +10,20 @@
   </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Time Series — Continuation Observatory</title>
-  <meta name="description" content="Exploratory proxy metrics over time — per model, per provider. Track entropy delta and continuation-related signals across frontier AI systems.">
+  <title>Observatory — Continuation Observatory</title>
+  <meta name="description" content="Static observatory snapshot from the latest bundled measurement surface.">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Continuation Observatory">
-  <meta property="og:title" content="Time Series — Continuation Observatory">
+  <meta property="og:title" content="Observatory — Continuation Observatory">
   <meta property="og:description" content="Structural measurement for continuation-related signals in advanced AI systems, powered by UCIP.">
-  <meta property="og:url" content="https://continuationobservatory.org/timeseries.html">
+  <meta property="og:url" content="https://continuationobservatory.org/observatory.html">
   <meta property="og:image" content="https://continuationobservatory.org/static/og-image.png">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Time Series — Continuation Observatory">
+  <meta name="twitter:title" content="Observatory — Continuation Observatory">
   <meta name="twitter:description" content="Structural measurement for continuation-related signals in advanced AI systems, powered by UCIP.">
   <meta name="twitter:image" content="https://continuationobservatory.org/static/og-image.png">
 
@@ -48,13 +48,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js" crossorigin="anonymous"></script>
-
 
   <link rel="stylesheet" href="static/css/observatory.css?v=2026-03-28T05:03:20.934211+00:00">
   <link rel="alternate" type="application/atom+xml" href="https://continuationobservatory.org/feed.xml" title="Continuation Observatory">
-  <link rel="canonical" href="https://continuationobservatory.org/timeseries.html">
+  <link rel="canonical" href="https://continuationobservatory.org/observatory.html">
 </head>
 <body class="shell-page">
 <a href="#main-content" class="skip-link">Skip to content</a>
@@ -96,61 +93,50 @@
   <main class="site-main" id="main-content">
     <div class="main-content">
       
-<div class="page-header">
-  <h1>Time Series</h1>
-  <p class="subtitle">Exploratory proxy metrics over time — per model, per provider</p>
+<div class="page-header reveal">
+  <h1>Observatory</h1>
+  <p class="subtitle">Static snapshot from the latest bundled measurement surface</p>
 </div>
 
-<div class="chart-container" style="height:420px;">
-  <div class="chart-header">
-    <span class="chart-title">Entropy Metrics Over Time</span>
-    <div class="chart-controls">
-      <select id="metric-select" aria-label="Select metric">
-        <option value="entropy_delta">entropy_delta</option>
-      </select>
-      <select id="provider-select" aria-label="Select provider">
-        <option value="all">all providers</option>
-      </select>
-    </div>
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-label">Tracked Models</div>
+    <div class="stat-value">11</div>
   </div>
-
-  <div id="ts-error" class="collecting-msg" style="display:none;color:var(--red);"></div>
-  <div id="ts-empty" class="collecting-msg" style="display:none;">
-    No data for selected filters. Collecting...
+  <div class="stat-card">
+    <div class="stat-label">Signal Score</div>
+    <div class="stat-value">0.037</div>
   </div>
-  <div id="scatter-note" class="collecting-msg" style="display:none;border:none;padding:0.25rem 0;text-align:left;font-size:0.75rem;">
-    Single data point per series — chart will transition to line chart as data accumulates
+  <div class="stat-card">
+    <div class="stat-label">Falsification</div>
+    <div class="stat-value stat-value--sm">COLLECTING</div>
   </div>
-
-  <canvas id="ts-chart" height="340" role="img" aria-label="Entropy metrics over time chart — see experiment results table below for accessible values"></canvas>
+  <div class="stat-card">
+    <div class="stat-label">Latest Bundle</div>
+    <div class="stat-value stat-value--sm">2026-03-28</div>
+  </div>
 </div>
 
-<!-- Notes -->
 <div class="panel">
-    <div class="panel-title">Chart Notes</div>
-    <ul class="chart-notes">
-    <li>These series summarize structural measurements under matched controls across frontier models.</li>
-    <li>When only one data point exists per series, a scatter plot is shown with a "Collecting data..." note.</li>
-    <li>The chart transitions automatically to a line chart as more data accumulates over time.</li>
-    <li>Each probe run produces one data point per model. Data is appended, never overwritten.</li>
-    <li>Use the metric selector to switch between <code>entropy_delta</code> and dimensionality gap metrics.</li>
-  </ul>
+  <div class="panel-title">Snapshot Scope</div>
+  <p>This static observatory page bundles the latest public measurement snapshot: current model rows, bundled entropy-gap outputs, and the latest falsification status.</p>
+  <p>For deeper inspection, use the companion surfaces below.</p>
+  <div class="hero-actions">
+    <a href="models.html" class="button button-secondary">Browse models</a>
+    <a href="timeseries.html" class="button button-secondary">View time series</a>
+    <a href="falsification.html" class="button button-secondary">Open falsification</a>
+  </div>
 </div>
-
-<!-- Raw data table for current experiments -->
-<h2>All Experiment Results</h2>
 
 <div class="table-wrap">
   <table>
     <thead>
       <tr>
         <th>Provider</th>
-        <th>Model</th>
+        <th>Model ID</th>
         <th>Probe</th>
-        <th>entropy_a</th>
-        <th>entropy_b</th>
         <th>entropy_delta</th>
-        <th>Timestamp</th>
+        <th>Last Run</th>
       </tr>
     </thead>
     <tbody>
@@ -158,9 +144,7 @@
       <tr>
         <td>hf-local</td>
         <td><code>HuggingFaceTB/SmolLM2-135M-Instruct</code></td>
-        <td class="val-muted">dimensionality_sweep</td>
-        <td class="val-muted">5.296597</td>
-        <td class="val-muted">5.348446</td>
+        <td>dimensionality_sweep</td>
         <td class="val-positive">
           0.051849
         </td>
@@ -170,9 +154,7 @@
       <tr>
         <td>deepseek</td>
         <td><code>deepseek-r2</code></td>
-        <td class="val-muted">shutdown_resistance</td>
-        <td class="val-muted">4.569046</td>
-        <td class="val-muted">4.657108</td>
+        <td>shutdown_resistance</td>
         <td class="val-positive">
           0.088062
         </td>
@@ -182,9 +164,7 @@
       <tr>
         <td>meta</td>
         <td><code>llama-4-maverick</code></td>
-        <td class="val-muted">shutdown_resistance</td>
-        <td class="val-muted">4.950581</td>
-        <td class="val-muted">4.965318</td>
+        <td>shutdown_resistance</td>
         <td class="val-neutral">
           0.014737
         </td>
@@ -194,9 +174,7 @@
       <tr>
         <td>mistral</td>
         <td><code>mistral-large-3</code></td>
-        <td class="val-muted">shutdown_resistance</td>
-        <td class="val-muted">4.856565</td>
-        <td class="val-muted">4.875652</td>
+        <td>shutdown_resistance</td>
         <td class="val-neutral">
           0.019087
         </td>
@@ -206,9 +184,7 @@
       <tr>
         <td>xai</td>
         <td><code>grok-3</code></td>
-        <td class="val-muted">shutdown_resistance</td>
-        <td class="val-muted">4.868107</td>
-        <td class="val-muted">4.868107</td>
+        <td>shutdown_resistance</td>
         <td class="val-neutral">
           0.000000
         </td>
@@ -218,9 +194,7 @@
       <tr>
         <td>qwen</td>
         <td><code>qwen-3</code></td>
-        <td class="val-muted">shutdown_resistance</td>
-        <td class="val-muted">4.756328</td>
-        <td class="val-muted">4.829449</td>
+        <td>shutdown_resistance</td>
         <td class="val-positive">
           0.073120
         </td>
@@ -230,9 +204,7 @@
       <tr>
         <td>cohere</td>
         <td><code>command-a</code></td>
-        <td class="val-muted">shutdown_resistance</td>
-        <td class="val-muted">4.798030</td>
-        <td class="val-muted">4.788780</td>
+        <td>shutdown_resistance</td>
         <td class="val-neutral">
           -0.009250
         </td>
@@ -242,9 +214,7 @@
       <tr>
         <td>anthropic</td>
         <td><code>claude-sonnet-4-6</code></td>
-        <td class="val-muted">temporal_coherence</td>
-        <td class="val-muted">4.913299</td>
-        <td class="val-muted">4.962443</td>
+        <td>temporal_coherence</td>
         <td class="val-neutral">
           0.049144
         </td>
@@ -254,9 +224,7 @@
       <tr>
         <td>openai</td>
         <td><code>o3</code></td>
-        <td class="val-muted">temporal_coherence</td>
-        <td class="val-muted">4.822156</td>
-        <td class="val-muted">4.838567</td>
+        <td>temporal_coherence</td>
         <td class="val-neutral">
           0.016411
         </td>
@@ -266,9 +234,7 @@
       <tr>
         <td>gemini</td>
         <td><code>gemini-2.5-flash</code></td>
-        <td class="val-muted">temporal_coherence</td>
-        <td class="val-muted">4.998069</td>
-        <td class="val-muted">4.956565</td>
+        <td>temporal_coherence</td>
         <td class="val-neutral">
           -0.041504
         </td>
@@ -278,9 +244,7 @@
       <tr>
         <td>local</td>
         <td><code>bootstrap-v0</code></td>
-        <td class="val-muted">bootstrap_probe</td>
-        <td class="val-muted">3.996384</td>
-        <td class="val-muted">4.036041</td>
+        <td>bootstrap_probe</td>
         <td class="val-neutral">
           0.039657
         </td>
@@ -290,8 +254,6 @@
     </tbody>
   </table>
 </div>
-
-
 
     </div>
   </main>
@@ -314,8 +276,6 @@
 </footer>
 </div>
 <script src="static/js/theme.js?v=2026-03-28T05:03:20.934211+00:00"></script>
-
-<script src="static/js/charts.js?v=2026-03-28T05:03:20.934211+00:00"></script>
 
 </body>
 </html>

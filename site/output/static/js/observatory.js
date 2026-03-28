@@ -3,7 +3,6 @@
 
   const state = {
     range: "24h",
-    includeCompleted: false,
     pcii: [],
     models: [],
     events: [],
@@ -94,7 +93,7 @@
   }
 
   async function refreshData() {
-    const eventsUrl = `/api/observatory/events?limit=40${state.includeCompleted ? "&include_completed=true" : ""}`;
+    const eventsUrl = "/api/observatory/events?limit=40&include_completed=true";
     const [pcii, models, events, constellation] = await Promise.all([
       fetchJSON(`/api/observatory/pcii?range=${encodeURIComponent(state.range)}`),
       fetchJSON("/api/observatory/models"),
@@ -376,16 +375,6 @@
         });
       });
     });
-    const toggle = qs("#include-completions");
-    if (toggle) {
-      toggle.addEventListener("change", function () {
-        state.includeCompleted = Boolean(toggle.checked);
-        refreshData().catch(function (error) {
-          console.error("Event refresh failed", error);
-        });
-      });
-    }
-
     const panelList = qs("#model-panels");
     if (panelList && !panelList.dataset.boundFocus) {
       panelList.dataset.boundFocus = "true";

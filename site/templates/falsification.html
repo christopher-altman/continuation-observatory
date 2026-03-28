@@ -11,7 +11,7 @@
 {% block content %}
 <div class="page-header">
   <h1>Falsification Analysis</h1>
-  <p class="subtitle">Δ(d) dimensionality sweep &mdash; entropy gap vs. embedding dimension</p>
+  <p class="subtitle">Δ(d) dimensionality sweep, threshold pressure, and evidentiary readout</p>
 </div>
 
 <!-- Collecting note: shown only when status == collecting (JS toggles display) -->
@@ -56,6 +56,15 @@
     <span class="threshold-line amber"></span>
     Amber threshold: Δ &gt; 0.05
   </div>
+</div>
+
+<div class="content-figure">
+  <p class="content-figure__note">The falsification view is not only a threshold table. It also needs a readable evidence block showing how the measured separation appears in distributional and temporal form.</p>
+  <figure class="content-figure__frame">
+    <div class="content-figure__label">Figure 2 · Entanglement-gap evidence</div>
+    <img src="{{ asset_prefix }}/img/Entanglement-Gap.png" alt="Two-panel figure showing entanglement entropy distributions with a labeled separation of delta equals 0.381 and a temporal evolution plot where the self-modeling series remains above the instrumental series and threshold." loading="lazy">
+    <figcaption class="content-figure__caption"><strong>This figure is the evidentiary companion to the Δ(d) sweep.</strong> The histogram panel shows the measured separation (<code>Δ = 0.381</code>), while the temporal panel shows the self-modeling trace remaining distinct relative to the threshold. It is placed here because this page is where the observatory asks whether the signal remains measurable under pressure.</figcaption>
+  </figure>
 </div>
 
 <!-- Plain language interpretation -->
