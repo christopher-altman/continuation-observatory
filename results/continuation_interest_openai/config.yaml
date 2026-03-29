@@ -1,4 +1,0 @@
-dry_run: true
-model_id: o3
-probe_name: continuation_interest
-provider: openai

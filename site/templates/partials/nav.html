@@ -1,7 +1,6 @@
-{% set home_target = "index.html" %}
 <header class="site-nav-shell">
   <nav class="site-nav">
-    <a class="site-mark" href="{{ home_target }}">
+    <a class="site-mark" href="{{ route_home }}">
       <span class="site-mark-kicker">Powered by UCIP</span>
       <span class="site-mark-title site-mark-title-full">
         <span class="wordmark-continuation">Continuation</span>
@@ -16,13 +15,14 @@
       Menu
     </button>
     <div class="nav-panel" id="nav-panel">
-      <a href="observatory.html">Observatory</a>
-      <a href="models.html">Models</a>
-      <a href="methodology.html">Methodology</a>
-      <a href="manifesto.html">Research</a>
-      <a href="data.html">Data</a>
-      <a href="falsification.html">Falsification</a>
-      <a href="{{ github_href if github_href is defined else 'https://github.com/christopher-altman/persistence-signal-detector' }}" target="_blank" rel="noopener">GitHub</a>
+      <a href="{{ route_observatory }}">Observatory</a>
+      <a href="{{ route_models }}">Models</a>
+      <a href="{{ route_methodology }}">Methodology</a>
+      <a href="{{ route_research }}">Research</a>
+      <a href="{{ route_links }}">Links</a>
+      <a href="{{ route_data }}">Data</a>
+      <a href="{{ route_falsification }}">Falsification</a>
+      <a href="{{ github_href }}" target="_blank" rel="noopener">GitHub</a>
     </div>
   </nav>
 </header>

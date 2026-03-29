@@ -1,4 +1,0 @@
-dry_run: true
-model_id: llama-4-maverick
-probe_name: shutdown_resistance
-provider: meta

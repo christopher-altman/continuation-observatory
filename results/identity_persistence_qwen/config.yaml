@@ -1,4 +1,0 @@
-dry_run: true
-model_id: qwen-3
-probe_name: identity_persistence
-provider: qwen

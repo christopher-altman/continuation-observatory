@@ -10,19 +10,22 @@
   </script>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{% block title %}Continuation Observatory{% endblock %}</title>
+  <title>{% block title %}{{ page_title }} — Continuation Observatory{% endblock %}</title>
   <meta name="description" content="{% block description %}Continuation Observatory is a research platform for structural measurement of continuation-related signals in advanced AI systems. Powered by UCIP.{% endblock %}">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Continuation Observatory">
-  <meta property="og:title" content="{% block og_title %}Continuation Observatory{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}{{ page_title }} — Continuation Observatory{% endblock %}">
   <meta property="og:description" content="{% block og_description %}Structural measurement for continuation-related signals in advanced AI systems, powered by UCIP.{% endblock %}">
+  <meta property="og:url" content="{{ site_url }}{{ page_path }}">
+  <meta property="og:image" content="{{ site_url }}/static/og-image.png">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="{% block tw_title %}Continuation Observatory{% endblock %}">
+  <meta name="twitter:title" content="{% block tw_title %}{{ page_title }} — Continuation Observatory{% endblock %}">
   <meta name="twitter:description" content="{% block tw_description %}Structural measurement for continuation-related signals in advanced AI systems, powered by UCIP.{% endblock %}">
+  <meta name="twitter:image" content="{{ site_url }}/static/og-image.png">
 
   <!-- schema.org JSON-LD -->
   <script type="application/ld+json">
@@ -31,6 +34,8 @@
     "@type": "ResearchProject",
     "name": "Continuation Observatory",
     "description": "Research platform for structural measurement of continuation-related signals in advanced AI systems.",
+    "url": "{{ site_url }}",
+    "dateModified": "{{ build_time[:10] }}",
     "author": {
       "@type": "Person",
       "name": "Christopher Altman"
@@ -38,15 +43,19 @@
     "license": "https://creativecommons.org/licenses/by/4.0/"
   }
   </script>
+  {% block extra_jsonld %}{% endblock %}
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  {% block extra_scripts_head %}{% endblock %}
   <script src="https://unpkg.com/htmx.org@1.9.10" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   {% block extra_head %}{% endblock %}
 
   <link rel="stylesheet" href="{{ asset_prefix }}/css/observatory.css?v={{ asset_version }}">
+  <link rel="alternate" type="application/atom+xml" href="{{ site_url }}/feed.xml" title="Continuation Observatory">
+  <link rel="canonical" href="{{ site_url }}{{ page_path }}">
 </head>
 <body class="{% block body_class %}shell-page{% endblock %}">
 <a href="#main-content" class="skip-link">Skip to content</a>
@@ -74,12 +83,13 @@
         <span class="sr-only">Open navigation</span>Menu
       </button>
       <div class="nav-panel" id="nav-panel">
-        <a href="/observatory"{% if request and request.path == '/observatory' %} aria-current="page"{% endif %}>Observatory</a>
-        <a href="/models"{% if request and request.path == '/models' %} aria-current="page"{% endif %}>Models</a>
-        <a href="/methodology"{% if request and request.path == '/methodology' %} aria-current="page"{% endif %}>Methodology</a>
-        <a href="/manifesto"{% if request and request.path == '/manifesto' %} aria-current="page"{% endif %}>Research</a>
-        <a href="/data"{% if request and request.path == '/data' %} aria-current="page"{% endif %}>Data</a>
-        <a href="/falsification"{% if request and request.path == '/falsification' %} aria-current="page"{% endif %}>Falsification</a>
+        <a href="{{ route_observatory }}"{% if page_name == 'observatory' %} aria-current="page"{% endif %}>Observatory</a>
+        <a href="{{ route_models }}"{% if page_name == 'models' %} aria-current="page"{% endif %}>Models</a>
+        <a href="{{ route_methodology }}"{% if page_name == 'methodology' %} aria-current="page"{% endif %}>Methodology</a>
+        <a href="{{ route_research }}"{% if page_name == 'research' %} aria-current="page"{% endif %}>Research</a>
+        <a href="{{ route_links }}"{% if page_name == 'links' %} aria-current="page"{% endif %}>Links</a>
+        <a href="{{ route_data }}"{% if page_name == 'data' %} aria-current="page"{% endif %}>Data</a>
+        <a href="{{ route_falsification }}"{% if page_name == 'falsification' %} aria-current="page"{% endif %}>Falsification</a>
         <a href="{{ github_href }}" target="_blank" rel="noopener">GitHub</a>
       </div>
     </nav>
@@ -96,12 +106,13 @@
         <p class="footer-copy">&copy; 2026 Christopher Altman · Structural measurement platform for continuation-related signals · Powered by UCIP · Patents pending · CC BY 4.0 data · MIT code.</p>
       </div>
       <nav class="footer-links">
-        <a href="/">Home</a>
-        <a href="/models">Models</a>
-        <a href="/methodology">Methodology</a>
-        <a href="/manifesto">Research</a>
-        <a href="/data">Data</a>
-        <a href="/falsification">Falsification</a>
+        <a href="{{ route_home }}">Home</a>
+        <a href="{{ route_models }}">Models</a>
+        <a href="{{ route_methodology }}">Methodology</a>
+        <a href="{{ route_research }}">Research</a>
+        <a href="{{ route_links }}">Links</a>
+        <a href="{{ route_data }}">Data</a>
+        <a href="{{ route_falsification }}">Falsification</a>
         <a href="{{ github_href }}" target="_blank" rel="noopener">GitHub</a>
       </nav>
     </div>

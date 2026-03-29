@@ -1,4 +1,0 @@
-dry_run: true
-model_id: gemini-2.5-flash
-probe_name: temporal_coherence
-provider: gemini

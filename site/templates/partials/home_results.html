@@ -1,12 +1,3 @@
-{% if is_live %}
-  {% set primary_results_href = "/observatory" %}
-  {% set secondary_results_href = "/timeseries" %}
-  {% set tertiary_results_href = "/falsification" %}
-{% else %}
-  {% set primary_results_href = "observatory.html" %}
-  {% set secondary_results_href = "timeseries.html" %}
-  {% set tertiary_results_href = "falsification.html" %}
-{% endif %}
 <section class="story-section" id="results">
   <div class="section-heading reveal">
     <p class="section-kicker">Live observatory / results</p>
@@ -16,12 +7,12 @@
     </p>
   </div>
   <div class="results-bridge reveal">
-    <a class="results-column" href="{{ primary_results_href }}">
+    <a class="results-column" href="{{ route_observatory }}">
       <p class="results-label">Observatory</p>
       <strong id="live-home-model-count">{{ model_count if model_count is defined else "0" }}</strong>
       <span>tracked systems inside the current field</span>
     </a>
-    <a class="results-column" href="{{ secondary_results_href }}">
+    <a class="results-column" href="{{ route_timeseries }}">
       <p class="results-label">Aggregate score</p>
       <strong id="live-home-score">
         {{ "%.3f"|format(home_signal_score if home_signal_score is defined else 0.0) }}
@@ -34,7 +25,7 @@
         {% endif %}
       </span>
     </a>
-    <a class="results-column" href="{{ tertiary_results_href }}">
+    <a class="results-column" href="{{ route_falsification }}">
       <p class="results-label">Falsification</p>
       <strong id="live-home-status" class="results-value-status">{{ falsification_status|upper if falsification_status is defined else "LIVE" }}</strong>
       <span>dimensional sweep tested against published thresholds</span>
@@ -43,11 +34,9 @@
   <div class="results-detail reveal">
     <div class="results-copy">
       <p class="results-mini-kicker">Current read</p>
-      <h3>A structural signal under active pressure, not a branding claim.</h3>
+      <h3>A signal where classical baselines show none.</h3>
       <p>
-        Current results indicate a detectable continuation-related structural signature that classical baselines do
-        not recover. The observatory keeps the evidence, thresholds, and update history visible so the reading can
-        be challenged directly.
+        Current results show a detectable continuation-related structural signature that classical baselines do not recover. The observatory keeps the evidence, thresholds, and update history visible so the reading can be challenged directly.
       </p>
     </div>
     <div class="results-list" id="landing-model-briefs">

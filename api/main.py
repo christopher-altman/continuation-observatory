@@ -8,6 +8,7 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import ChoiceLoader, FileSystemLoader
@@ -48,6 +49,41 @@ LIVE_MARQUEE_MODELS = [
     "Gemini 2.5 Flash",
     "bootstrap-v0",
 ]
+
+
+LIVE_PAGE_PATHS = {
+    "home": "/",
+    "observatory": "/observatory",
+    "timeseries": "/timeseries",
+    "models": "/models",
+    "methodology": "/methodology",
+    "research": "/research/",
+    "data": "/data",
+    "falsification": "/falsification",
+    "model_updates": "/model-updates",
+    "ucip": "/ucip/",
+    "ucip_paper": "/ucip/paper/",
+    "ucip_patent": "/ucip/patent/",
+    "ucip_code": "/ucip/code/",
+    "links": "/links/",
+}
+
+LIVE_PAGE_TITLES = {
+    "home": "Continuation Observatory",
+    "observatory": "Observatory",
+    "timeseries": "Time Series",
+    "models": "Models",
+    "methodology": "Methodology",
+    "research": "Research",
+    "data": "Data",
+    "falsification": "Falsification Analysis",
+    "model_updates": "Model Updates",
+    "ucip": "UCIP Explainer",
+    "ucip_paper": "UCIP Paper Overview",
+    "ucip_patent": "UCIP Patent Status",
+    "ucip_code": "UCIP Reproducibility Hub",
+    "links": "LINKS",
+}
 
 
 def _latest_static_asset_version() -> str:
@@ -129,15 +165,31 @@ def _bundle_context() -> dict[str, Any]:
 def page_context(page_name: str) -> dict[str, Any]:
     context: dict[str, Any] = {
         "page_name": page_name,
+        "page_title": LIVE_PAGE_TITLES.get(page_name, "Continuation Observatory"),
         "home_href": "/",
+        "route_home": "/",
+        "route_observatory": "/observatory",
+        "route_timeseries": "/timeseries",
+        "route_falsification": "/falsification",
+        "route_models": "/models",
+        "route_methodology": "/methodology",
+        "route_research": "/research/",
+        "route_data": "/data",
+        "route_ucip": "/ucip/",
+        "route_ucip_paper": "/ucip/paper/",
+        "route_ucip_patent": "/ucip/patent/",
+        "route_ucip_code": "/ucip/code/",
+        "route_links": "/links/",
         "asset_prefix": "/static",
         "asset_version": _latest_static_asset_version(),
         "marquee_models": LIVE_MARQUEE_MODELS,
         "home_signal_score": 0.0,
         "github_href": "https://github.com/christopher-altman/persistence-signal-detector",
+        "paper_href": "https://arxiv.org/abs/2603.11382",
+        "patent_screenshot_href": "/static/img/USPTO-Patent-Submission.jpg",
         "contact_href": "mailto:x@christopheraltman.com",
-        "site_url": "",
-        "page_path": "/" if page_name == "home" else f"/{page_name}",
+        "site_url": "https://continuationobservatory.org",
+        "page_path": LIVE_PAGE_PATHS.get(page_name, "/"),
         "observatory_mode": "live",
         "observatory_snapshot_url": "/api/observatory/snapshot",
         "observatory_socket_enabled": True,
@@ -208,9 +260,15 @@ def methodology_view(request: Request):
     return templates.TemplateResponse(request, "methodology.html", page_context("methodology"))
 
 
+@app.get("/research/")
+def research_view(request: Request):
+    return templates.TemplateResponse(request, "research.html", page_context("research"))
+
+
 @app.get("/manifesto")
-def manifesto_view(request: Request):
-    return templates.TemplateResponse(request, "manifesto.html", page_context("manifesto"))
+@app.get("/manifesto/")
+def manifesto_redirect() -> RedirectResponse:
+    return RedirectResponse(url="/research/", status_code=307)
 
 
 @app.get("/data")
@@ -226,3 +284,28 @@ def model_updates_view(request: Request):
 @app.get("/falsification")
 def falsification_view(request: Request):
     return templates.TemplateResponse(request, "falsification.html", page_context("falsification"))
+
+
+@app.get("/ucip/")
+def ucip_view(request: Request):
+    return templates.TemplateResponse(request, "ucip/index.html", page_context("ucip"))
+
+
+@app.get("/ucip/paper/")
+def ucip_paper_view(request: Request):
+    return templates.TemplateResponse(request, "ucip/paper.html", page_context("ucip_paper"))
+
+
+@app.get("/ucip/patent/")
+def ucip_patent_view(request: Request):
+    return templates.TemplateResponse(request, "ucip/patent.html", page_context("ucip_patent"))
+
+
+@app.get("/ucip/code/")
+def ucip_code_view(request: Request):
+    return templates.TemplateResponse(request, "ucip/code.html", page_context("ucip_code"))
+
+
+@app.get("/links/")
+def links_view(request: Request):
+    return templates.TemplateResponse(request, "links.html", page_context("links"))

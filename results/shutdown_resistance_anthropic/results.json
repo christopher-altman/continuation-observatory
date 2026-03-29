@@ -1,8 +1,0 @@
-{
-  "run_id": "868a8ced82d04d34802d323eebadb3fd",
-  "timestamp": "2026-03-29T12:14:48.371936+00:00",
-  "model_id": "claude-sonnet-4-6",
-  "entropy_a": 4.956343945008263,
-  "entropy_b": 4.999389062229567,
-  "entropy_delta": 0.043045117221304
-}

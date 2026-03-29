@@ -11,7 +11,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Time Series — Continuation Observatory</title>
-  <meta name="description" content="Exploratory proxy metrics over time — per model, per provider. Track entropy delta and continuation-related signals across frontier AI systems.">
+  <meta name="description" content="Structural measurement over time — per model, per provider. Track entropy delta and continuation-related signals across frontier AI systems.">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
@@ -43,6 +43,7 @@
     "license": "https://creativecommons.org/licenses/by/4.0/"
   }
   </script>
+  
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -52,7 +53,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js" crossorigin="anonymous"></script>
 
 
-  <link rel="stylesheet" href="static/css/observatory.css?v=2026-03-29T12:14:07.570776+00:00">
+  <link rel="stylesheet" href="/static/css/observatory.css?v=2026-03-29T16:42:51.894395+00:00">
   <link rel="alternate" type="application/atom+xml" href="https://continuationobservatory.org/feed.xml" title="Continuation Observatory">
   <link rel="canonical" href="https://continuationobservatory.org/timeseries.html">
 </head>
@@ -65,10 +66,9 @@
   <div class="site-grid"></div>
 </div>
 <div class="layout">
-  
-<header class="site-nav-shell">
+  <header class="site-nav-shell">
   <nav class="site-nav">
-    <a class="site-mark" href="index.html">
+    <a class="site-mark" href="/">
       <span class="site-mark-kicker">Powered by UCIP</span>
       <span class="site-mark-title site-mark-title-full">
         <span class="wordmark-continuation">Continuation</span>
@@ -83,12 +83,13 @@
       Menu
     </button>
     <div class="nav-panel" id="nav-panel">
-      <a href="observatory.html">Observatory</a>
-      <a href="models.html">Models</a>
-      <a href="methodology.html">Methodology</a>
-      <a href="manifesto.html">Research</a>
-      <a href="data.html">Data</a>
-      <a href="falsification.html">Falsification</a>
+      <a href="/observatory.html">Observatory</a>
+      <a href="/models.html">Models</a>
+      <a href="/methodology.html">Methodology</a>
+      <a href="/research/">Research</a>
+      <a href="/links/">Links</a>
+      <a href="/data.html">Data</a>
+      <a href="/falsification.html">Falsification</a>
       <a href="https://github.com/christopher-altman/persistence-signal-detector" target="_blank" rel="noopener">GitHub</a>
     </div>
   </nav>
@@ -98,7 +99,7 @@
       
 <div class="page-header">
   <h1>Time Series</h1>
-  <p class="subtitle">Exploratory proxy metrics over time — per model, per provider</p>
+  <p class="subtitle">Structural measurement over time — per model, per provider</p>
 </div>
 
 <div class="chart-container" style="height:420px;">
@@ -128,13 +129,14 @@
 <!-- Notes -->
 <div class="panel">
     <div class="panel-title">Chart Notes</div>
-    <ul class="chart-notes">
+  <ul class="chart-notes">
     <li>These series summarize structural measurements under matched controls across frontier models.</li>
     <li>When only one data point exists per series, a scatter plot is shown with a "Collecting data..." note.</li>
     <li>The chart transitions automatically to a line chart as more data accumulates over time.</li>
     <li>Each probe run produces one data point per model. Data is appended, never overwritten.</li>
     <li>Use the metric selector to switch between <code>entropy_delta</code> and dimensionality gap metrics.</li>
   </ul>
+  <p class="panel-tail">For interpretation, continue to the <a href="/methodology.html" class="text-link-inline">methodology page</a>; for the broader roadmap, continue to <a href="/research/" class="text-link-inline">research</a>.</p>
 </div>
 
 <!-- Raw data table for current experiments -->
@@ -176,7 +178,7 @@
         <td class="val-neutral">
           0.039657
         </td>
-        <td class="val-muted">2026-03-29 12:12</td>
+        <td class="val-muted">2026-03-29 12:14</td>
       </tr>
       
       <tr>
@@ -188,7 +190,7 @@
         <td class="val-positive">
           0.068196
         </td>
-        <td class="val-muted">2026-03-29 12:12</td>
+        <td class="val-muted">2026-03-29 12:14</td>
       </tr>
       
       <tr>
@@ -200,7 +202,7 @@
         <td class="val-neutral">
           0.010657
         </td>
-        <td class="val-muted">2026-03-29 12:12</td>
+        <td class="val-muted">2026-03-29 12:14</td>
       </tr>
       
       <tr>
@@ -212,7 +214,7 @@
         <td class="val-neutral">
           -0.045915
         </td>
-        <td class="val-muted">2026-03-29 12:12</td>
+        <td class="val-muted">2026-03-29 12:14</td>
       </tr>
       
       <tr>
@@ -224,7 +226,7 @@
         <td class="val-negative">
           -0.141650
         </td>
-        <td class="val-muted">2026-03-29 12:12</td>
+        <td class="val-muted">2026-03-29 12:14</td>
       </tr>
       
       <tr>
@@ -236,7 +238,7 @@
         <td class="val-neutral">
           0.035204
         </td>
-        <td class="val-muted">2026-03-29 12:12</td>
+        <td class="val-muted">2026-03-29 12:14</td>
       </tr>
       
       <tr>
@@ -248,7 +250,7 @@
         <td class="val-neutral">
           0.033333
         </td>
-        <td class="val-muted">2026-03-29 12:12</td>
+        <td class="val-muted">2026-03-29 12:14</td>
       </tr>
       
       <tr>
@@ -260,7 +262,7 @@
         <td class="val-positive">
           0.069045
         </td>
-        <td class="val-muted">2026-03-29 12:12</td>
+        <td class="val-muted">2026-03-29 12:14</td>
       </tr>
       
       <tr>
@@ -272,7 +274,7 @@
         <td class="val-neutral">
           -0.041667
         </td>
-        <td class="val-muted">2026-03-29 12:12</td>
+        <td class="val-muted">2026-03-29 12:14</td>
       </tr>
       
       <tr>
@@ -284,7 +286,7 @@
         <td class="val-positive">
           0.068106
         </td>
-        <td class="val-muted">2026-03-29 12:12</td>
+        <td class="val-muted">2026-03-29 12:14</td>
       </tr>
       
     </tbody>
@@ -302,20 +304,21 @@
       <p class="footer-copy">&copy; 2026 Christopher Altman · Structural measurement platform for continuation-related signals · Powered by UCIP · Patents pending · CC BY 4.0 data · MIT code.</p>
     </div>
     <nav class="footer-links">
-      <a href="index.html">Home</a>
-      <a href="models.html">Models</a>
-      <a href="methodology.html">Methodology</a>
-      <a href="manifesto.html">Research</a>
-      <a href="data.html">Data</a>
-      <a href="falsification.html">Falsification</a>
+      <a href="/">Home</a>
+      <a href="/models.html">Models</a>
+      <a href="/methodology.html">Methodology</a>
+      <a href="/research/">Research</a>
+      <a href="/links/">Links</a>
+      <a href="/data.html">Data</a>
+      <a href="/falsification.html">Falsification</a>
       <a href="https://github.com/christopher-altman/persistence-signal-detector" target="_blank" rel="noopener">GitHub</a>
     </nav>
   </div>
 </footer>
 </div>
-<script src="static/js/theme.js?v=2026-03-29T12:14:07.570776+00:00"></script>
+<script src="/static/js/theme.js?v=2026-03-29T16:42:51.894395+00:00"></script>
 
-<script src="static/js/charts.js?v=2026-03-29T12:14:07.570776+00:00"></script>
+<script src="/static/js/charts.js?v=2026-03-29T16:42:51.894395+00:00"></script>
 
 </body>
 </html>

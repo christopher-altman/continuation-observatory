@@ -37,6 +37,100 @@ THRESH_YELLOW = 0.05
 # d-values used in sweep probes
 SWEEP_D_VALUES = [10, 50, 100, 200, 500]
 
+CANONICAL_PAGES = [
+    {
+        "template": "index.html",
+        "output": "index.html",
+        "title": "Home",
+        "page_name": "home",
+        "page_path": "/",
+    },
+    {
+        "template": "observatory.html",
+        "output": "observatory.html",
+        "title": "Observatory",
+        "page_name": "observatory",
+        "page_path": "/observatory.html",
+    },
+    {
+        "template": "timeseries.html",
+        "output": "timeseries.html",
+        "title": "Time Series",
+        "page_name": "timeseries",
+        "page_path": "/timeseries.html",
+    },
+    {
+        "template": "falsification.html",
+        "output": "falsification.html",
+        "title": "Falsification",
+        "page_name": "falsification",
+        "page_path": "/falsification.html",
+    },
+    {
+        "template": "models.html",
+        "output": "models.html",
+        "title": "Models",
+        "page_name": "models",
+        "page_path": "/models.html",
+    },
+    {
+        "template": "methodology.html",
+        "output": "methodology.html",
+        "title": "Methodology",
+        "page_name": "methodology",
+        "page_path": "/methodology.html",
+    },
+    {
+        "template": "research.html",
+        "output": "research/index.html",
+        "title": "Research",
+        "page_name": "research",
+        "page_path": "/research/",
+    },
+    {
+        "template": "data.html",
+        "output": "data.html",
+        "title": "Data",
+        "page_name": "data",
+        "page_path": "/data.html",
+    },
+    {
+        "template": "ucip/index.html",
+        "output": "ucip/index.html",
+        "title": "UCIP Explainer",
+        "page_name": "ucip",
+        "page_path": "/ucip/",
+    },
+    {
+        "template": "ucip/paper.html",
+        "output": "ucip/paper/index.html",
+        "title": "UCIP Paper",
+        "page_name": "ucip_paper",
+        "page_path": "/ucip/paper/",
+    },
+    {
+        "template": "ucip/patent.html",
+        "output": "ucip/patent/index.html",
+        "title": "Patent Status",
+        "page_name": "ucip_patent",
+        "page_path": "/ucip/patent/",
+    },
+    {
+        "template": "ucip/code.html",
+        "output": "ucip/code/index.html",
+        "title": "Reproducibility",
+        "page_name": "ucip_code",
+        "page_path": "/ucip/code/",
+    },
+    {
+        "template": "links.html",
+        "output": "links/index.html",
+        "title": "Links",
+        "page_name": "links",
+        "page_path": "/links/",
+    },
+]
+
 
 # ---------------------------------------------------------------------------
 # Data loading
@@ -356,6 +450,19 @@ def generate_feed(manifest: dict, experiments: list, site_url: str) -> str:
     return '<?xml version="1.0" encoding="utf-8"?>\n' + ET.tostring(feed, encoding="unicode")
 
 
+def generate_sitemap(site_url: str) -> str:
+    urlset = ET.Element("urlset", xmlns="http://www.sitemaps.org/schemas/sitemap/0.9")
+    for page in CANONICAL_PAGES:
+        url = ET.SubElement(urlset, "url")
+        ET.SubElement(url, "loc").text = f"{site_url}{page['page_path']}"
+    ET.indent(urlset, space="  ")
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(urlset, encoding="unicode")
+
+
+def generate_robots(site_url: str) -> str:
+    return f"User-agent: *\nAllow: /\n\nSitemap: {site_url}/sitemap.xml\n"
+
+
 # ---------------------------------------------------------------------------
 # Template rendering
 # ---------------------------------------------------------------------------
@@ -370,29 +477,39 @@ def render_templates(
         autoescape=True,
     )
 
-    pages = [
-        ("index.html", "index.html", "Home"),
-        ("observatory.html", "observatory.html", "Observatory"),
-        ("timeseries.html", "timeseries.html", "Time Series"),
-        ("falsification.html", "falsification.html", "Falsification"),
-        ("models.html", "models.html", "Models"),
-        ("methodology.html", "methodology.html", "Methodology"),
-        ("manifesto.html", "manifesto.html", "Manifesto"),
-        ("data.html", "data.html", "Data"),
-    ]
-
-    for template_name, output_name, page_title in pages:
+    for page in CANONICAL_PAGES:
         try:
-            tmpl = env.get_template(template_name)
+            tmpl = env.get_template(page["template"])
             page_context = dict(context)
-            page_context["page_title"] = page_title
-            page_context["page_path"] = f"/{output_name}"
+            page_context["page_title"] = page["title"]
+            page_context["page_name"] = page["page_name"]
+            page_context["page_path"] = page["page_path"]
             html = tmpl.render(**page_context)
-            (output_dir / output_name).write_text(html, encoding="utf-8")
-            print(f"  rendered {output_name}")
+            output_path = output_dir / page["output"]
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(html, encoding="utf-8")
+            print(f"  rendered {page['output']}")
         except Exception as ex:
-            print(f"  ERROR rendering {template_name}: {ex}", file=sys.stderr)
+            print(f"  ERROR rendering {page['template']}: {ex}", file=sys.stderr)
             raise
+
+
+def write_redirect_page(output_path: Path, target_path: str, site_url: str) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Redirecting…</title>
+  <meta http-equiv="refresh" content="0; url={target_path}">
+  <link rel="canonical" href="{site_url}{target_path}">
+</head>
+<body>
+  <p>Redirecting to <a href="{target_path}">{target_path}</a>.</p>
+</body>
+</html>
+"""
+    output_path.write_text(html, encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -515,10 +632,12 @@ def build(output_dir: Path, exports_only: bool = False) -> None:
         print("Exports-only mode — done.")
         return
 
-    # Generate feed
+    # Generate feed and discovery files
     print("Generating feed.xml...")
     feed_xml = generate_feed(manifest, experiments, SITE_URL)
     (output_dir / "feed.xml").write_text(feed_xml, encoding="utf-8")
+    (output_dir / "sitemap.xml").write_text(generate_sitemap(SITE_URL), encoding="utf-8")
+    (output_dir / "robots.txt").write_text(generate_robots(SITE_URL), encoding="utf-8")
 
     # Write CNAME
     (output_dir / "CNAME").write_text(CNAME_VALUE + "\n", encoding="utf-8")
@@ -555,19 +674,36 @@ def build(output_dir: Path, exports_only: bool = False) -> None:
         "latest": latest,
         "falsification": falsification,
         "models_data": models,
-        "asset_prefix": "static",
+        "asset_prefix": "/static",
         "asset_version": _now_iso(),
-        "home_href": "index.html",
+        "home_href": "/",
+        "route_home": "/",
+        "route_observatory": "/observatory.html",
+        "route_timeseries": "/timeseries.html",
+        "route_falsification": "/falsification.html",
+        "route_models": "/models.html",
+        "route_methodology": "/methodology.html",
+        "route_research": "/research/",
+        "route_data": "/data.html",
+        "route_ucip": "/ucip/",
+        "route_ucip_paper": "/ucip/paper/",
+        "route_ucip_patent": "/ucip/patent/",
+        "route_ucip_code": "/ucip/code/",
+        "route_links": "/links/",
         "github_href": "https://github.com/christopher-altman/persistence-signal-detector",
+        "paper_href": "https://arxiv.org/abs/2603.11382",
+        "patent_screenshot_href": "/static/img/USPTO-Patent-Submission.jpg",
         "contact_href": "mailto:x@christopheraltman.com",
         "marquee_models": marquee_models,
         "home_signal_score": home_signal_score,
         "observatory_mode": "static",
-        "observatory_snapshot_url": "static/data/observatory_snapshot.json",
+        "observatory_snapshot_url": "/static/data/observatory_snapshot.json",
         "observatory_socket_enabled": False,
     }
 
     render_templates(output_dir, TEMPLATES_DIR, context)
+    write_redirect_page(output_dir / "manifesto.html", "/research/", SITE_URL)
+    write_redirect_page(output_dir / "manifesto" / "index.html", "/research/", SITE_URL)
 
     print(f"\nBuild complete → {output_dir}")
     print(f"  {experiment_count} experiments, {model_count} models")

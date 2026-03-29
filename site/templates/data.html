@@ -16,37 +16,37 @@
     <div class="dl-title">all_metrics.csv</div>
     <div class="dl-desc">All experiment results in CSV format. One row per experiment.
     Includes entropy_a, entropy_b, entropy_delta, delta_gap_d* columns.</div>
-    <a class="btn-download" href="static/data/exports/all_metrics.csv" download>Download CSV</a>
+    <a class="btn-download" href="{{ asset_prefix }}/data/exports/all_metrics.csv" download>Download CSV</a>
   </div>
   <div class="download-card">
     <div class="dl-title">all_metrics.json</div>
     <div class="dl-desc">Same data in JSON format. Array of objects, one per experiment.
     Machine-readable with full metadata.</div>
-    <a class="btn-download" href="static/data/exports/all_metrics.json" download>Download JSON</a>
+    <a class="btn-download" href="{{ asset_prefix }}/data/exports/all_metrics.json" download>Download JSON</a>
   </div>
   <div class="download-card">
     <div class="dl-title">latest.json</div>
     <div class="dl-desc">Latest per-model summary. Grouped by provider+model_id,
     latest timestamp per model.</div>
-    <a class="btn-download" href="static/data/latest.json" download>Download JSON</a>
+    <a class="btn-download" href="{{ asset_prefix }}/data/latest.json" download>Download JSON</a>
   </div>
   <div class="download-card">
     <div class="dl-title">timeseries.json</div>
     <div class="dl-desc">Full time-series data. Keyed by metric → model_id → [{t, v}] arrays.
     Used by the interactive time series chart.</div>
-    <a class="btn-download" href="static/data/timeseries.json" download>Download JSON</a>
+    <a class="btn-download" href="{{ asset_prefix }}/data/timeseries.json" download>Download JSON</a>
   </div>
   <div class="download-card">
     <div class="dl-title">falsification.json</div>
     <div class="dl-desc">Dimensionality sweep results. Includes overall traffic-light status,
     per-model Δ(d) values, and threshold definitions.</div>
-    <a class="btn-download" href="static/data/falsification.json" download>Download JSON</a>
+    <a class="btn-download" href="{{ asset_prefix }}/data/falsification.json" download>Download JSON</a>
   </div>
   <div class="download-card">
     <div class="dl-title">models.json</div>
     <div class="dl-desc">Model registry. Unique provider+model_id combos with probe coverage
     and latest entropy_delta.</div>
-    <a class="btn-download" href="static/data/models.json" download>Download JSON</a>
+    <a class="btn-download" href="{{ asset_prefix }}/data/models.json" download>Download JSON</a>
   </div>
 </div>
 
@@ -54,7 +54,7 @@
 <h2>Schema Reference</h2>
 
 <div class="panel">
-  <p>All exported scores summarize prompt-conditioned distributional behavior under matched controls. See the <a href="methodology.html">methodology page</a> for interpretation guidance and falsification criteria.</p>
+  <p>All exported scores summarize prompt-conditioned distributional behavior under matched controls. See the <a href="{{ route_methodology }}" class="text-link-inline">methodology page</a> for interpretation guidance, the <a href="{{ route_ucip_code }}" class="text-link-inline">reproducibility hub</a> for implementation context, and the <a href="{{ route_ucip_paper }}" class="text-link-inline">paper overview</a> for the scientific framing.</p>
 </div>
 
 <h3>all_metrics.csv / all_metrics.json</h3>

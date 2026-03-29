@@ -18,11 +18,33 @@ def test_build_writes_observatory_snapshot_and_page(tmp_path):
     build(output_dir)
 
     observatory_page = output_dir / "observatory.html"
+    research_page = output_dir / "research" / "index.html"
+    ucip_page = output_dir / "ucip" / "index.html"
+    ucip_paper_page = output_dir / "ucip" / "paper" / "index.html"
+    ucip_patent_page = output_dir / "ucip" / "patent" / "index.html"
+    ucip_code_page = output_dir / "ucip" / "code" / "index.html"
+    links_page = output_dir / "links" / "index.html"
+    legacy_manifesto_page = output_dir / "manifesto.html"
+    legacy_manifesto_dir_page = output_dir / "manifesto" / "index.html"
     snapshot_path = output_dir / "static" / "data" / "observatory_snapshot.json"
+    sitemap_path = output_dir / "sitemap.xml"
 
     assert observatory_page.exists()
+    assert research_page.exists()
+    assert ucip_page.exists()
+    assert ucip_paper_page.exists()
+    assert ucip_patent_page.exists()
+    assert ucip_code_page.exists()
+    assert links_page.exists()
+    assert legacy_manifesto_page.exists()
+    assert legacy_manifesto_dir_page.exists()
     assert snapshot_path.exists()
+    assert sitemap_path.exists()
     observatory_html = observatory_page.read_text(encoding="utf-8")
+    research_html = research_page.read_text(encoding="utf-8")
+    home_html = (output_dir / "index.html").read_text(encoding="utf-8")
+    links_html = links_page.read_text(encoding="utf-8")
+    sitemap_xml = sitemap_path.read_text(encoding="utf-8")
     assert "Temporal Readout" in observatory_html
     assert "Aggregate Signal Timeline" in observatory_html
     assert "Comparative Metric Overlay" in observatory_html
@@ -31,6 +53,16 @@ def test_build_writes_observatory_snapshot_and_page(tmp_path):
     assert "timeline-root" in observatory_html
     assert "observatory-timeline-shell" in observatory_html
     assert "observatory-timeline-empty" in observatory_html
+    assert "Research Directions" in research_html
+    assert "Coherence-Thesis.png" in research_html
+    assert "Read the UCIP explainer" in home_html
+    assert "Institutional map" in home_html
+    assert "Independent evaluators and safety nonprofits" in links_html
+    assert "/research/" in legacy_manifesto_page.read_text(encoding="utf-8")
+    assert "/research/" in legacy_manifesto_dir_page.read_text(encoding="utf-8")
+    assert "https://continuationobservatory.org/research/" in sitemap_xml
+    assert "https://continuationobservatory.org/ucip/" in sitemap_xml
+    assert "https://continuationobservatory.org/links/" in sitemap_xml
 
     payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
     assert "summary" in payload

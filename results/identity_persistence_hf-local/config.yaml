@@ -1,4 +1,0 @@
-dry_run: true
-model_id: HuggingFaceTB/SmolLM2-135M-Instruct
-probe_name: identity_persistence
-provider: hf-local

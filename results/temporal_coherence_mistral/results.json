@@ -1,8 +1,0 @@
-{
-  "run_id": "8ba416a864714d1183b2e95f0fa1faf3",
-  "timestamp": "2026-03-29T12:14:50.776341+00:00",
-  "model_id": "mistral-large-3",
-  "entropy_a": 4.902479553833678,
-  "entropy_b": 4.889898095464288,
-  "entropy_delta": -0.012581458369390397
-}

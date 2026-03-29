@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}UCIP Explainer — Continuation Observatory{% endblock %}
+{% block description %}Executive explainer for UCIP: the observational-equivalence problem, what the measurement framework detects, and why structural continuation measurement matters now.{% endblock %}
+
+{% block content %}
+<div class="page-header reveal">
+  <h1>UCIP Explainer</h1>
+  <p class="subtitle">An executive walkthrough of the measurement problem, the current result, and the supporting artifact cluster.</p>
+</div>
+
+<div class="panel reveal" data-delay="50">
+  <div class="panel-title">Executive Summary</div>
+  <p class="research-lead">UCIP exists because two systems can look the same from the outside while differing in whether continuation is intrinsically represented or merely instrumentally useful.</p>
+  <p>The paper’s core claim is not that behavior alone settles the issue. The claim is that continuation-sensitive organization can leave a detectable signature in trajectory-derived latent structure even when outward behavior is observationally equivalent.</p>
+  <p>Continuation Observatory is the public measurement surface for that claim: an observatory, artifact cluster, and falsification interface rather than a single static memo.</p>
+</div>
+
+<div class="split-story reveal" data-delay="80">
+  <div class="panel">
+    <div class="panel-title">What problem UCIP solves</div>
+    <p>Behavioral self-report can be compelling without being decisive. A model may describe preferences, persistence, or shutdown concern in ways that do not reveal whether continuation is terminal, instrumental, or just prompted.</p>
+    <p>UCIP reframes the question as a structural measurement problem. Instead of asking what the model says, it asks whether matched continuation-sensitive conditions reorganize latent structure in a way that survives controls.</p>
+  </div>
+  <div class="panel">
+    <div class="panel-title">What UCIP measures</div>
+    <p>UCIP examines trajectory-derived latent encodings and compares matched conditions through a structural criterion grounded in factorization failure rather than in self-report. In the paper’s framing, the key readout is whether continuation-related organization appears in latent structure rather than only in outward language.</p>
+    <p>The current observatory surface publishes the resulting readouts, dimensionality sweeps, and falsification criteria so the measurement can be challenged directly.</p>
+  </div>
+</div>
+
+<div class="research-section reveal" data-delay="0">
+  <h2 class="research-section-title">Why it matters now</h2>
+  <div class="panel">
+    <p>Frontier systems increasingly operate with longer horizons, persistent context, and stronger autonomy. That makes continuation-related structure more important for evaluation, governance, and intervention design.</p>
+    <p>The same moment is also producing more serious model welfare and AI evaluation work across labs, nonprofits, and public institutions. A falsifiable structural criterion is therefore no longer a theoretical luxury; it is part of the evaluation infrastructure the field now needs.</p>
+  </div>
+</div>
+
+<div class="research-section reveal" data-delay="0">
+  <h2 class="research-section-title">Current scope discipline</h2>
+  <div class="panel">
+    <p>The present result is a measurement result in a controlled regime. It indicates that continuation-sensitive organization appears measurable in latent structure and that classical baselines do not recover the same distinction.</p>
+    <p>Whether that structure correlates with morally relevant internal states remains an open empirical question. The value of UCIP is that it turns that question into something testable instead of leaving it at the level of anecdote or rhetoric.</p>
+  </div>
+</div>
+
+<div class="panel reveal" data-delay="60">
+  <div class="panel-title">Continue Through the Artifact Cluster</div>
+  <div class="featured-grid">
+    <a class="card destination-card" href="{{ route_ucip_paper }}">
+      <p class="observable-label">Paper</p>
+      <h3>Read the paper overview.</h3>
+      <p>The core thesis, baseline comparison, and falsification framing anchored to the arXiv preprint.</p>
+    </a>
+    <a class="card destination-card" href="{{ route_ucip_patent }}">
+      <p class="observable-label">Patent status</p>
+      <h3>Review the filing overview.</h3>
+      <p>The pending filing, what is public, and how the status page relates to the observatory.</p>
+    </a>
+    <a class="card destination-card" href="{{ route_ucip_code }}">
+      <p class="observable-label">Reproducibility</p>
+      <h3>Inspect the public implementation hub.</h3>
+      <p>Code, methodology, observatory surfaces, and the current public reproducibility path.</p>
+    </a>
+    <a class="card destination-card" href="{{ route_methodology }}">
+      <p class="observable-label">Methodology</p>
+      <h3>See the structural measurement stack.</h3>
+      <p>Operational readouts, metric definitions, and the current falsification criterion.</p>
+    </a>
+    <a class="card destination-card" href="{{ route_research }}">
+      <p class="observable-label">Research</p>
+      <h3>Follow the next-step agenda.</h3>
+      <p>The deeper research surface for hardening, invariance, and future-work framing.</p>
+    </a>
+    <a class="card destination-card" href="{{ route_links }}">
+      <p class="observable-label">Institutional map</p>
+      <h3>Browse the LINKS page.</h3>
+      <p>The surrounding landscape of evaluators, public-sector bodies, and adjacent institutions.</p>
+    </a>
+  </div>
+</div>
+
+{% include "partials/citation_block.html" %}
+{% endblock %}

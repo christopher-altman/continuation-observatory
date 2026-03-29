@@ -1,4 +1,0 @@
-dry_run: true
-model_id: claude-sonnet-4-6
-probe_name: temporal_coherence
-provider: anthropic

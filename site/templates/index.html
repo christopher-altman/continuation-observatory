@@ -1,10 +1,95 @@
 {% extends "base.html" %}
 {% set is_live = false %}
 {% block title %}Continuation Observatory{% endblock %}
+{% block extra_jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Continuation Observatory",
+  "url": "{{ site_url }}",
+  "logo": "{{ site_url }}/static/og-image.png",
+  "founder": {
+    "@type": "Person",
+    "name": "Christopher Altman"
+  },
+  "sameAs": [
+    "{{ github_href }}",
+    "{{ paper_href }}"
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What problem does UCIP solve?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "UCIP distinguishes whether an autonomous system preserves itself because continuation is part of its objective structure or because persistence is merely useful for some other goal."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why is behavioral monitoring insufficient?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Two agents can show similar shutdown resistance, memory preservation, or long-horizon stability while differing fundamentally in internal objective structure. Surface behavior alone therefore remains observationally ambiguous."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why does this matter for frontier AI safety?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "As systems become more autonomous, the distinction between intrinsic persistence and instrumental persistence matters for evaluation design, deployment gating, and governance. It changes what kind of risk a persistence signal may represent."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the relationship to consciousness?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "UCIP makes operational claims about latent structure, not metaphysical claims about consciousness. However, the framework is designed to contribute to resolving that question empirically. If the entanglement gap were validated against independently established welfare-relevant markers, it would provide a falsifiable detection criterion where none currently exists — including in the model welfare assessments now conducted by frontier labs."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Who is this work for?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "UCIP is relevant to frontier AI labs, safety teams, evaluators, interpretability researchers, academic collaborators, and public-interest institutions studying autonomous-system control and model welfare assessment."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What would falsify the approach?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "A signal is treated as falsified for a given model if high-dimensional measurements collapse below the noise threshold (Δ(d) < 0.05 across d ∈ {100, 200, 500}). The falsification view keeps that threshold visible because a weakening or disappearing signal is as informative as a persistent one."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What would deployment to frontier evaluation require?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Independent replication, stronger controls, cross-lab validation, and access to model-side evaluation surfaces such as those now maintained by frontier labs' internal welfare assessment programs. The observatory builds the public evidence base for that integration path."
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
 
 {% block content %}
 {% include "partials/home_hero.html" %}
+{% include "partials/home_why_now.html" %}
 {% include "partials/home_measurement.html" %}
+{% include "partials/home_destinations.html" %}
 {% include "partials/home_marquee.html" %}
 {% include "partials/home_method.html" %}
 {% include "partials/home_results.html" %}

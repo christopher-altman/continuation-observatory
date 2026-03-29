@@ -42,7 +42,7 @@
         <td class="val-muted">{{ (m.timestamp or "")[:10] or "—" }}</td>
         <td>
           {% if m.figure %}
-          <a href="static/figures/{{ m.figure }}" target="_blank">png</a>
+          <a href="{{ asset_prefix }}/figures/{{ m.figure }}" target="_blank">png</a>
           {% else %}—{% endif %}
         </td>
       </tr>

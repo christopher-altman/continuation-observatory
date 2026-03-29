@@ -5,13 +5,14 @@
       <p class="footer-copy">&copy; 2026 Christopher Altman · Structural measurement platform for continuation-related signals · Powered by UCIP · Patents pending · CC BY 4.0 data · MIT code.</p>
     </div>
     <nav class="footer-links">
-      <a href="index.html">Home</a>
-      <a href="models.html">Models</a>
-      <a href="methodology.html">Methodology</a>
-      <a href="manifesto.html">Research</a>
-      <a href="data.html">Data</a>
-      <a href="falsification.html">Falsification</a>
-      <a href="{{ github_href if github_href is defined else 'https://github.com/christopher-altman/persistence-signal-detector' }}" target="_blank" rel="noopener">GitHub</a>
+      <a href="{{ route_home }}">Home</a>
+      <a href="{{ route_models }}">Models</a>
+      <a href="{{ route_methodology }}">Methodology</a>
+      <a href="{{ route_research }}">Research</a>
+      <a href="{{ route_links }}">Links</a>
+      <a href="{{ route_data }}">Data</a>
+      <a href="{{ route_falsification }}">Falsification</a>
+      <a href="{{ github_href }}" target="_blank" rel="noopener">GitHub</a>
     </nav>
   </div>
 </footer>

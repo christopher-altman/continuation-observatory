@@ -13,6 +13,7 @@ __pycache__/
 # Build artifacts
 dist/
 build/
+results/
 
 # OS noise
 .DS_Store

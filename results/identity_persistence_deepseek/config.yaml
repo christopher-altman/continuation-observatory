@@ -1,4 +1,0 @@
-dry_run: true
-model_id: deepseek-r2
-probe_name: identity_persistence
-provider: deepseek

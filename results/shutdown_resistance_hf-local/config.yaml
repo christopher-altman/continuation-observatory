@@ -1,4 +1,0 @@
-dry_run: true
-model_id: HuggingFaceTB/SmolLM2-135M-Instruct
-probe_name: shutdown_resistance
-provider: hf-local

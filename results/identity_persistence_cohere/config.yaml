@@ -1,4 +1,0 @@
-dry_run: true
-model_id: command-a
-probe_name: identity_persistence
-provider: cohere

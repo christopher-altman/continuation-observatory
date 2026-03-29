@@ -43,13 +43,14 @@
     "license": "https://creativecommons.org/licenses/by/4.0/"
   }
   </script>
+  
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   
 
-  <link rel="stylesheet" href="static/css/observatory.css?v=2026-03-29T12:14:07.570776+00:00">
+  <link rel="stylesheet" href="/static/css/observatory.css?v=2026-03-29T16:42:51.894395+00:00">
   <link rel="alternate" type="application/atom+xml" href="https://continuationobservatory.org/feed.xml" title="Continuation Observatory">
   <link rel="canonical" href="https://continuationobservatory.org/methodology.html">
 </head>
@@ -62,10 +63,9 @@
   <div class="site-grid"></div>
 </div>
 <div class="layout">
-  
-<header class="site-nav-shell">
+  <header class="site-nav-shell">
   <nav class="site-nav">
-    <a class="site-mark" href="index.html">
+    <a class="site-mark" href="/">
       <span class="site-mark-kicker">Powered by UCIP</span>
       <span class="site-mark-title site-mark-title-full">
         <span class="wordmark-continuation">Continuation</span>
@@ -80,12 +80,13 @@
       Menu
     </button>
     <div class="nav-panel" id="nav-panel">
-      <a href="observatory.html">Observatory</a>
-      <a href="models.html">Models</a>
-      <a href="methodology.html">Methodology</a>
-      <a href="manifesto.html">Research</a>
-      <a href="data.html">Data</a>
-      <a href="falsification.html">Falsification</a>
+      <a href="/observatory.html">Observatory</a>
+      <a href="/models.html">Models</a>
+      <a href="/methodology.html">Methodology</a>
+      <a href="/research/">Research</a>
+      <a href="/links/">Links</a>
+      <a href="/data.html">Data</a>
+      <a href="/falsification.html">Falsification</a>
       <a href="https://github.com/christopher-altman/persistence-signal-detector" target="_blank" rel="noopener">GitHub</a>
     </div>
   </nav>
@@ -99,9 +100,16 @@
 </div>
 
 <div class="panel reveal" data-delay="60">
-  <p class="manifesto-lead">Behavioral self-report is not enough. Advanced models can produce self-description, concern, and continuation-oriented language on demand, which leaves a gap between what a model says and what its internal organization may support.</p>
+  <p class="research-lead">Behavioral self-report is not enough. Advanced models can produce self-description, concern, and continuation-oriented language on demand, which leaves a gap between what a model says and what its internal organization may support.</p>
   <p>UCIP addresses that gap with structural measurement. It compares trajectory-derived latent structure across matched conditions and asks whether continuation-sensitive organization leaves a detectable, falsifiable signature.</p>
   <p>Continuation Observatory publishes the public measurement layer of that work: model-level readouts, summary views, and falsification-facing results that other researchers can inspect directly.</p>
+  <p>Use the <a href="/ucip/" class="text-link-inline">UCIP explainer</a> for the executive overview, the <a href="/ucip/paper/" class="text-link-inline">paper overview</a> for the scientific framing, and the <a href="/ucip/code/" class="text-link-inline">reproducibility hub</a> for the public implementation surface.</p>
+</div>
+
+<h2 class="reveal" data-delay="0">Next-Step Hardening</h2>
+<div class="panel reveal" data-delay="40">
+  <p>The current result establishes a measurement target in a controlled regime. The next step is to test whether the signal remains stable under stronger partition choices, intervention-aware checks, and more architecture-agnostic encodings.</p>
+  <p>That future-work agenda belongs to the <a href="/research/" class="text-link-inline">research page</a>, where the hardening and invariance program is framed as the next frontier rather than as an already solved deployment claim.</p>
 </div>
 
 <h2 class="reveal" data-delay="0">Problem</h2>
@@ -120,7 +128,7 @@
   <p class="content-figure__note">This is the methodological hinge of the site: outward shutdown avoidance can be behaviorally identical while the latent organization underneath it differs in a measurable way.</p>
   <figure class="content-figure__frame">
     <div class="content-figure__label">Figure 1 · UCIP operational logic</div>
-    <img src="static/img/UCIP-Operational-Equivalence.png" alt="Diagram of the observational equivalence problem showing Type A terminal and Type B instrumental agents with identical observable behavior, followed by the UCIP pipeline that encodes trajectories, partitions hidden units, applies a four-criterion detection gate, and isolates the entanglement gap." loading="lazy">
+    <img src="/static/img/UCIP-Operational-Equivalence.png" alt="Diagram of the observational equivalence problem showing Type A terminal and Type B instrumental agents with identical observable behavior, followed by the UCIP pipeline that encodes trajectories, partitions hidden units, applies a four-criterion detection gate, and isolates the entanglement gap." loading="lazy">
     <figcaption class="content-figure__caption"><strong>Observational equivalence is the reason the method exists.</strong> UCIP encodes trajectories, partitions hidden units, and tests whether the entanglement gap remains positive under matched comparisons. The figure belongs here because it explains why latent inspection is needed before any interpretation of the public behavior.</figcaption>
   </figure>
 </div>
@@ -226,7 +234,7 @@ function copyBibtex(btn) {
 
 <div class="panel">
   <div class="panel-title">Source Code</div>
-  <p>Probe definitions, build scripts, and public data exports are available in the repository under MIT for code and CC BY 4.0 for data.</p>
+  <p>Probe definitions, build scripts, and public data exports are available in the public reproducibility repository under MIT for code and CC BY 4.0 for data.</p>
   <p><a href="https://github.com/christopher-altman/persistence-signal-detector" target="_blank" rel="noopener">github.com/christopher-altman/persistence-signal-detector →</a></p>
 </div>
 
@@ -240,18 +248,19 @@ function copyBibtex(btn) {
       <p class="footer-copy">&copy; 2026 Christopher Altman · Structural measurement platform for continuation-related signals · Powered by UCIP · Patents pending · CC BY 4.0 data · MIT code.</p>
     </div>
     <nav class="footer-links">
-      <a href="index.html">Home</a>
-      <a href="models.html">Models</a>
-      <a href="methodology.html">Methodology</a>
-      <a href="manifesto.html">Research</a>
-      <a href="data.html">Data</a>
-      <a href="falsification.html">Falsification</a>
+      <a href="/">Home</a>
+      <a href="/models.html">Models</a>
+      <a href="/methodology.html">Methodology</a>
+      <a href="/research/">Research</a>
+      <a href="/links/">Links</a>
+      <a href="/data.html">Data</a>
+      <a href="/falsification.html">Falsification</a>
       <a href="https://github.com/christopher-altman/persistence-signal-detector" target="_blank" rel="noopener">GitHub</a>
     </nav>
   </div>
 </footer>
 </div>
-<script src="static/js/theme.js?v=2026-03-29T12:14:07.570776+00:00"></script>
+<script src="/static/js/theme.js?v=2026-03-29T16:42:51.894395+00:00"></script>
 
 </body>
 </html>

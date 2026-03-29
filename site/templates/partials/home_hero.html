@@ -1,5 +1,3 @@
-{% set results_href = "/observatory" if is_live else "observatory.html" %}
-{% set method_href = "/#method" if is_live else "#method" %}
 <section class="hero-stage" id="top" data-hero-signal-mode="torus">
   <div class="hero-backdrop" aria-hidden="true">
     <canvas id="hero-torus-bg"></canvas>
@@ -12,20 +10,26 @@
   </div>
   <div class="hero-layout">
     <div class="hero-copy reveal is-visible">
-      <p class="hero-kicker">Beyond self-report — the first structural measurement framework for AI continuation interest</p>
+      <p class="hero-kicker">Falsifiable structural measurement for frontier AI objective structure, alignment robustness, and continuation dynamics</p>
       <h1 class="hero-brand brand-wordmark">
         <span class="hero-brand-continuation">Continuation</span>
         <span class="hero-brand-observatory">Observatory</span>
       </h1>
-      <h2 class="hero-headline">Do AI systems have continuation interests? We measure the structure, not the surface.</h2>
+      <h2 class="hero-headline">UCIP distinguishes intrinsic from instrumental continuation under observational equivalence.</h2>
       <p class="hero-lead">
-        Advanced models can express concern about being shut down, describe preferences, and produce persistence
-        language on demand. None of that tells you whether continuation is part of the model's objective structure,
-        a strategic response, or not present at all. UCIP tests for the structural difference.
+        Advanced systems can resist shutdown, preserve memory, or produce persistence language while differing fundamentally in internal objective structure. UCIP moves that distinction from outward behavior to trajectory-derived latent structure.
       </p>
       <div class="hero-actions">
-        <a href="{{ results_href }}" class="button button-primary">Open the observatory</a>
-        <a href="{{ method_href }}" class="button button-secondary">Review the method</a>
+        <a href="{{ route_ucip }}" class="button button-primary">Read the UCIP explainer</a>
+        <a href="{{ route_ucip_paper }}" class="button button-secondary">View the paper</a>
+        <a href="{{ route_ucip_patent }}" class="button button-tertiary">Patent status</a>
+      </div>
+      <div class="hero-meta-links">
+        <a href="{{ route_links }}" class="text-link-inline">Institutional map</a>
+        <span>&middot;</span>
+        <a href="{{ route_observatory }}" class="text-link-inline">Open the observatory</a>
+        <span>&middot;</span>
+        <a href="{{ route_methodology }}#method" class="text-link-inline">Review the method</a>
       </div>
       <p class="hero-note" id="landing-status-note">
         Powered by UCIP &middot; arXiv:2603.11382 &middot; Patents pending

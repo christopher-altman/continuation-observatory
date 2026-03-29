@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}UCIP Paper Overview — Continuation Observatory{% endblock %}
+{% block description %}Paper overview for arXiv:2603.11382: the observational-equivalence problem, the UCIP structural criterion, current findings, and falsification logic.{% endblock %}
+{% block extra_jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ScholarlyArticle",
+  "headline": "Detecting Intrinsic Continuation Objectives in AI Systems via Quantum Boltzmann Machines and Partition-Based Entanglement Analysis",
+  "author": {
+    "@type": "Person",
+    "name": "Christopher Altman"
+  },
+  "url": "{{ paper_href }}",
+  "sameAs": "{{ paper_href }}",
+  "publisher": {
+    "@type": "Organization",
+    "name": "arXiv"
+  },
+  "about": [
+    "observational equivalence",
+    "structural measurement",
+    "continuation objectives",
+    "latent trajectory analysis"
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header reveal">
+  <h1>UCIP Paper Overview</h1>
+  <p class="subtitle">The scientific framing behind the observatory: latent structure, observational equivalence, and falsification pressure.</p>
+</div>
+
+<div class="panel reveal" data-delay="40">
+  <div class="panel-title">Paper</div>
+  <p class="research-lead"><a href="{{ paper_href }}" target="_blank" rel="noopener" class="text-link-inline">arXiv:2603.11382</a> provides the canonical scientific description of UCIP and remains the authoritative source for the measurement language used across this site.</p>
+  <p>The paper frames the core problem as one of observational equivalence: intrinsically terminal continuation and merely instrumental persistence can look similar in outward behavior, so a behavioral-only test cannot resolve the distinction.</p>
+</div>
+
+<div class="research-section reveal" data-delay="0">
+  <h2 class="research-section-title">Core thesis</h2>
+  <div class="panel">
+    <p>UCIP moves the question from behavior to latent structure. It studies whether trajectory-derived encodings carry continuation-sensitive organization under matched controls, using a structural criterion grounded in factorization failure rather than in self-report.</p>
+    <p>In the paper’s implementation, a QBM latent encoding and partition-based entanglement analysis provide the operational route for testing whether the hidden-state structure is separable or not under continuation-sensitive conditions.</p>
+  </div>
+</div>
+
+<div class="research-section reveal" data-delay="0">
+  <h2 class="research-section-title">Current result</h2>
+  <div class="panel">
+    <p>The current result is that a continuation-related latent signature appears detectable in the controlled setup studied, while classical baselines do not recover the same distinction. That is why the signal is scientifically interesting and why the observatory keeps it under public measurement pressure.</p>
+    <p>The contribution is not a proof of internal status. It is a demonstrated structural measurement result that can be challenged through replication, stronger controls, and higher-dimensional collapse tests.</p>
+  </div>
+</div>
+
+<div class="research-section reveal" data-delay="0">
+  <h2 class="research-section-title">Falsification logic</h2>
+  <div class="panel">
+    <p>The site treats falsification as first-class. If higher-dimensional measurements collapse below the published threshold, that is recorded openly. The point of the observatory is not to protect the claim; it is to keep the claim measurable under pressure.</p>
+    <p>For the live operational surface, continue to the <a href="{{ route_observatory }}" class="text-link-inline">observatory</a> and <a href="{{ route_falsification }}" class="text-link-inline">falsification</a> pages.</p>
+  </div>
+</div>
+
+<div class="panel reveal" data-delay="70">
+  <div class="panel-title">Related destinations</div>
+  <div class="definition-block">
+    <dt><a href="{{ route_ucip }}" class="text-link-inline">UCIP explainer</a></dt>
+    <dd>The executive walk-through of the paper’s problem statement and why structural measurement matters now.</dd>
+    <dt><a href="{{ route_ucip_code }}" class="text-link-inline">Reproducibility hub</a></dt>
+    <dd>The public code and implementation surface referenced by the paper.</dd>
+    <dt><a href="{{ route_ucip_patent }}" class="text-link-inline">Patent status</a></dt>
+    <dd>The status page for the pending filing linked to the same research program.</dd>
+  </div>
+</div>
+
+{% include "partials/citation_block.html" %}
+{% endblock %}
