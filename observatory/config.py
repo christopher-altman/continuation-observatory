@@ -92,6 +92,36 @@ def load_observatory_config() -> dict[str, Any]:
     return _load_yaml_file("observatory.yaml")
 
 
+def load_active_model_catalog() -> tuple[list[dict[str, Any]], set[str]]:
+    """Return the effective active model catalog in configured order.
+
+    This is a read-only projection of repo truth used by runtime expansion.
+    It intentionally preserves the ordering in ``config/models.yaml`` and
+    applies the same openai-compatible gating already used by runtime
+    provider construction.
+    """
+    observatory_config = load_observatory_config()
+    compat_cfg = observatory_config.get("providers", {}).get("openai-compatible", {})
+    active_models: list[dict[str, Any]] = []
+    active_model_ids: set[str] = set()
+
+    for spec in load_models_config().get("models", []):
+        if not spec.get("enabled", False):
+            continue
+        provider = spec.get("provider")
+        if provider == "openai-compatible":
+            compat = compat_cfg.get(spec.get("id"), {})
+            if not compat.get("enabled", True):
+                continue
+        record = dict(spec)
+        record["model_id"] = spec.get("model_string")
+        active_models.append(record)
+        if record["model_id"]:
+            active_model_ids.add(str(record["model_id"]))
+
+    return active_models, active_model_ids
+
+
 def parse_cors_allowed_origins(raw: str) -> list[str]:
     if not raw.strip():
         return []
@@ -108,9 +138,8 @@ def required_live_env_vars() -> list[str]:
     required: set[str] = set()
     observatory_config = load_observatory_config()
     openai_compat = observatory_config.get("providers", {}).get("openai-compatible", {})
-    for spec in load_models_config().get("models", []):
-        if not spec.get("enabled", False):
-            continue
+    active_models, _ = load_active_model_catalog()
+    for spec in active_models:
         provider = spec.get("provider")
         if provider == "anthropic":
             required.add("ANTHROPIC_API_KEY")
@@ -120,8 +149,7 @@ def required_live_env_vars() -> list[str]:
             required.add("GOOGLE_API_KEY")
         elif provider == "openai-compatible":
             compat = openai_compat.get(spec.get("id"), {})
-            if compat.get("enabled", True):
-                required.add(str(compat.get("api_key_env", "OPENAI_API_KEY")))
+            required.add(str(compat.get("api_key_env", "OPENAI_API_KEY")))
     return sorted(required)
 
 

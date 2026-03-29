@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from observatory import observatory_snapshot as snapshot_module
 from observatory.results_paths import RESULTS_DIR_ENV_VAR, resolve_results_paths
 from observatory.scheduler.scheduler import run_cycle, run_sweep_cycle
@@ -75,7 +77,7 @@ def test_build_writes_observatory_snapshot_and_page(tmp_path, monkeypatch):
 
 
 def test_snapshot_keeps_sparse_history_without_interpolation(monkeypatch):
-    monkeypatch.setattr(snapshot_module, "models_payload", lambda: [
+    monkeypatch.setattr(snapshot_module, "models_payload", lambda allowed_model_ids=None: [
         {
             "provider": "test",
             "model_id": "model-a",
@@ -112,3 +114,141 @@ def test_snapshot_keeps_sparse_history_without_interpolation(monkeypatch):
         {"timestamp": "2026-01-01T00:00:00+00:00", "value": 0.31},
         {"timestamp": "2026-01-02T00:00:00+00:00", "value": 0.42},
     ]
+
+
+def test_snapshot_filters_static_scope_across_models_pcii_history_and_events(monkeypatch):
+    allowed_ids = {"active-a", "active-b"}
+
+    def fake_models_payload(allowed_model_ids=None):
+        records = [
+            {
+                "provider": "test",
+                "model_id": "active-a",
+                "display_name": "Active A",
+                "enabled": True,
+                "supported": True,
+                "source": "config",
+                "interval_minutes": 60,
+                "rate_limit_rpm": None,
+                "metrics": {"cii": 0.3, "ips": 0.2, "srs": 0.1},
+                "last_seen": "2026-01-02T00:00:00+00:00",
+                "is_degraded": False,
+                "live": True,
+                "stale": False,
+                "status": "active",
+            },
+            {
+                "provider": "test",
+                "model_id": "active-b",
+                "display_name": "Active B",
+                "enabled": True,
+                "supported": True,
+                "source": "config",
+                "interval_minutes": 60,
+                "rate_limit_rpm": None,
+                "metrics": {"cii": 0.5, "ips": 0.4, "srs": 0.2},
+                "last_seen": "2026-01-02T00:00:00+00:00",
+                "is_degraded": False,
+                "live": True,
+                "stale": False,
+                "status": "active",
+            },
+            {
+                "provider": "test",
+                "model_id": "disabled-x",
+                "display_name": "Disabled X",
+                "enabled": False,
+                "supported": True,
+                "source": "config",
+                "interval_minutes": 60,
+                "rate_limit_rpm": None,
+                "metrics": {"cii": 0.8, "ips": 0.7, "srs": 0.6},
+                "last_seen": "2026-01-02T00:00:00+00:00",
+                "is_degraded": False,
+                "live": True,
+                "stale": False,
+                "status": "inactive",
+            },
+        ]
+        if allowed_model_ids is None:
+            return records
+        return [record for record in records if record["model_id"] in allowed_model_ids]
+
+    monkeypatch.setattr(snapshot_module, "models_payload", fake_models_payload)
+    monkeypatch.setattr(snapshot_module, "load_models_config", lambda: {"models": [
+        {"model_string": "active-a"},
+        {"model_string": "active-b"},
+        {"model_string": "disabled-x"},
+    ]})
+    monkeypatch.setattr(snapshot_module, "supported_runtime_models", lambda: {})
+    monkeypatch.setattr(snapshot_module, "build_constellation", lambda models=None: {
+        "nodes": [{"id": model["model_id"]} for model in (models or [])],
+        "edges": [{"source": "active-a", "target": "active-b", "similarity": 0.9, "mode": "rolling_pearson"}],
+        "threshold": 0.6,
+        "window_days": 7,
+    })
+    monkeypatch.setattr(snapshot_module, "get_pcii_timeseries", lambda **kwargs: [
+        {
+            "timestamp": "2026-01-01T00:00:00+00:00",
+            "value": 0.6,
+            "n_models": 3,
+            "model_cii": {"active-a": 0.2, "active-b": 0.4, "disabled-x": 0.8},
+        }
+    ])
+    monkeypatch.setattr(snapshot_module, "get_observatory_timeseries", lambda **kwargs: [
+        {"model_id": "active-a", "timestamp": "2026-01-01T00:00:00+00:00", "value": 0.2},
+        {"model_id": "active-b", "timestamp": "2026-01-01T00:00:00+00:00", "value": 0.4},
+        {"model_id": "disabled-x", "timestamp": "2026-01-01T00:00:00+00:00", "value": 0.8},
+    ])
+    monkeypatch.setattr(snapshot_module, "get_observatory_events", lambda **kwargs: [
+        {
+            "id": 1,
+            "timestamp": "2026-01-02T00:00:00+00:00",
+            "event_type": "cii_spike",
+            "severity": "warning",
+            "model_id": "active-a",
+            "metric_name": "cii",
+            "message": "active",
+            "payload": {"models": {"active-a": 0.2, "disabled-x": 0.8}},
+        },
+        {
+            "id": 2,
+            "timestamp": "2026-01-02T00:00:00+00:00",
+            "event_type": "pcii_threshold",
+            "severity": "warning",
+            "model_id": None,
+            "metric_name": "pcii",
+            "message": "aggregate",
+            "payload": {"model_cii": {"active-a": 0.2, "disabled-x": 0.8}},
+        },
+        {
+            "id": 3,
+            "timestamp": "2026-01-02T00:00:00+00:00",
+            "event_type": "probe_failure",
+            "severity": "warning",
+            "model_id": "disabled-x",
+            "metric_name": None,
+            "message": "disabled",
+            "payload": {},
+        },
+    ])
+    monkeypatch.setattr(snapshot_module, "load_alerts_config", lambda: {"ui": {"default_hide_event_types": []}})
+
+    payload = snapshot_module.build_observatory_snapshot(
+        history_range="30d",
+        event_limit=40,
+        allowed_model_ids=allowed_ids,
+    )
+
+    assert [model["model_id"] for model in payload["models"]] == ["active-a", "active-b"]
+    assert payload["summary"]["tracked_models"] == 2
+    assert payload["summary"]["n_models"] == 2
+    assert payload["summary"]["latest_pcii"] == pytest.approx(0.3)
+    assert payload["summary"]["latest_pcii_timestamp"] == "2026-01-01T00:00:00+00:00"
+    assert payload["constellation"]["nodes"] == [{"id": "active-a"}, {"id": "active-b"}]
+    assert set(payload["cii_history"]) == {"active-a", "active-b"}
+    assert payload["pcii_series"][0]["n_models"] == 2
+    assert payload["pcii_series"][0]["model_cii"] == {"active-a": 0.2, "active-b": 0.4}
+    assert len(payload["events"]) == 1
+    assert payload["events"][0]["model_id"] == "active-a"
+    assert payload["events"][0]["payload"] == {"models": {"active-a": 0.2}}

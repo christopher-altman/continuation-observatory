@@ -17,6 +17,7 @@ from xml.etree import ElementTree as ET
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
+from observatory.config import load_active_model_catalog
 from observatory.observatory_snapshot import build_observatory_snapshot
 from observatory.results_paths import RESULTS_DIR_ENV_VAR, resolve_results_paths
 
@@ -168,6 +169,17 @@ def load_all_experiments(manifest: dict, results_dir: Path) -> list:
         except Exception as e:
             print(f"  WARNING: Could not load {exp.get('name', '?')}: {e}", file=sys.stderr)
     return experiments
+
+
+def filter_model_scoped_experiments(experiments: list, active_model_ids: set[str]) -> list:
+    """Keep generic records plus model-scoped records in the active catalog."""
+    filtered: list[dict] = []
+    for experiment in experiments:
+        result = experiment.get("result") or {}
+        model_id = result.get("model_id")
+        if not model_id or model_id in active_model_ids:
+            filtered.append(experiment)
+    return filtered
 
 
 # ---------------------------------------------------------------------------
@@ -337,9 +349,23 @@ def generate_falsification(experiments: list) -> dict:
     }
 
 
-def generate_models(experiments: list) -> dict:
-    """Unique provider+model_id combos with probe coverage."""
+def generate_models(experiments: list, active_models: list[dict]) -> dict:
+    """Ordered active model catalog merged with observed probe coverage."""
     models_map: dict[str, dict] = {}
+    for spec in active_models:
+        model_id = spec.get("model_id") or spec.get("model_string") or ""
+        models_map[model_id] = {
+            "provider": spec.get("provider", "unknown"),
+            "model_id": model_id,
+            "display_name": spec.get("display_name", model_id),
+            "probes": [],
+            "entropy_delta": None,
+            "timestamp": None,
+            "figure": None,
+            "interval_minutes": spec.get("interval_minutes"),
+            "rate_limit_rpm": spec.get("rate_limit_rpm"),
+        }
+
     for e in experiments:
         result = e["result"]
         config = e["config"]
@@ -348,21 +374,25 @@ def generate_models(experiments: list) -> dict:
         provider = config.get("provider", "unknown")
         model_id = result.get("model_id", "unknown")
         probe_name = config.get("probe_name", "unknown")
-        key = f"{provider}::{model_id}"
-        if key not in models_map:
-            models_map[key] = {
+        entry = models_map.setdefault(
+            model_id,
+            {
                 "provider": provider,
                 "model_id": model_id,
+                "display_name": model_id,
                 "probes": [],
                 "entropy_delta": None,
                 "timestamp": None,
                 "figure": None,
-            }
-        entry = models_map[key]
+                "interval_minutes": None,
+                "rate_limit_rpm": None,
+            },
+        )
         if probe_name not in entry["probes"]:
             entry["probes"].append(probe_name)
         ts = result.get("timestamp", "")
         if entry["timestamp"] is None or ts > entry["timestamp"]:
+            entry["provider"] = provider
             entry["entropy_delta"] = result.get("entropy_delta")
             entry["timestamp"] = ts
             figures = e["manifest"].get("figures", [])
@@ -554,9 +584,13 @@ def _write_json(path: Path, data: dict | list) -> None:
         json.dump(data, f, indent=2, default=str)
 
 
-def _safe_observatory_snapshot() -> dict:
+def _safe_observatory_snapshot(active_model_ids: set[str]) -> dict:
     try:
-        return build_observatory_snapshot(history_range="30d", event_limit=40)
+        return build_observatory_snapshot(
+            history_range="30d",
+            event_limit=40,
+            allowed_model_ids=active_model_ids,
+        )
     except Exception as exc:
         print(f"  WARNING: Could not build observatory snapshot: {exc}", file=sys.stderr)
         return {
@@ -565,6 +599,7 @@ def _safe_observatory_snapshot() -> dict:
                 "history_range": "30d",
                 "tracked_models": 0,
                 "live_models": 0,
+                "n_models": 0,
                 "focused_metric": "cii",
                 "constellation_threshold": 0.60,
                 "similarity_window_days": 7,
@@ -604,7 +639,11 @@ def build(output_dir: Path, exports_only: bool = False, results_dir: str | Path 
     manifest = load_manifest(results_paths.root)
     print(f"  {len(manifest.get('experiments', []))} experiments found")
 
-    experiments = load_all_experiments(manifest, results_paths.root)
+    active_models, active_model_ids = load_active_model_catalog()
+    experiments = filter_model_scoped_experiments(
+        load_all_experiments(manifest, results_paths.root),
+        active_model_ids,
+    )
 
     # Copy static assets first (data writes below must come after, not be wiped)
     print("Copying static assets...")
@@ -625,10 +664,10 @@ def build(output_dir: Path, exports_only: bool = False, results_dir: str | Path 
     falsification = generate_falsification(experiments)
     _write_json(data_dir / "falsification.json", falsification)
 
-    models = generate_models(experiments)
+    models = generate_models(experiments, active_models)
     _write_json(data_dir / "models.json", models)
 
-    observatory_snapshot = _safe_observatory_snapshot()
+    observatory_snapshot = _safe_observatory_snapshot(active_model_ids)
     _write_json(data_dir / "observatory_snapshot.json", observatory_snapshot)
 
     # Generate exports

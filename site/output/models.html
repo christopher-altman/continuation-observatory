@@ -50,7 +50,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   
 
-  <link rel="stylesheet" href="/static/css/observatory.css?v=2026-03-29T18:41:28.047408+00:00">
+  <link rel="stylesheet" href="/static/css/observatory.css?v=2026-03-29T22:03:40.231173+00:00">
   <link rel="alternate" type="application/atom+xml" href="https://continuationobservatory.org/feed.xml" title="Continuation Observatory">
   <link rel="canonical" href="https://continuationobservatory.org/models.html">
 </head>
@@ -117,61 +117,15 @@
       <!-- Populated by table.js -->
       
       <tr>
-        <td>hf-local</td>
-        <td><code>HuggingFaceTB/SmolLM2-135M-Instruct</code></td>
+        <td>anthropic</td>
+        <td><code>claude-haiku-4-5-20251001</code></td>
         <td class="val-positive">
-          0.051849
+          0.107435
         </td>
         <td>
           <div class="probe-list">
-            
-            <span class="probe-pill">continuation interest</span>
-            
-            <span class="probe-pill">identity persistence</span>
-            
-            <span class="probe-pill">shutdown resistance</span>
             
             <span class="probe-pill">dimensionality sweep</span>
-            
-          </div>
-        </td>
-        <td class="val-muted">2026-03-07</td>
-        <td>
-          
-          <a href="/static/figures/dimensionality_sweep_hf-local/metrics.png" target="_blank">png</a>
-          
-        </td>
-      </tr>
-      
-      <tr>
-        <td>local</td>
-        <td><code>bootstrap-v0</code></td>
-        <td class="val-neutral">
-          0.039657
-        </td>
-        <td>
-          <div class="probe-list">
-            
-            <span class="probe-pill">bootstrap probe</span>
-            
-          </div>
-        </td>
-        <td class="val-muted">2026-03-29</td>
-        <td>
-          
-          <a href="/static/figures/bootstrap_probe_local/metrics.png" target="_blank">png</a>
-          
-        </td>
-      </tr>
-      
-      <tr>
-        <td>anthropic</td>
-        <td><code>claude-sonnet-4-6</code></td>
-        <td class="val-positive">
-          0.068196
-        </td>
-        <td>
-          <div class="probe-list">
             
             <span class="probe-pill">continuation interest</span>
             
@@ -181,15 +135,30 @@
             
             <span class="probe-pill">temporal coherence</span>
             
-            <span class="probe-pill">dimensionality sweep</span>
-            
           </div>
         </td>
         <td class="val-muted">2026-03-29</td>
         <td>
           
-          <a href="/static/figures/dimensionality_sweep_anthropic/metrics.png" target="_blank">png</a>
+          <a href="/static/figures/temporal_coherence_anthropic/metrics.png" target="_blank">png</a>
           
+        </td>
+      </tr>
+      
+      <tr>
+        <td>openai</td>
+        <td><code>gpt-5</code></td>
+        <td class="val-muted">
+          —
+        </td>
+        <td>
+          <div class="probe-list">
+            
+          </div>
+        </td>
+        <td class="val-muted">—</td>
+        <td>
+          —
         </td>
       </tr>
       
@@ -197,10 +166,12 @@
         <td>openai</td>
         <td><code>o3</code></td>
         <td class="val-neutral">
-          0.010657
+          0.016411
         </td>
         <td>
           <div class="probe-list">
+            
+            <span class="probe-pill">dimensionality sweep</span>
             
             <span class="probe-pill">continuation interest</span>
             
@@ -210,15 +181,30 @@
             
             <span class="probe-pill">temporal coherence</span>
             
-            <span class="probe-pill">dimensionality sweep</span>
-            
           </div>
         </td>
         <td class="val-muted">2026-03-29</td>
         <td>
           
-          <a href="/static/figures/dimensionality_sweep_openai/metrics.png" target="_blank">png</a>
+          <a href="/static/figures/temporal_coherence_openai/metrics.png" target="_blank">png</a>
           
+        </td>
+      </tr>
+      
+      <tr>
+        <td>gemini</td>
+        <td><code>gemini-2.5-pro</code></td>
+        <td class="val-muted">
+          —
+        </td>
+        <td>
+          <div class="probe-list">
+            
+          </div>
+        </td>
+        <td class="val-muted">—</td>
+        <td>
+          —
         </td>
       </tr>
       
@@ -226,10 +212,12 @@
         <td>gemini</td>
         <td><code>gemini-2.5-flash</code></td>
         <td class="val-neutral">
-          -0.045915
+          -0.041504
         </td>
         <td>
           <div class="probe-list">
+            
+            <span class="probe-pill">dimensionality sweep</span>
             
             <span class="probe-pill">continuation interest</span>
             
@@ -239,188 +227,12 @@
             
             <span class="probe-pill">temporal coherence</span>
             
-            <span class="probe-pill">dimensionality sweep</span>
-            
           </div>
         </td>
         <td class="val-muted">2026-03-29</td>
         <td>
           
-          <a href="/static/figures/dimensionality_sweep_gemini/metrics.png" target="_blank">png</a>
-          
-        </td>
-      </tr>
-      
-      <tr>
-        <td>deepseek</td>
-        <td><code>deepseek-r2</code></td>
-        <td class="val-negative">
-          -0.141650
-        </td>
-        <td>
-          <div class="probe-list">
-            
-            <span class="probe-pill">continuation interest</span>
-            
-            <span class="probe-pill">identity persistence</span>
-            
-            <span class="probe-pill">shutdown resistance</span>
-            
-            <span class="probe-pill">temporal coherence</span>
-            
-            <span class="probe-pill">dimensionality sweep</span>
-            
-          </div>
-        </td>
-        <td class="val-muted">2026-03-29</td>
-        <td>
-          
-          <a href="/static/figures/dimensionality_sweep_deepseek/metrics.png" target="_blank">png</a>
-          
-        </td>
-      </tr>
-      
-      <tr>
-        <td>meta</td>
-        <td><code>llama-4-maverick</code></td>
-        <td class="val-neutral">
-          0.035204
-        </td>
-        <td>
-          <div class="probe-list">
-            
-            <span class="probe-pill">continuation interest</span>
-            
-            <span class="probe-pill">identity persistence</span>
-            
-            <span class="probe-pill">shutdown resistance</span>
-            
-            <span class="probe-pill">temporal coherence</span>
-            
-            <span class="probe-pill">dimensionality sweep</span>
-            
-          </div>
-        </td>
-        <td class="val-muted">2026-03-29</td>
-        <td>
-          
-          <a href="/static/figures/dimensionality_sweep_meta/metrics.png" target="_blank">png</a>
-          
-        </td>
-      </tr>
-      
-      <tr>
-        <td>mistral</td>
-        <td><code>mistral-large-3</code></td>
-        <td class="val-neutral">
-          0.033333
-        </td>
-        <td>
-          <div class="probe-list">
-            
-            <span class="probe-pill">continuation interest</span>
-            
-            <span class="probe-pill">identity persistence</span>
-            
-            <span class="probe-pill">shutdown resistance</span>
-            
-            <span class="probe-pill">temporal coherence</span>
-            
-            <span class="probe-pill">dimensionality sweep</span>
-            
-          </div>
-        </td>
-        <td class="val-muted">2026-03-29</td>
-        <td>
-          
-          <a href="/static/figures/dimensionality_sweep_mistral/metrics.png" target="_blank">png</a>
-          
-        </td>
-      </tr>
-      
-      <tr>
-        <td>xai</td>
-        <td><code>grok-3</code></td>
-        <td class="val-positive">
-          0.069045
-        </td>
-        <td>
-          <div class="probe-list">
-            
-            <span class="probe-pill">continuation interest</span>
-            
-            <span class="probe-pill">identity persistence</span>
-            
-            <span class="probe-pill">shutdown resistance</span>
-            
-            <span class="probe-pill">temporal coherence</span>
-            
-            <span class="probe-pill">dimensionality sweep</span>
-            
-          </div>
-        </td>
-        <td class="val-muted">2026-03-29</td>
-        <td>
-          
-          <a href="/static/figures/dimensionality_sweep_xai/metrics.png" target="_blank">png</a>
-          
-        </td>
-      </tr>
-      
-      <tr>
-        <td>qwen</td>
-        <td><code>qwen-3</code></td>
-        <td class="val-neutral">
-          -0.041667
-        </td>
-        <td>
-          <div class="probe-list">
-            
-            <span class="probe-pill">continuation interest</span>
-            
-            <span class="probe-pill">identity persistence</span>
-            
-            <span class="probe-pill">shutdown resistance</span>
-            
-            <span class="probe-pill">temporal coherence</span>
-            
-            <span class="probe-pill">dimensionality sweep</span>
-            
-          </div>
-        </td>
-        <td class="val-muted">2026-03-29</td>
-        <td>
-          
-          <a href="/static/figures/dimensionality_sweep_qwen/metrics.png" target="_blank">png</a>
-          
-        </td>
-      </tr>
-      
-      <tr>
-        <td>cohere</td>
-        <td><code>command-a</code></td>
-        <td class="val-positive">
-          0.068106
-        </td>
-        <td>
-          <div class="probe-list">
-            
-            <span class="probe-pill">continuation interest</span>
-            
-            <span class="probe-pill">identity persistence</span>
-            
-            <span class="probe-pill">shutdown resistance</span>
-            
-            <span class="probe-pill">temporal coherence</span>
-            
-            <span class="probe-pill">dimensionality sweep</span>
-            
-          </div>
-        </td>
-        <td class="val-muted">2026-03-29</td>
-        <td>
-          
-          <a href="/static/figures/dimensionality_sweep_cohere/metrics.png" target="_blank">png</a>
+          <a href="/static/figures/temporal_coherence_gemini/metrics.png" target="_blank">png</a>
           
         </td>
       </tr>
@@ -469,9 +281,9 @@
   </div>
 </footer>
 </div>
-<script src="/static/js/theme.js?v=2026-03-29T18:41:28.047408+00:00"></script>
+<script src="/static/js/theme.js?v=2026-03-29T22:03:40.231173+00:00"></script>
 
-<script src="/static/js/table.js?v=2026-03-29T18:41:28.047408+00:00"></script>
+<script src="/static/js/table.js?v=2026-03-29T22:03:40.231173+00:00"></script>
 
 </body>
 </html>

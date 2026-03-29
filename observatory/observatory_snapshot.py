@@ -4,7 +4,13 @@ from datetime import datetime, timedelta, timezone
 from math import sqrt
 from typing import Any
 
-from observatory.config import load_alerts_config, load_models_config, load_observatory_config, load_weights_config
+from observatory.config import (
+    load_alerts_config,
+    load_models_config,
+    load_observatory_config,
+    load_weights_config,
+)
+from observatory.metrics.pcii import compute_pcii
 from observatory.providers.runtime import build_runtime_providers
 from observatory.storage.sqlite_backend import (
     get_latest_observatory_metrics,
@@ -63,7 +69,94 @@ def group_latest_metrics() -> dict[tuple[str, str], dict[str, Any]]:
     return grouped
 
 
-def models_payload() -> list[dict[str, Any]]:
+def _known_model_ids(runtime: dict[str, dict[str, Any]] | None = None) -> set[str]:
+    known = {
+        str(spec.get("model_string"))
+        for spec in load_models_config().get("models", [])
+        if spec.get("model_string")
+    }
+    if runtime is None:
+        runtime = supported_runtime_models()
+    known.update(runtime.keys())
+    return known
+
+
+def _filter_nested_model_ids(value: Any, allowed_model_ids: set[str], known_model_ids: set[str]) -> Any:
+    if isinstance(value, dict):
+        filtered: dict[str, Any] = {}
+        for key, nested in value.items():
+            if key in known_model_ids and key not in allowed_model_ids:
+                continue
+            filtered[key] = _filter_nested_model_ids(nested, allowed_model_ids, known_model_ids)
+        return filtered
+    if isinstance(value, list):
+        filtered_items = []
+        for item in value:
+            if isinstance(item, dict):
+                model_id = item.get("model_id")
+                if model_id and model_id in known_model_ids and model_id not in allowed_model_ids:
+                    continue
+            filtered_items.append(_filter_nested_model_ids(item, allowed_model_ids, known_model_ids))
+        return filtered_items
+    return value
+
+
+def _filter_pcii_series(
+    start: datetime,
+    end: datetime,
+    allowed_model_ids: set[str],
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    filtered_series: list[dict[str, Any]] = []
+    latest_visible: dict[str, Any] | None = None
+    for row in get_pcii_timeseries(start=start, end=end, limit=5000):
+        model_cii = row.get("model_cii") or {}
+        filtered_model_cii = {
+            model_id: value
+            for model_id, value in model_cii.items()
+            if model_id in allowed_model_ids
+        }
+        value = compute_pcii(filtered_model_cii)
+        if value is None:
+            continue
+        filtered_row = {
+            **row,
+            "value": value,
+            "n_models": len([metric for metric in filtered_model_cii.values() if metric is not None]),
+            "model_cii": filtered_model_cii,
+        }
+        filtered_series.append(filtered_row)
+        latest_visible = filtered_row
+    return filtered_series, latest_visible
+
+
+def _filter_events(
+    events: list[dict[str, Any]],
+    allowed_model_ids: set[str],
+    known_model_ids: set[str],
+) -> list[dict[str, Any]]:
+    filtered_events: list[dict[str, Any]] = []
+    for event in events:
+        model_id = event.get("model_id")
+        if model_id and model_id not in allowed_model_ids:
+            continue
+        if not model_id and (
+            event.get("metric_name") == "pcii"
+            or str(event.get("event_type", "")).startswith("pcii_")
+        ):
+            continue
+        filtered_event = dict(event)
+        payload = filtered_event.get("payload")
+        if payload is not None:
+            filtered_event["payload"] = _filter_nested_model_ids(
+                payload,
+                allowed_model_ids,
+                known_model_ids,
+            )
+        filtered_events.append(filtered_event)
+    return filtered_events
+
+
+def models_payload(allowed_model_ids: set[str] | None = None) -> list[dict[str, Any]]:
     configured = load_models_config().get("models", [])
     runtime = supported_runtime_models()
     latest = group_latest_metrics()
@@ -73,9 +166,12 @@ def models_payload() -> list[dict[str, Any]]:
     )
 
     for spec in configured:
-        if not include_disabled and not spec.get("enabled", False):
-            continue
         model_id = spec["model_string"]
+        if allowed_model_ids is not None:
+            if model_id not in allowed_model_ids:
+                continue
+        elif not include_disabled and not spec.get("enabled", False):
+            continue
         merged[model_id] = {
             "provider": spec["provider"],
             "model_id": model_id,
@@ -92,6 +188,8 @@ def models_payload() -> list[dict[str, Any]]:
 
     for runtime_model in runtime.values():
         model_id = runtime_model["model_id"]
+        if allowed_model_ids is not None and model_id not in allowed_model_ids:
+            continue
         if model_id not in merged:
             merged[model_id] = {
                 **runtime_model,
@@ -103,6 +201,8 @@ def models_payload() -> list[dict[str, Any]]:
             }
 
     for (provider, model_id), latest_entry in latest.items():
+        if allowed_model_ids is not None and model_id not in allowed_model_ids:
+            continue
         record = merged.setdefault(
             model_id,
             {
@@ -149,13 +249,14 @@ def models_payload() -> list[dict[str, Any]]:
                 ),
             }
         )
-    payload.sort(
-        key=lambda row: (
-            row["metrics"].get("cii") is None,
-            -(row["metrics"].get("cii") or 0.0),
-            row["display_name"],
+    if allowed_model_ids is None:
+        payload.sort(
+            key=lambda row: (
+                row["metrics"].get("cii") is None,
+                -(row["metrics"].get("cii") or 0.0),
+                row["display_name"],
+            )
         )
-    )
     return payload
 
 
@@ -259,15 +360,27 @@ def build_constellation(models: list[dict[str, Any]] | None = None) -> dict[str,
     return {"nodes": nodes, "edges": edges, "threshold": threshold, "window_days": window_days}
 
 
-def build_observatory_snapshot(history_range: str = "30d", event_limit: int = 40) -> dict[str, Any]:
+def build_observatory_snapshot(
+    history_range: str = "30d",
+    event_limit: int = 40,
+    allowed_model_ids: set[str] | None = None,
+) -> dict[str, Any]:
     start, end = parse_range(history_range)
-    models = models_payload()
+    models = models_payload(allowed_model_ids=allowed_model_ids)
+    visible_model_ids = {model["model_id"] for model in models}
     constellation = build_constellation(models=models)
-    pcii_series = get_pcii_timeseries(start=start, end=end, limit=5000)
+    known_model_ids = _known_model_ids()
+    if allowed_model_ids is None:
+        pcii_series = get_pcii_timeseries(start=start, end=end, limit=5000)
+        latest_pcii = pcii_series[-1] if pcii_series else None
+    else:
+        pcii_series, latest_pcii = _filter_pcii_series(start, end, visible_model_ids)
     cii_rows = get_observatory_timeseries(metric_name="cii", start=start, end=end, limit=20000)
     cii_history: dict[str, list[dict[str, Any]]] = {}
     for row in cii_rows:
         if row.get("value") is None:
+            continue
+        if allowed_model_ids is not None and row["model_id"] not in visible_model_ids:
             continue
         cii_history.setdefault(row["model_id"], []).append(
             {"timestamp": row["timestamp"], "value": float(row["value"])}
@@ -278,11 +391,13 @@ def build_observatory_snapshot(history_range: str = "30d", event_limit: int = 40
     events = get_observatory_events(limit=event_limit)
     event_hidden_types = set(load_alerts_config().get("ui", {}).get("default_hide_event_types", []))
     visible_events = [row for row in events if row["event_type"] not in event_hidden_types]
-    latest_pcii = pcii_series[-1] if pcii_series else None
+    if allowed_model_ids is not None:
+        visible_events = _filter_events(visible_events, visible_model_ids, known_model_ids)
     summary = {
         "history_range": history_range,
         "tracked_models": len(models),
         "live_models": sum(1 for model in models if model.get("live")),
+        "n_models": len(models),
         "focused_metric": "cii",
         "constellation_threshold": constellation["threshold"],
         "similarity_window_days": constellation["window_days"],

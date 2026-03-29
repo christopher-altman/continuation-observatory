@@ -3,7 +3,12 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from observatory.config import load_models_config, load_observatory_config, load_weights_config
+from observatory.config import (
+    load_active_model_catalog,
+    load_models_config,
+    load_observatory_config,
+    load_weights_config,
+)
 from observatory.metrics.observatory_metrics import ObservatoryMetrics
 from observatory.probes.registry import discover_probes
 from observatory.providers.generic_openai_provider import GenericOpenAIProvider
@@ -21,6 +26,20 @@ def test_runtime_providers_expand_configured_models():
     assert "gpt-5" in model_ids
     assert "claude-haiku-4-5-20251001" in model_ids
     assert "deepseek-r2" not in model_ids
+
+
+def test_active_model_catalog_matches_runtime_truth_in_config_order():
+    active_models, active_model_ids = load_active_model_catalog()
+    ordered_ids = [model["model_id"] for model in active_models]
+    assert ordered_ids == [
+        "claude-haiku-4-5-20251001",
+        "gpt-5",
+        "o3",
+        "gemini-2.5-pro",
+        "gemini-2.5-flash",
+    ]
+    assert active_model_ids == set(ordered_ids)
+    assert "deepseek-r2" not in active_model_ids
 
 
 def test_generic_openai_provider_dry_run_response():
