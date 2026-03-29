@@ -50,7 +50,15 @@ def test_observatory_pages_render():
     resp = client.get("/observatory")
     assert resp.status_code == 200
     assert b"Continuation Observatory" in resp.content
+    assert b"Temporal Readout" in resp.content
+    assert b"Aggregate Signal Timeline" in resp.content
+    assert b"Comparative Metric Overlay" in resp.content
+    assert b"Event Feed" in resp.content
     assert b"observatory-history-root" in resp.content
+    assert b'observatory-history-panel' in resp.content
+    assert b'timeline-root' in resp.content
+    assert b'observatory-timeline-shell' in resp.content
+    assert b'observatory-timeline-empty' in resp.content
 
     resp = client.get("/")
     assert resp.status_code == 200

@@ -17,6 +17,17 @@
     edp: "Entropy Proxy",
   };
 
+  const HISTORY_SERIES_PALETTE = [
+    "#7ec7ff",
+    "#8fe7ff",
+    "#7287ff",
+    "#9679ff",
+    "#cb72ff",
+    "#ff89c5",
+    "#ffbe73",
+    "#72d7bf",
+  ];
+
   const landingState = {
     refreshTimer: null,
     ws: null,
@@ -44,6 +55,19 @@
         view: null,
       }
     : null;
+  const historyPanelState = {
+    hoverModelId: null,
+    resizeObserver: null,
+    resizeTimer: null,
+    observedTarget: null,
+  };
+  const reducedMotionQuery = typeof window.matchMedia === "function"
+    ? window.matchMedia("(prefers-reduced-motion: reduce)")
+    : {
+        matches: false,
+        addEventListener: function () {},
+        addListener: function () {},
+      };
 
   function qs(selector) {
     return document.querySelector(selector);
@@ -72,6 +96,185 @@
   function extractProvider(modelId) {
     if (!modelId) return "unknown";
     return modelId.split("-")[0];
+  }
+
+  function hashString(input) {
+    let hash = 2166136261;
+    const value = String(input || "");
+    for (let index = 0; index < value.length; index += 1) {
+      hash ^= value.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return hash >>> 0;
+  }
+
+  function formatRangeLabel(range) {
+    return `${String(range || "24h").toUpperCase()} WINDOW`;
+  }
+
+  function historySeriesColor(modelId, index) {
+    return HISTORY_SERIES_PALETTE[(hashString(modelId) + index) % HISTORY_SERIES_PALETTE.length];
+  }
+
+  function historyTickFormatter(range) {
+    if (typeof d3 === "undefined") {
+      return function (value) {
+        return String(value);
+      };
+    }
+    if (range === "1h") return d3.timeFormat("%H:%M");
+    if (range === "24h") return d3.timeFormat("%H:%M");
+    if (range === "7d") return d3.timeFormat("%b %d");
+    return d3.timeFormat("%b %d");
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function classifyHistorySeries(series) {
+    if (!series || series.samples.length < 2) return "Sparse";
+    if (typeof d3 === "undefined") return "Tracked";
+    const values = series.samples.map(function (sample) { return sample.v; });
+    const delta = series.latest.v - series.first.v;
+    const span = (d3.max(values) || 0) - (d3.min(values) || 0);
+    const deviation = d3.deviation(values) || 0;
+    if (span < 0.02 && Math.abs(delta) < 0.015) return "Stable";
+    if (delta > 0.035) return deviation > 0.06 ? "Rising / volatile" : "Rising";
+    if (delta < -0.035) return deviation > 0.06 ? "Falling / volatile" : "Falling";
+    if (deviation > 0.065) return "Volatile";
+    return "Drifting";
+  }
+
+  function buildPlaceholderHistorySeries(models, range) {
+    const now = Date.now();
+    const windowMs = RANGE_TO_MS[range] || RANGE_TO_MS["24h"];
+    const sampleCount = range === "1h" ? 6 : range === "24h" ? 7 : 8;
+    const candidates = (models || [])
+      .filter(function (model) {
+        return model && model.metrics && Number.isFinite(model.metrics.cii);
+      })
+      .slice(0, 6);
+
+    return candidates.map(function (model, index) {
+      const seed = hashString(model.model_id);
+      const baseScore = clamp(
+        typeof model.rangeCii === "number" ? model.rangeCii : model.metrics.cii,
+        0.14,
+        0.92
+      );
+      const trendBias = (((seed % 17) / 16) - 0.5) * 0.18;
+      const swing = 0.018 + ((((seed >> 3) % 9) / 8) * 0.05);
+      const cadence = 1.4 + (seed % 3) * 0.55;
+      const samples = [];
+
+      for (let step = 0; step < sampleCount; step += 1) {
+        const progress = sampleCount === 1 ? 1 : step / (sampleCount - 1);
+        const timestamp = new Date(now - windowMs + (windowMs * progress));
+        const drift = (progress - 0.5) * trendBias;
+        const wave = Math.sin((progress * Math.PI * 2 * cadence) + index * 0.8) * swing * 0.55;
+        const echo = Math.cos((progress * Math.PI * cadence * 0.5) + index * 0.4) * swing * 0.2;
+        samples.push({
+          t: timestamp,
+          timestamp: timestamp.toISOString(),
+          v: clamp(baseScore + drift + wave + echo, 0.04, 0.98),
+        });
+      }
+
+      const latestDelta = baseScore - samples[samples.length - 1].v;
+      samples.forEach(function (entry) {
+        entry.v = clamp(entry.v + latestDelta, 0.04, 0.98);
+      });
+
+      return {
+        modelId: model.model_id,
+        label: model.display_name,
+        provider: model.provider,
+        samples: samples,
+        latest: samples[samples.length - 1],
+        first: samples[0],
+        historyDepth: samples.length,
+        trend: samples[samples.length - 1].v - samples[0].v,
+        classification: "",
+        color: historySeriesColor(model.model_id, index),
+        isPreview: true,
+      };
+    });
+  }
+
+  function buildPlaceholderAggregateSeries(models, range) {
+    const placeholderModels = buildPlaceholderHistorySeries(models, range);
+    if (!placeholderModels.length) return null;
+    const sampleCount = placeholderModels[0].samples.length;
+    const values = [];
+
+    for (let index = 0; index < sampleCount; index += 1) {
+      const stepSamples = placeholderModels
+        .map(function (entry) { return entry.samples[index]; })
+        .filter(Boolean);
+      if (!stepSamples.length) continue;
+      const mean = stepSamples.reduce(function (sum, entry) { return sum + entry.v; }, 0) / stepSamples.length;
+      const min = Math.min.apply(null, stepSamples.map(function (entry) { return entry.v; }));
+      const max = Math.max.apply(null, stepSamples.map(function (entry) { return entry.v; }));
+      values.push({
+        t: stepSamples[0].t,
+        timestamp: stepSamples[0].timestamp,
+        v: mean,
+        min: min,
+        max: max,
+      });
+    }
+
+    if (!values.length) return null;
+    return {
+      values: values,
+      isPreview: true,
+      label: "Preview aggregate telemetry",
+    };
+  }
+
+  function setPanelState(config) {
+    const panel = config.panel || null;
+    const mount = config.mount || null;
+    const empty = config.empty || null;
+    const note = config.note || null;
+    const state = config.state;
+    const states = ["real", "preview", "empty"];
+
+    if (panel) {
+      panel.dataset.panelState = state;
+      states.forEach(function (name) {
+        panel.classList.toggle(`is-${name}`, state === name);
+      });
+    }
+    if (mount) mount.hidden = state === "empty";
+    if (empty) empty.hidden = state !== "empty";
+    if (note) note.hidden = state !== "preview";
+  }
+
+  function scheduleHistoryPanelRender() {
+    if (historyPanelState.resizeTimer) window.clearTimeout(historyPanelState.resizeTimer);
+    historyPanelState.resizeTimer = window.setTimeout(function () {
+      renderHistoryPanel();
+    }, 80);
+  }
+
+  function bindHistoryPanelResize() {
+    const target = qs("#observatory-history-root");
+    if (!target || historyPanelState.observedTarget === target) return;
+    if (historyPanelState.resizeObserver) {
+      historyPanelState.resizeObserver.disconnect();
+      historyPanelState.resizeObserver = null;
+    }
+    historyPanelState.observedTarget = target;
+    if ("ResizeObserver" in window) {
+      historyPanelState.resizeObserver = new ResizeObserver(function () {
+        scheduleHistoryPanelRender();
+      });
+      historyPanelState.resizeObserver.observe(target);
+      return;
+    }
+    window.addEventListener("resize", scheduleHistoryPanelRender);
   }
 
   async function fetchJSON(url) {
@@ -413,27 +616,458 @@
     `;
   }
 
-  function renderTimeline() {
-    const target = qs("#timeline-root");
-    if (!target || !observatoryState.view) return;
-    if (!observatoryState.view.pciiSeries.length || typeof d3 === "undefined") {
-      target.innerHTML = `<p class="muted">No aggregate-score timeseries available for this window.</p>`;
+  function renderHistoryPanel() {
+    const target = qs("#observatory-history-root");
+    const panel = target ? target.closest(".observatory-history-panel") : null;
+    const emptyState = qs("#observatory-history-empty");
+    const rangeReadout = qs("#observatory-history-window");
+    const focusReadout = qs("#observatory-history-focus");
+    const modeNote = qs("#observatory-history-mode-note");
+    const historyShell = target ? target.closest(".observatory-history-shell") : null;
+    if (!target || !observatoryState || !observatoryState.view) return;
+
+    bindHistoryPanelResize();
+    historyPanelState.hoverModelId = null;
+    if (rangeReadout) rangeReadout.textContent = formatRangeLabel(observatoryState.range);
+
+    let series = observatoryState.view.models
+      .map(function (model, index) {
+        const history = Array.isArray(model.ciiHistory) ? model.ciiHistory : [];
+        const samples = history
+          .map(function (entry) {
+            return {
+              t: new Date(entry.timestamp),
+              v: entry.value,
+              timestamp: entry.timestamp,
+            };
+          })
+          .filter(function (entry) {
+            return entry.t instanceof Date && !Number.isNaN(entry.t.getTime()) && Number.isFinite(entry.v);
+          });
+        if (!samples.length) return null;
+        const latest = samples[samples.length - 1];
+        const first = samples[0];
+        return {
+          modelId: model.model_id,
+          label: model.display_name,
+          provider: model.provider,
+          samples: samples,
+          latest: latest,
+          first: first,
+          historyDepth: samples.length,
+          trend: latest.v - first.v,
+          classification: "",
+          color: historySeriesColor(model.model_id, index),
+        };
+      })
+      .filter(Boolean);
+
+    const usableRealSeriesCount = series.filter(function (entry) {
+      return entry.historyDepth >= 2;
+    }).length;
+
+    let usingPreview = false;
+    if (!series.length || usableRealSeriesCount === 0) {
+      const placeholderSeries = buildPlaceholderHistorySeries(observatoryState.view.models, observatoryState.range);
+      if (placeholderSeries.length) {
+        series = placeholderSeries;
+        usingPreview = true;
+      }
+    }
+
+    series.forEach(function (entry) {
+      entry.classification = classifyHistorySeries(entry);
+    });
+
+    const focusedModel = observatoryState.view.models.find(function (model) {
+      return model.model_id === observatoryState.focusModelId;
+    });
+    if (focusReadout) {
+      if (focusedModel) {
+        const focusedSeries = series.find(function (entry) { return entry.modelId === focusedModel.model_id; });
+        focusReadout.textContent = focusedSeries
+          ? `${focusedModel.display_name} · ${usingPreview ? "preview " : ""}${focusedSeries.classification.toLowerCase()}`
+          : `${focusedModel.display_name} · ${usingPreview ? "preview trail" : "no in-range trail"}`;
+      } else {
+        focusReadout.textContent = usingPreview
+          ? "Preview telemetry · placeholder values"
+          : series.length ? `${series.length} model traces` : "All tracked models";
+      }
+    }
+
+    target.innerHTML = "";
+    target.hidden = false;
+    target.classList.remove("is-ready");
+    target.classList.toggle("is-reduced-motion", Boolean(reducedMotionQuery.matches));
+    if (historyShell) {
+      historyShell.classList.toggle("is-preview", usingPreview);
+      historyShell.classList.toggle("is-real", !usingPreview && series.length > 0);
+      historyShell.classList.toggle("is-empty", !series.length);
+    }
+    if (rangeReadout) {
+      rangeReadout.textContent = usingPreview
+        ? `PREVIEW MODE · ${String(observatoryState.range || "24h").toUpperCase()}`
+        : formatRangeLabel(observatoryState.range);
+    }
+    if (!series.length || typeof d3 === "undefined") {
+      setPanelState({
+        panel: panel,
+        mount: target,
+        empty: emptyState,
+        note: modeNote,
+        state: "empty",
+      });
       return;
     }
+    setPanelState({
+      panel: panel,
+      mount: target,
+      empty: emptyState,
+      note: modeNote,
+      state: usingPreview ? "preview" : "real",
+    });
+
+    const width = Math.max(target.clientWidth || 960, 320);
+    const height = width < 620 ? 286 : 326;
+    const padding = { top: 34, right: 22, bottom: 36, left: 52 };
+    const innerWidth = width - padding.left - padding.right;
+    const innerHeight = height - padding.top - padding.bottom;
+    const allSamples = series.flatMap(function (entry) { return entry.samples; });
+
+    let xDomain = d3.extent(allSamples, function (entry) { return entry.t; });
+    if (!xDomain[0] || !xDomain[1]) {
+      const now = new Date();
+      xDomain = [new Date(now.getTime() - RANGE_TO_MS[observatoryState.range]), now];
+    }
+    if (xDomain[0].getTime() === xDomain[1].getTime()) {
+      const span = Math.max(RANGE_TO_MS[observatoryState.range] / 10, 60 * 60 * 1000);
+      xDomain = [new Date(xDomain[0].getTime() - span), new Date(xDomain[1].getTime() + span)];
+    }
+
+    const valueExtent = d3.extent(allSamples, function (entry) { return entry.v; });
+    const minValue = valueExtent[0] == null ? 0 : valueExtent[0];
+    const maxValue = valueExtent[1] == null ? 1 : valueExtent[1];
+    const valuePad = minValue === maxValue ? Math.max(0.03, Math.abs(maxValue) * 0.08) : (maxValue - minValue) * 0.16;
+    const yMin = clamp(minValue - valuePad, 0, 1);
+    const yMax = maxValue + valuePad;
+
+    const x = d3.scaleTime().domain(xDomain).range([padding.left, width - padding.right]);
+    const y = d3.scaleLinear().domain([yMin, yMax]).nice().range([height - padding.bottom, padding.top]);
+    const line = d3.line()
+      .x(function (entry) { return x(entry.t); })
+      .y(function (entry) { return y(entry.v); });
+
+    const svg = d3.select(target)
+      .append("svg")
+      .attr("viewBox", `0 0 ${width} ${height}`)
+      .attr("role", "img")
+      .attr("aria-label", "Continuation index history for tracked models");
+
+    const defs = svg.append("defs");
+    defs.append("clipPath")
+      .attr("id", "observatoryHistoryClip")
+      .append("rect")
+      .attr("x", padding.left)
+      .attr("y", padding.top)
+      .attr("width", innerWidth)
+      .attr("height", innerHeight);
+
+    defs.append("filter")
+      .attr("id", "observatoryHistoryLatestGlow")
+      .attr("x", "-80%")
+      .attr("y", "-80%")
+      .attr("width", "260%")
+      .attr("height", "260%");
+
+    const latestGlow = defs.select("#observatoryHistoryLatestGlow");
+    latestGlow.append("feGaussianBlur")
+      .attr("stdDeviation", 3)
+      .attr("result", "blur");
+    const latestGlowMerge = latestGlow.append("feMerge");
+    latestGlowMerge.append("feMergeNode").attr("in", "blur");
+    latestGlowMerge.append("feMergeNode").attr("in", "SourceGraphic");
+
+    const plot = svg.append("g").attr("clip-path", "url(#observatoryHistoryClip)");
+    const xAxis = d3.axisBottom(x)
+      .ticks(width < 520 ? 4 : 6)
+      .tickSizeOuter(0)
+      .tickFormat(historyTickFormatter(observatoryState.range));
+    const yAxis = d3.axisLeft(y).ticks(5).tickSizeOuter(0);
+    const xGrid = d3.axisBottom(x).ticks(width < 520 ? 4 : 6).tickSize(-innerHeight).tickFormat("");
+    const yGrid = d3.axisLeft(y).ticks(5).tickSize(-innerWidth).tickFormat("");
+
+    svg.append("g")
+      .attr("class", "observatory-history-grid observatory-history-grid--x")
+      .attr("transform", `translate(0,${height - padding.bottom})`)
+      .call(xGrid)
+      .call(function (group) {
+        group.select(".domain").remove();
+      });
+
+    svg.append("g")
+      .attr("class", "observatory-history-grid observatory-history-grid--y")
+      .attr("transform", `translate(${padding.left},0)`)
+      .call(yGrid)
+      .call(function (group) {
+        group.select(".domain").remove();
+      });
+
+    svg.append("g")
+      .attr("class", "observatory-history-axis")
+      .attr("transform", `translate(0,${height - padding.bottom})`)
+      .call(xAxis);
+
+    svg.append("g")
+      .attr("class", "observatory-history-axis")
+      .attr("transform", `translate(${padding.left},0)`)
+      .call(yAxis);
+
+    svg.append("text")
+      .attr("class", "observatory-history-axis-title")
+      .attr("x", padding.left)
+      .attr("y", 18)
+      .text("Continuation Index");
+
+    svg.append("text")
+      .attr("class", "observatory-history-axis-title")
+      .attr("x", width - padding.right)
+      .attr("y", height - 10)
+      .attr("text-anchor", "end")
+      .text("Time");
+
+    const seriesLayer = plot.append("g").attr("class", "observatory-history-series-layer");
+    const tooltip = d3.select(target)
+      .append("div")
+      .attr("class", "observatory-history-tooltip")
+      .attr("hidden", true);
+
+    function updateTooltip(seriesEntry, event) {
+      const [pointerX, pointerY] = d3.pointer(event, target);
+      tooltip
+        .html(
+          `<div class="observatory-history-tooltip-title">${seriesEntry.label}</div>` +
+          `<div class="observatory-history-tooltip-meta">${seriesEntry.isPreview ? "Preview telemetry · " : ""}${seriesEntry.classification} · ${seriesEntry.historyDepth} sample${seriesEntry.historyDepth === 1 ? "" : "s"}</div>` +
+          `<div class="observatory-history-tooltip-value">${fmt(seriesEntry.latest.v)} latest · ${seriesEntry.trend >= 0 ? "▲" : "▼"} ${fmt(Math.abs(seriesEntry.trend))}</div>`
+        )
+        .style("left", `${Math.min(pointerX + 18, width - 196)}px`)
+        .style("top", `${Math.max(pointerY - 18, 16)}px`)
+        .attr("hidden", null);
+    }
+
+    function clearTooltip() {
+      tooltip.attr("hidden", true);
+    }
+
+    function seriesPriority(entry) {
+      if (historyPanelState.hoverModelId && entry.modelId === historyPanelState.hoverModelId) return 2;
+      if (observatoryState.focusModelId && entry.modelId === observatoryState.focusModelId) return 1;
+      return 0;
+    }
+
+    const seriesGroups = seriesLayer.selectAll(".observatory-history-series")
+      .data(series.slice().sort(function (left, right) {
+        return seriesPriority(left) - seriesPriority(right);
+      }), function (entry) { return entry.modelId; })
+      .enter()
+      .append("g")
+      .attr("class", "observatory-history-series")
+      .attr("data-model-id", function (entry) { return entry.modelId; });
+
+    seriesGroups.append("path")
+      .attr("class", "observatory-history-line")
+      .attr("fill", "none")
+      .attr("stroke", function (entry) { return entry.color; })
+      .attr("stroke-linecap", "round")
+      .attr("stroke-linejoin", "round")
+      .attr("d", function (entry) {
+        return entry.samples.length > 1 ? line(entry.samples) : null;
+      });
+
+    seriesGroups.append("g")
+      .attr("class", "observatory-history-points")
+      .selectAll("circle")
+      .data(function (entry) {
+        return entry.samples.slice(0, Math.max(0, entry.samples.length - 1)).map(function (sample) {
+          return { sample: sample, series: entry };
+        });
+      })
+      .enter()
+      .append("circle")
+      .attr("class", "observatory-history-point")
+      .attr("cx", function (entry) { return x(entry.sample.t); })
+      .attr("cy", function (entry) { return y(entry.sample.v); })
+      .attr("r", 1.7)
+      .attr("fill", function (entry) { return entry.series.color; });
+
+    seriesGroups.append("circle")
+      .attr("class", "observatory-history-latest")
+      .attr("cx", function (entry) { return x(entry.latest.t); })
+      .attr("cy", function (entry) { return y(entry.latest.v); })
+      .attr("r", 3.6)
+      .attr("fill", function (entry) { return entry.color; });
+
+    function applySeriesVisualState() {
+      seriesGroups.sort(function (left, right) {
+        return seriesPriority(left) - seriesPriority(right);
+      });
+      seriesGroups.each(function (entry) {
+        const selection = d3.select(this);
+        const isHovered = historyPanelState.hoverModelId === entry.modelId;
+        const isFocused = observatoryState.focusModelId === entry.modelId;
+        const hasSpotlight = Boolean(historyPanelState.hoverModelId || observatoryState.focusModelId);
+        const isMuted = hasSpotlight && !isHovered && !isFocused;
+        const lineOpacity = isHovered ? 0.96 : isFocused ? 0.88 : hasSpotlight ? 0.16 : 0.44;
+        const pointOpacity = isHovered ? 0.82 : isFocused ? 0.66 : hasSpotlight ? 0.16 : 0.34;
+        const latestOpacity = isHovered ? 1 : isFocused ? 0.98 : hasSpotlight ? 0.34 : 0.86;
+
+        selection
+          .classed("is-hovered", isHovered)
+          .classed("is-focused", isFocused)
+          .classed("is-muted", isMuted);
+
+        selection.select(".observatory-history-line")
+          .attr("stroke-width", isHovered ? 2.5 : isFocused ? 2.2 : 1.15)
+          .style("opacity", entry.samples.length > 1 ? lineOpacity : 0);
+
+        selection.selectAll(".observatory-history-point")
+          .attr("r", isHovered ? 2.1 : isFocused ? 1.9 : 1.6)
+          .style("opacity", pointOpacity);
+
+        selection.select(".observatory-history-latest")
+          .attr("r", isHovered ? 5.1 : isFocused ? 4.6 : 3.6)
+          .style("opacity", latestOpacity)
+          .style("filter", isHovered || isFocused ? "url(#observatoryHistoryLatestGlow)" : null)
+          .classed("is-animated", !reducedMotionQuery.matches && (isHovered || isFocused));
+      });
+    }
+
+    seriesGroups
+      .on("pointerenter", function (event, entry) {
+        historyPanelState.hoverModelId = entry.modelId;
+        updateTooltip(entry, event);
+        applySeriesVisualState();
+      })
+      .on("pointermove", function (event, entry) {
+        updateTooltip(entry, event);
+      })
+      .on("pointerleave", function () {
+        historyPanelState.hoverModelId = null;
+        clearTooltip();
+        applySeriesVisualState();
+      })
+      .on("click", function (_, entry) {
+        window.dispatchEvent(new CustomEvent("observatory:focus-model", {
+          detail: { modelId: observatoryState.focusModelId === entry.modelId ? null : entry.modelId },
+        }));
+      });
+
+    svg.on("pointerleave", function () {
+      historyPanelState.hoverModelId = null;
+      clearTooltip();
+      applySeriesVisualState();
+    });
+
+    applySeriesVisualState();
+
+    if (!reducedMotionQuery.matches) {
+      window.requestAnimationFrame(function () {
+        target.classList.add("is-ready");
+      });
+    } else {
+      target.classList.add("is-ready");
+    }
+  }
+
+  function renderTimeline() {
+    const target = qs("#timeline-root");
+    const panel = target ? target.closest(".observatory-timeline-shell") : null;
+    const emptyState = qs("#observatory-timeline-empty");
+    const modeNote = qs("#observatory-timeline-mode-note");
+    const timelineShell = target ? target.closest(".observatory-timeline-shell") : null;
+    if (!target || !observatoryState.view) return;
+
+    target.innerHTML = "";
+    target.hidden = false;
+    if (timelineShell) {
+      timelineShell.classList.remove("is-preview", "is-real", "is-empty");
+    }
+
+    const realValues = (observatoryState.view.pciiSeries || [])
+      .map(function (row) {
+        return {
+          t: new Date(row.timestamp),
+          timestamp: row.timestamp,
+          v: row.value,
+        };
+      })
+      .filter(function (row) {
+        return row.t instanceof Date && !Number.isNaN(row.t.getTime()) && Number.isFinite(row.v);
+      });
+
+    let aggregateSeries = null;
+    if (realValues.length >= 2) {
+      aggregateSeries = {
+        values: realValues,
+        isPreview: false,
+        label: "Aggregate signal telemetry",
+      };
+    } else {
+      const placeholderAggregate = buildPlaceholderAggregateSeries(observatoryState.view.models, observatoryState.range);
+      if (placeholderAggregate) {
+        aggregateSeries = placeholderAggregate;
+      } else if (realValues.length === 1) {
+        aggregateSeries = {
+          values: realValues,
+          isPreview: false,
+          label: "Aggregate signal telemetry",
+        };
+      }
+    }
+
+    if (aggregateSeries && aggregateSeries.isPreview) {
+      if (timelineShell) timelineShell.classList.add("is-preview");
+    }
+
+    if (!aggregateSeries || typeof d3 === "undefined") {
+      setPanelState({
+        panel: panel,
+        mount: target,
+        empty: emptyState,
+        note: modeNote,
+        state: "empty",
+      });
+      return;
+    }
+    setPanelState({
+      panel: panel,
+      mount: target,
+      empty: emptyState,
+      note: modeNote,
+      state: aggregateSeries.isPreview ? "preview" : "real",
+    });
+
     const width = target.clientWidth || 980;
     const height = 250;
     const padding = { top: 18, right: 18, bottom: 28, left: 42 };
-    target.innerHTML = "";
     const svg = d3.select(target).append("svg").attr("viewBox", `0 0 ${width} ${height}`);
-    const values = observatoryState.view.pciiSeries.map(function (row) {
-      return { t: new Date(row.timestamp), v: row.value };
-    });
+    const values = aggregateSeries.values;
     const x = d3.scaleTime().domain(d3.extent(values, function (d) { return d.t; })).range([padding.left, width - padding.right]);
-    const y = d3.scaleLinear().domain([0, Math.max(1, d3.max(values, function (d) { return d.v; }) || 1)]).nice().range([height - padding.bottom, padding.top]);
+    const y = d3.scaleLinear().domain([
+      0,
+      Math.max(
+        1,
+        d3.max(values, function (d) { return d.max != null ? d.max : d.v; }) || 1
+      ),
+    ]).nice().range([height - padding.bottom, padding.top]);
     const area = d3.area()
       .x(function (d) { return x(d.t); })
       .y0(height - padding.bottom)
       .y1(function (d) { return y(d.v); })
+      .curve(d3.curveMonotoneX);
+    const band = d3.area()
+      .x(function (d) { return x(d.t); })
+      .y0(function (d) { return y(d.min != null ? d.min : d.v); })
+      .y1(function (d) { return y(d.max != null ? d.max : d.v); })
       .curve(d3.curveMonotoneX);
     const line = d3.line()
       .x(function (d) { return x(d.t); })
@@ -457,6 +1091,23 @@
       .attr("offset", function (d) { return d.offset; })
       .attr("stop-color", function (d) { return d.color; });
 
+    svg.append("defs")
+      .append("linearGradient")
+      .attr("id", "observatoryTimelineBandGradient")
+      .attr("x1", "0%")
+      .attr("x2", "0%")
+      .attr("y1", "0%")
+      .attr("y2", "100%")
+      .selectAll("stop")
+      .data([
+        { offset: "0%", color: aggregateSeries.isPreview ? "rgba(241, 190, 99, 0.14)" : "rgba(126, 199, 255, 0.12)" },
+        { offset: "100%", color: "rgba(126, 199, 255, 0.01)" },
+      ])
+      .enter()
+      .append("stop")
+      .attr("offset", function (d) { return d.offset; })
+      .attr("stop-color", function (d) { return d.color; });
+
     svg.append("g")
       .attr("transform", `translate(0,${height - padding.bottom})`)
       .call(d3.axisBottom(x).ticks(6).tickSizeOuter(0))
@@ -465,6 +1116,14 @@
       .attr("transform", `translate(${padding.left},0)`)
       .call(d3.axisLeft(y).ticks(5).tickSizeOuter(0))
       .attr("class", "axis");
+    if (values.some(function (entry) {
+      return entry.min != null && entry.max != null && entry.max !== entry.min;
+    })) {
+      svg.append("path")
+        .datum(values)
+        .attr("fill", "url(#observatoryTimelineBandGradient)")
+        .attr("d", band);
+    }
     svg.append("path")
       .datum(values)
       .attr("fill", "url(#observatoryTimelineGradient)")
@@ -472,7 +1131,7 @@
     svg.append("path")
       .datum(values)
       .attr("fill", "none")
-      .attr("stroke", "var(--cyan)")
+      .attr("stroke", aggregateSeries.isPreview ? "var(--amber)" : "var(--cyan)")
       .attr("stroke-width", 2.3)
       .attr("d", line);
     svg.selectAll("circle")
@@ -482,7 +1141,7 @@
       .attr("cx", function (d) { return x(d.t); })
       .attr("cy", function (d) { return y(d.v); })
       .attr("r", 2.4)
-      .attr("fill", "var(--accent)");
+      .attr("fill", aggregateSeries.isPreview ? "var(--amber)" : "var(--accent)");
   }
 
   function renderHeatmap() {
@@ -569,6 +1228,7 @@
     renderRangeState();
     renderObservatoryHeader();
     renderInspector();
+    renderHistoryPanel();
     renderTimeline();
     renderHeatmap();
     renderEvents();
@@ -609,6 +1269,7 @@
   }
 
   function bindObservatoryControls() {
+    bindHistoryPanelResize();
     document.querySelectorAll("[data-range]").forEach(function (button) {
       button.addEventListener("click", function () {
         observatoryState.range = button.dataset.range;
@@ -643,6 +1304,16 @@
     window.addEventListener("observatory:clear-focus", function () {
       setFocusModel(null);
     });
+
+    if (typeof reducedMotionQuery.addEventListener === "function") {
+      reducedMotionQuery.addEventListener("change", function () {
+        renderHistoryPanel();
+      });
+    } else if (typeof reducedMotionQuery.addListener === "function") {
+      reducedMotionQuery.addListener(function () {
+        renderHistoryPanel();
+      });
+    }
   }
 
   document.addEventListener("DOMContentLoaded", async function () {

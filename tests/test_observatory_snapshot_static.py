@@ -22,7 +22,15 @@ def test_build_writes_observatory_snapshot_and_page(tmp_path):
 
     assert observatory_page.exists()
     assert snapshot_path.exists()
-    assert "observatory-history-root" in observatory_page.read_text(encoding="utf-8")
+    observatory_html = observatory_page.read_text(encoding="utf-8")
+    assert "Temporal Readout" in observatory_html
+    assert "Aggregate Signal Timeline" in observatory_html
+    assert "Comparative Metric Overlay" in observatory_html
+    assert "Event Feed" in observatory_html
+    assert "observatory-history-root" in observatory_html
+    assert "timeline-root" in observatory_html
+    assert "observatory-timeline-shell" in observatory_html
+    assert "observatory-timeline-empty" in observatory_html
 
     payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
     assert "summary" in payload

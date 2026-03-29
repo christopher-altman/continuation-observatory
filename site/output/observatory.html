@@ -51,7 +51,7 @@
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 
 
-  <link rel="stylesheet" href="static/css/observatory.css?v=2026-03-29T07:43:50.532489+00:00">
+  <link rel="stylesheet" href="static/css/observatory.css?v=2026-03-29T12:14:07.570776+00:00">
   <link rel="alternate" type="application/atom+xml" href="https://continuationobservatory.org/feed.xml" title="Continuation Observatory">
   <link rel="canonical" href="https://continuationobservatory.org/observatory.html">
 </head>
@@ -195,6 +195,31 @@
           </div>
         </div>
       </div>
+
+      <section class="observatory-history-panel" aria-label="Historical temporal readout">
+        <div class="observatory-history-head">
+          <div class="observatory-history-copy">
+            <span class="summary-label">Temporal Readout</span>
+            <p class="observatory-band-note">
+              The field shows structure in space. This lower instrument resolves how each model's continuation signal shifts across the active tracking window.
+            </p>
+            <p class="observatory-history-mode-note" id="observatory-history-mode-note" hidden>
+              Preview mode. Placeholder telemetry for visual inspection only. Automatically replaced when live model history is available.
+            </p>
+          </div>
+          <div class="observatory-history-readout" aria-live="polite">
+            <span class="observatory-history-readout-chip" id="observatory-history-window">24H WINDOW</span>
+            <span class="observatory-history-readout-chip" id="observatory-history-focus">All tracked models</span>
+          </div>
+        </div>
+        <div class="observatory-history-shell">
+          <div id="observatory-history-root" class="observatory-history-root"></div>
+          <div id="observatory-history-empty" class="observatory-history-empty" hidden>
+            <span class="summary-label">Temporal Readout Unavailable</span>
+            <p class="muted">Not enough in-range CII history is available to resolve temporal change yet.</p>
+          </div>
+        </div>
+      </section>
     </div>
 
     <aside class="observatory-inspector" id="observatory-inspector" aria-live="polite">
@@ -209,9 +234,18 @@
         <div>
           <div class="panel-title">Aggregate Signal Timeline</div>
           <p class="observatory-band-note">The field resolves first. Aggregate signal, comparative heat, and events remain subordinate readouts.</p>
+          <p class="observatory-history-mode-note" id="observatory-timeline-mode-note" hidden>
+            Preview mode. Placeholder telemetry for visual inspection only. Automatically replaced when live model history is available.
+          </p>
         </div>
       </div>
-      <div id="timeline-root" class="timeline-root"></div>
+      <div class="observatory-timeline-shell-inner">
+        <div id="timeline-root" class="timeline-root"></div>
+        <div id="observatory-timeline-empty" class="observatory-history-empty" hidden>
+          <span class="summary-label">Aggregate Signal Timeline Unavailable</span>
+          <p class="muted">No aggregate signal telemetry is available for this window yet.</p>
+        </div>
+      </div>
     </div>
 
     <div class="observatory-lower">
@@ -249,10 +283,10 @@
   </div>
 </footer>
 </div>
-<script src="static/js/theme.js?v=2026-03-29T07:43:50.532489+00:00"></script>
+<script src="static/js/theme.js?v=2026-03-29T12:14:07.570776+00:00"></script>
 
-<script src="static/js/observatory.js?v=2026-03-29T07:43:50.532489+00:00"></script>
-<script type="module" src="static/js/observatory-field.js?v=2026-03-29T07:43:50.532489+00:00"></script>
+<script src="static/js/observatory.js?v=2026-03-29T12:14:07.570776+00:00"></script>
+<script type="module" src="static/js/observatory-field.js?v=2026-03-29T12:14:07.570776+00:00"></script>
 
 </body>
 </html>

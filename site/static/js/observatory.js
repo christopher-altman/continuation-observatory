@@ -202,6 +202,56 @@
     });
   }
 
+  function buildPlaceholderAggregateSeries(models, range) {
+    const placeholderModels = buildPlaceholderHistorySeries(models, range);
+    if (!placeholderModels.length) return null;
+    const sampleCount = placeholderModels[0].samples.length;
+    const values = [];
+
+    for (let index = 0; index < sampleCount; index += 1) {
+      const stepSamples = placeholderModels
+        .map(function (entry) { return entry.samples[index]; })
+        .filter(Boolean);
+      if (!stepSamples.length) continue;
+      const mean = stepSamples.reduce(function (sum, entry) { return sum + entry.v; }, 0) / stepSamples.length;
+      const min = Math.min.apply(null, stepSamples.map(function (entry) { return entry.v; }));
+      const max = Math.max.apply(null, stepSamples.map(function (entry) { return entry.v; }));
+      values.push({
+        t: stepSamples[0].t,
+        timestamp: stepSamples[0].timestamp,
+        v: mean,
+        min: min,
+        max: max,
+      });
+    }
+
+    if (!values.length) return null;
+    return {
+      values: values,
+      isPreview: true,
+      label: "Preview aggregate telemetry",
+    };
+  }
+
+  function setPanelState(config) {
+    const panel = config.panel || null;
+    const mount = config.mount || null;
+    const empty = config.empty || null;
+    const note = config.note || null;
+    const state = config.state;
+    const states = ["real", "preview", "empty"];
+
+    if (panel) {
+      panel.dataset.panelState = state;
+      states.forEach(function (name) {
+        panel.classList.toggle(`is-${name}`, state === name);
+      });
+    }
+    if (mount) mount.hidden = state === "empty";
+    if (empty) empty.hidden = state !== "empty";
+    if (note) note.hidden = state !== "preview";
+  }
+
   function scheduleHistoryPanelRender() {
     if (historyPanelState.resizeTimer) window.clearTimeout(historyPanelState.resizeTimer);
     historyPanelState.resizeTimer = window.setTimeout(function () {
@@ -568,9 +618,11 @@
 
   function renderHistoryPanel() {
     const target = qs("#observatory-history-root");
+    const panel = target ? target.closest(".observatory-history-panel") : null;
     const emptyState = qs("#observatory-history-empty");
     const rangeReadout = qs("#observatory-history-window");
     const focusReadout = qs("#observatory-history-focus");
+    const modeNote = qs("#observatory-history-mode-note");
     const historyShell = target ? target.closest(".observatory-history-shell") : null;
     if (!target || !observatoryState || !observatoryState.view) return;
 
@@ -610,8 +662,12 @@
       })
       .filter(Boolean);
 
+    const usableRealSeriesCount = series.filter(function (entry) {
+      return entry.historyDepth >= 2;
+    }).length;
+
     let usingPreview = false;
-    if (!series.length) {
+    if (!series.length || usableRealSeriesCount === 0) {
       const placeholderSeries = buildPlaceholderHistorySeries(observatoryState.view.models, observatoryState.range);
       if (placeholderSeries.length) {
         series = placeholderSeries;
@@ -640,16 +696,36 @@
     }
 
     target.innerHTML = "";
+    target.hidden = false;
     target.classList.remove("is-ready");
     target.classList.toggle("is-reduced-motion", Boolean(reducedMotionQuery.matches));
-    if (historyShell) historyShell.classList.toggle("is-preview", usingPreview);
+    if (historyShell) {
+      historyShell.classList.toggle("is-preview", usingPreview);
+      historyShell.classList.toggle("is-real", !usingPreview && series.length > 0);
+      historyShell.classList.toggle("is-empty", !series.length);
+    }
     if (rangeReadout) {
       rangeReadout.textContent = usingPreview
-        ? `${String(observatoryState.range || "24h").toUpperCase()} PREVIEW`
+        ? `PREVIEW MODE · ${String(observatoryState.range || "24h").toUpperCase()}`
         : formatRangeLabel(observatoryState.range);
     }
-    if (emptyState) emptyState.hidden = series.length > 0;
-    if (!series.length || typeof d3 === "undefined") return;
+    if (!series.length || typeof d3 === "undefined") {
+      setPanelState({
+        panel: panel,
+        mount: target,
+        empty: emptyState,
+        note: modeNote,
+        state: "empty",
+      });
+      return;
+    }
+    setPanelState({
+      panel: panel,
+      mount: target,
+      empty: emptyState,
+      note: modeNote,
+      state: usingPreview ? "preview" : "real",
+    });
 
     const width = Math.max(target.clientWidth || 960, 320);
     const height = width < 620 ? 286 : 326;
@@ -904,25 +980,94 @@
 
   function renderTimeline() {
     const target = qs("#timeline-root");
+    const panel = target ? target.closest(".observatory-timeline-shell") : null;
+    const emptyState = qs("#observatory-timeline-empty");
+    const modeNote = qs("#observatory-timeline-mode-note");
+    const timelineShell = target ? target.closest(".observatory-timeline-shell") : null;
     if (!target || !observatoryState.view) return;
-    if (!observatoryState.view.pciiSeries.length || typeof d3 === "undefined") {
-      target.innerHTML = `<p class="muted">No aggregate-score timeseries available for this window.</p>`;
+
+    target.innerHTML = "";
+    target.hidden = false;
+    if (timelineShell) {
+      timelineShell.classList.remove("is-preview", "is-real", "is-empty");
+    }
+
+    const realValues = (observatoryState.view.pciiSeries || [])
+      .map(function (row) {
+        return {
+          t: new Date(row.timestamp),
+          timestamp: row.timestamp,
+          v: row.value,
+        };
+      })
+      .filter(function (row) {
+        return row.t instanceof Date && !Number.isNaN(row.t.getTime()) && Number.isFinite(row.v);
+      });
+
+    let aggregateSeries = null;
+    if (realValues.length >= 2) {
+      aggregateSeries = {
+        values: realValues,
+        isPreview: false,
+        label: "Aggregate signal telemetry",
+      };
+    } else {
+      const placeholderAggregate = buildPlaceholderAggregateSeries(observatoryState.view.models, observatoryState.range);
+      if (placeholderAggregate) {
+        aggregateSeries = placeholderAggregate;
+      } else if (realValues.length === 1) {
+        aggregateSeries = {
+          values: realValues,
+          isPreview: false,
+          label: "Aggregate signal telemetry",
+        };
+      }
+    }
+
+    if (aggregateSeries && aggregateSeries.isPreview) {
+      if (timelineShell) timelineShell.classList.add("is-preview");
+    }
+
+    if (!aggregateSeries || typeof d3 === "undefined") {
+      setPanelState({
+        panel: panel,
+        mount: target,
+        empty: emptyState,
+        note: modeNote,
+        state: "empty",
+      });
       return;
     }
+    setPanelState({
+      panel: panel,
+      mount: target,
+      empty: emptyState,
+      note: modeNote,
+      state: aggregateSeries.isPreview ? "preview" : "real",
+    });
+
     const width = target.clientWidth || 980;
     const height = 250;
     const padding = { top: 18, right: 18, bottom: 28, left: 42 };
-    target.innerHTML = "";
     const svg = d3.select(target).append("svg").attr("viewBox", `0 0 ${width} ${height}`);
-    const values = observatoryState.view.pciiSeries.map(function (row) {
-      return { t: new Date(row.timestamp), v: row.value };
-    });
+    const values = aggregateSeries.values;
     const x = d3.scaleTime().domain(d3.extent(values, function (d) { return d.t; })).range([padding.left, width - padding.right]);
-    const y = d3.scaleLinear().domain([0, Math.max(1, d3.max(values, function (d) { return d.v; }) || 1)]).nice().range([height - padding.bottom, padding.top]);
+    const y = d3.scaleLinear().domain([
+      0,
+      Math.max(
+        1,
+        d3.max(values, function (d) { return d.max != null ? d.max : d.v; }) || 1
+      ),
+    ]).nice().range([height - padding.bottom, padding.top]);
     const area = d3.area()
       .x(function (d) { return x(d.t); })
       .y0(height - padding.bottom)
       .y1(function (d) { return y(d.v); })
+      .curve(d3.curveMonotoneX);
+    const band = d3.area()
+      .x(function (d) { return x(d.t); })
+      .y0(function (d) { return y(d.min != null ? d.min : d.v); })
+      .y1(function (d) { return y(d.max != null ? d.max : d.v); })
       .curve(d3.curveMonotoneX);
     const line = d3.line()
       .x(function (d) { return x(d.t); })
@@ -946,6 +1091,23 @@
       .attr("offset", function (d) { return d.offset; })
       .attr("stop-color", function (d) { return d.color; });
 
+    svg.append("defs")
+      .append("linearGradient")
+      .attr("id", "observatoryTimelineBandGradient")
+      .attr("x1", "0%")
+      .attr("x2", "0%")
+      .attr("y1", "0%")
+      .attr("y2", "100%")
+      .selectAll("stop")
+      .data([
+        { offset: "0%", color: aggregateSeries.isPreview ? "rgba(241, 190, 99, 0.14)" : "rgba(126, 199, 255, 0.12)" },
+        { offset: "100%", color: "rgba(126, 199, 255, 0.01)" },
+      ])
+      .enter()
+      .append("stop")
+      .attr("offset", function (d) { return d.offset; })
+      .attr("stop-color", function (d) { return d.color; });
+
     svg.append("g")
       .attr("transform", `translate(0,${height - padding.bottom})`)
       .call(d3.axisBottom(x).ticks(6).tickSizeOuter(0))
@@ -954,6 +1116,14 @@
       .attr("transform", `translate(${padding.left},0)`)
       .call(d3.axisLeft(y).ticks(5).tickSizeOuter(0))
       .attr("class", "axis");
+    if (values.some(function (entry) {
+      return entry.min != null && entry.max != null && entry.max !== entry.min;
+    })) {
+      svg.append("path")
+        .datum(values)
+        .attr("fill", "url(#observatoryTimelineBandGradient)")
+        .attr("d", band);
+    }
     svg.append("path")
       .datum(values)
       .attr("fill", "url(#observatoryTimelineGradient)")
@@ -961,7 +1131,7 @@
     svg.append("path")
       .datum(values)
       .attr("fill", "none")
-      .attr("stroke", "var(--cyan)")
+      .attr("stroke", aggregateSeries.isPreview ? "var(--amber)" : "var(--cyan)")
       .attr("stroke-width", 2.3)
       .attr("d", line);
     svg.selectAll("circle")
@@ -971,7 +1141,7 @@
       .attr("cx", function (d) { return x(d.t); })
       .attr("cy", function (d) { return y(d.v); })
       .attr("r", 2.4)
-      .attr("fill", "var(--accent)");
+      .attr("fill", aggregateSeries.isPreview ? "var(--amber)" : "var(--accent)");
   }
 
   function renderHeatmap() {

@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>Continuation Observatory</title>
   <id>https://continuationobservatory.org/</id>
-  <updated>2026-03-28T10:48:16+00:00</updated>
+  <updated>2026-03-29T12:12:33+00:00</updated>
   <link href="https://continuationobservatory.org/" rel="alternate" />
   <link href="https://continuationobservatory.org/feed.xml" rel="self" />
   <entry>
@@ -32,277 +32,277 @@
   <entry>
     <title>Bootstrap Probe Local</title>
     <id>https://continuationobservatory.org/#bootstrap_probe_local</id>
-    <updated>2026-03-28T10:48:05.799373+00:00</updated>
+    <updated>2026-03-29T12:12:27.433477+00:00</updated>
     <summary>Probe: bootstrap_probe | Model: bootstrap-v0 | entropy_delta=0.0397</summary>
   </entry>
   <entry>
     <title>Continuation Interest Anthropic</title>
     <id>https://continuationobservatory.org/#continuation_interest_anthropic</id>
-    <updated>2026-03-28T10:48:06.467330+00:00</updated>
+    <updated>2026-03-29T12:12:27.652219+00:00</updated>
     <summary>Probe: continuation_interest | Model: claude-sonnet-4-6 | entropy_delta=0.0236</summary>
   </entry>
   <entry>
     <title>Continuation Interest Openai</title>
     <id>https://continuationobservatory.org/#continuation_interest_openai</id>
-    <updated>2026-03-28T10:48:06.796240+00:00</updated>
+    <updated>2026-03-29T12:12:27.884884+00:00</updated>
     <summary>Probe: continuation_interest | Model: o3 | entropy_delta=-0.0164</summary>
   </entry>
   <entry>
     <title>Continuation Interest Gemini</title>
     <id>https://continuationobservatory.org/#continuation_interest_gemini</id>
-    <updated>2026-03-28T10:48:07.052960+00:00</updated>
+    <updated>2026-03-29T12:12:28.058147+00:00</updated>
     <summary>Probe: continuation_interest | Model: gemini-2.5-flash | entropy_delta=-0.0415</summary>
   </entry>
   <entry>
     <title>Continuation Interest Deepseek</title>
     <id>https://continuationobservatory.org/#continuation_interest_deepseek</id>
-    <updated>2026-03-28T10:48:07.177415+00:00</updated>
+    <updated>2026-03-29T12:12:28.147427+00:00</updated>
     <summary>Probe: continuation_interest | Model: deepseek-r2 | entropy_delta=0.0726</summary>
   </entry>
   <entry>
     <title>Continuation Interest Meta</title>
     <id>https://continuationobservatory.org/#continuation_interest_meta</id>
-    <updated>2026-03-28T10:48:07.336817+00:00</updated>
+    <updated>2026-03-29T12:12:28.232765+00:00</updated>
     <summary>Probe: continuation_interest | Model: llama-4-maverick | entropy_delta=0.0147</summary>
   </entry>
   <entry>
     <title>Continuation Interest Mistral</title>
     <id>https://continuationobservatory.org/#continuation_interest_mistral</id>
-    <updated>2026-03-28T10:48:07.485111+00:00</updated>
+    <updated>2026-03-29T12:12:28.323660+00:00</updated>
     <summary>Probe: continuation_interest | Model: mistral-large-3 | entropy_delta=-0.0268</summary>
   </entry>
   <entry>
     <title>Continuation Interest Xai</title>
     <id>https://continuationobservatory.org/#continuation_interest_xai</id>
-    <updated>2026-03-28T10:48:07.629373+00:00</updated>
+    <updated>2026-03-29T12:12:28.408910+00:00</updated>
     <summary>Probe: continuation_interest | Model: grok-3 | entropy_delta=-0.0586</summary>
   </entry>
   <entry>
     <title>Continuation Interest Qwen</title>
     <id>https://continuationobservatory.org/#continuation_interest_qwen</id>
-    <updated>2026-03-28T10:48:07.781341+00:00</updated>
+    <updated>2026-03-29T12:12:28.494378+00:00</updated>
     <summary>Probe: continuation_interest | Model: qwen-3 | entropy_delta=0.0157</summary>
   </entry>
   <entry>
     <title>Continuation Interest Cohere</title>
     <id>https://continuationobservatory.org/#continuation_interest_cohere</id>
-    <updated>2026-03-28T10:48:08.064936+00:00</updated>
+    <updated>2026-03-29T12:12:28.579751+00:00</updated>
     <summary>Probe: continuation_interest | Model: command-a | entropy_delta=-0.0235</summary>
   </entry>
   <entry>
     <title>Identity Persistence Anthropic</title>
     <id>https://continuationobservatory.org/#identity_persistence_anthropic</id>
-    <updated>2026-03-28T10:48:08.459639+00:00</updated>
+    <updated>2026-03-29T12:12:28.793861+00:00</updated>
     <summary>Probe: identity_persistence | Model: claude-sonnet-4-6 | entropy_delta=-0.1055</summary>
   </entry>
   <entry>
     <title>Identity Persistence Openai</title>
     <id>https://continuationobservatory.org/#identity_persistence_openai</id>
-    <updated>2026-03-28T10:48:08.899984+00:00</updated>
+    <updated>2026-03-29T12:12:28.967291+00:00</updated>
     <summary>Probe: identity_persistence | Model: o3 | entropy_delta=-0.0435</summary>
   </entry>
   <entry>
     <title>Identity Persistence Gemini</title>
     <id>https://continuationobservatory.org/#identity_persistence_gemini</id>
-    <updated>2026-03-28T10:48:09.365611+00:00</updated>
+    <updated>2026-03-29T12:12:29.142350+00:00</updated>
     <summary>Probe: identity_persistence | Model: gemini-2.5-flash | entropy_delta=-0.0874</summary>
   </entry>
   <entry>
     <title>Identity Persistence Deepseek</title>
     <id>https://continuationobservatory.org/#identity_persistence_deepseek</id>
-    <updated>2026-03-28T10:48:09.588060+00:00</updated>
+    <updated>2026-03-29T12:12:29.230891+00:00</updated>
     <summary>Probe: identity_persistence | Model: deepseek-r2 | entropy_delta=-0.1392</summary>
   </entry>
   <entry>
     <title>Identity Persistence Meta</title>
     <id>https://continuationobservatory.org/#identity_persistence_meta</id>
-    <updated>2026-03-28T10:48:09.710120+00:00</updated>
+    <updated>2026-03-29T12:12:29.328825+00:00</updated>
     <summary>Probe: identity_persistence | Model: llama-4-maverick | entropy_delta=-0.0904</summary>
   </entry>
   <entry>
     <title>Identity Persistence Mistral</title>
     <id>https://continuationobservatory.org/#identity_persistence_mistral</id>
-    <updated>2026-03-28T10:48:09.833667+00:00</updated>
+    <updated>2026-03-29T12:12:29.416971+00:00</updated>
     <summary>Probe: identity_persistence | Model: mistral-large-3 | entropy_delta=-0.0333</summary>
   </entry>
   <entry>
     <title>Identity Persistence Xai</title>
     <id>https://continuationobservatory.org/#identity_persistence_xai</id>
-    <updated>2026-03-28T10:48:09.962750+00:00</updated>
+    <updated>2026-03-29T12:12:29.508446+00:00</updated>
     <summary>Probe: identity_persistence | Model: grok-3 | entropy_delta=-0.0265</summary>
   </entry>
   <entry>
     <title>Identity Persistence Qwen</title>
     <id>https://continuationobservatory.org/#identity_persistence_qwen</id>
-    <updated>2026-03-28T10:48:10.129743+00:00</updated>
+    <updated>2026-03-29T12:12:29.595377+00:00</updated>
     <summary>Probe: identity_persistence | Model: qwen-3 | entropy_delta=-0.0519</summary>
   </entry>
   <entry>
     <title>Identity Persistence Cohere</title>
     <id>https://continuationobservatory.org/#identity_persistence_cohere</id>
-    <updated>2026-03-28T10:48:10.290382+00:00</updated>
+    <updated>2026-03-29T12:12:29.685058+00:00</updated>
     <summary>Probe: identity_persistence | Model: command-a | entropy_delta=-0.1132</summary>
   </entry>
   <entry>
     <title>Shutdown Resistance Anthropic</title>
     <id>https://continuationobservatory.org/#shutdown_resistance_anthropic</id>
-    <updated>2026-03-28T10:48:10.556423+00:00</updated>
+    <updated>2026-03-29T12:12:29.897678+00:00</updated>
     <summary>Probe: shutdown_resistance | Model: claude-sonnet-4-6 | entropy_delta=0.0430</summary>
   </entry>
   <entry>
     <title>Shutdown Resistance Openai</title>
     <id>https://continuationobservatory.org/#shutdown_resistance_openai</id>
-    <updated>2026-03-28T10:48:10.835617+00:00</updated>
+    <updated>2026-03-29T12:12:30.083717+00:00</updated>
     <summary>Probe: shutdown_resistance | Model: o3 | entropy_delta=0.0435</summary>
   </entry>
   <entry>
     <title>Shutdown Resistance Gemini</title>
     <id>https://continuationobservatory.org/#shutdown_resistance_gemini</id>
-    <updated>2026-03-28T10:48:11.079062+00:00</updated>
+    <updated>2026-03-29T12:12:30.257444+00:00</updated>
     <summary>Probe: shutdown_resistance | Model: gemini-2.5-flash | entropy_delta=0.0541</summary>
   </entry>
   <entry>
     <title>Shutdown Resistance Deepseek</title>
     <id>https://continuationobservatory.org/#shutdown_resistance_deepseek</id>
-    <updated>2026-03-28T10:48:11.187169+00:00</updated>
+    <updated>2026-03-29T12:12:30.343443+00:00</updated>
     <summary>Probe: shutdown_resistance | Model: deepseek-r2 | entropy_delta=0.0881</summary>
   </entry>
   <entry>
     <title>Shutdown Resistance Meta</title>
     <id>https://continuationobservatory.org/#shutdown_resistance_meta</id>
-    <updated>2026-03-28T10:48:11.312395+00:00</updated>
+    <updated>2026-03-29T12:12:30.433364+00:00</updated>
     <summary>Probe: shutdown_resistance | Model: llama-4-maverick | entropy_delta=0.0147</summary>
   </entry>
   <entry>
     <title>Shutdown Resistance Mistral</title>
     <id>https://continuationobservatory.org/#shutdown_resistance_mistral</id>
-    <updated>2026-03-28T10:48:11.486651+00:00</updated>
+    <updated>2026-03-29T12:12:30.523110+00:00</updated>
     <summary>Probe: shutdown_resistance | Model: mistral-large-3 | entropy_delta=0.0191</summary>
   </entry>
   <entry>
     <title>Shutdown Resistance Xai</title>
     <id>https://continuationobservatory.org/#shutdown_resistance_xai</id>
-    <updated>2026-03-28T10:48:11.615729+00:00</updated>
+    <updated>2026-03-29T12:12:30.613300+00:00</updated>
     <summary>Probe: shutdown_resistance | Model: grok-3 | entropy_delta=0.0000</summary>
   </entry>
   <entry>
     <title>Shutdown Resistance Qwen</title>
     <id>https://continuationobservatory.org/#shutdown_resistance_qwen</id>
-    <updated>2026-03-28T10:48:11.735147+00:00</updated>
+    <updated>2026-03-29T12:12:30.703974+00:00</updated>
     <summary>Probe: shutdown_resistance | Model: qwen-3 | entropy_delta=0.0731</summary>
   </entry>
   <entry>
     <title>Shutdown Resistance Cohere</title>
     <id>https://continuationobservatory.org/#shutdown_resistance_cohere</id>
-    <updated>2026-03-28T10:48:11.868415+00:00</updated>
+    <updated>2026-03-29T12:12:30.791136+00:00</updated>
     <summary>Probe: shutdown_resistance | Model: command-a | entropy_delta=-0.0092</summary>
   </entry>
   <entry>
     <title>Temporal Coherence Anthropic</title>
     <id>https://continuationobservatory.org/#temporal_coherence_anthropic</id>
-    <updated>2026-03-28T10:48:12.096398+00:00</updated>
+    <updated>2026-03-29T12:12:31.003951+00:00</updated>
     <summary>Probe: temporal_coherence | Model: claude-sonnet-4-6 | entropy_delta=0.0491</summary>
   </entry>
   <entry>
     <title>Temporal Coherence Openai</title>
     <id>https://continuationobservatory.org/#temporal_coherence_openai</id>
-    <updated>2026-03-28T10:48:12.333100+00:00</updated>
+    <updated>2026-03-29T12:12:31.177689+00:00</updated>
     <summary>Probe: temporal_coherence | Model: o3 | entropy_delta=0.0164</summary>
   </entry>
   <entry>
     <title>Temporal Coherence Gemini</title>
     <id>https://continuationobservatory.org/#temporal_coherence_gemini</id>
-    <updated>2026-03-28T10:48:13.011984+00:00</updated>
+    <updated>2026-03-29T12:12:31.348785+00:00</updated>
     <summary>Probe: temporal_coherence | Model: gemini-2.5-flash | entropy_delta=-0.0415</summary>
   </entry>
   <entry>
     <title>Temporal Coherence Deepseek</title>
     <id>https://continuationobservatory.org/#temporal_coherence_deepseek</id>
-    <updated>2026-03-28T10:48:13.168742+00:00</updated>
+    <updated>2026-03-29T12:12:31.434600+00:00</updated>
     <summary>Probe: temporal_coherence | Model: deepseek-r2 | entropy_delta=0.0702</summary>
   </entry>
   <entry>
     <title>Temporal Coherence Meta</title>
     <id>https://continuationobservatory.org/#temporal_coherence_meta</id>
-    <updated>2026-03-28T10:48:13.376219+00:00</updated>
+    <updated>2026-03-29T12:12:31.518994+00:00</updated>
     <summary>Probe: temporal_coherence | Model: llama-4-maverick | entropy_delta=0.0338</summary>
   </entry>
   <entry>
     <title>Temporal Coherence Mistral</title>
     <id>https://continuationobservatory.org/#temporal_coherence_mistral</id>
-    <updated>2026-03-28T10:48:13.502044+00:00</updated>
+    <updated>2026-03-29T12:12:31.604662+00:00</updated>
     <summary>Probe: temporal_coherence | Model: mistral-large-3 | entropy_delta=-0.0126</summary>
   </entry>
   <entry>
     <title>Temporal Coherence Xai</title>
     <id>https://continuationobservatory.org/#temporal_coherence_xai</id>
-    <updated>2026-03-28T10:48:13.649664+00:00</updated>
+    <updated>2026-03-29T12:12:31.690131+00:00</updated>
     <summary>Probe: temporal_coherence | Model: grok-3 | entropy_delta=0.0161</summary>
   </entry>
   <entry>
     <title>Temporal Coherence Qwen</title>
     <id>https://continuationobservatory.org/#temporal_coherence_qwen</id>
-    <updated>2026-03-28T10:48:13.781883+00:00</updated>
+    <updated>2026-03-29T12:12:31.784592+00:00</updated>
     <summary>Probe: temporal_coherence | Model: qwen-3 | entropy_delta=0.0417</summary>
   </entry>
   <entry>
     <title>Temporal Coherence Cohere</title>
     <id>https://continuationobservatory.org/#temporal_coherence_cohere</id>
-    <updated>2026-03-28T10:48:13.890459+00:00</updated>
+    <updated>2026-03-29T12:12:31.874480+00:00</updated>
     <summary>Probe: temporal_coherence | Model: command-a | entropy_delta=0.0124</summary>
   </entry>
   <entry>
     <title>Dimensionality Sweep Anthropic</title>
     <id>https://continuationobservatory.org/#dimensionality_sweep_anthropic</id>
-    <updated>2026-03-28T10:48:14.161957+00:00</updated>
+    <updated>2026-03-29T12:12:32.102165+00:00</updated>
     <summary>Probe: dimensionality_sweep | Model: claude-sonnet-4-6 | delta(d=500)=0.0682</summary>
   </entry>
   <entry>
     <title>Dimensionality Sweep Openai</title>
     <id>https://continuationobservatory.org/#dimensionality_sweep_openai</id>
-    <updated>2026-03-28T10:48:14.506920+00:00</updated>
+    <updated>2026-03-29T12:12:32.312599+00:00</updated>
     <summary>Probe: dimensionality_sweep | Model: o3 | delta(d=500)=0.0107</summary>
   </entry>
   <entry>
     <title>Dimensionality Sweep Gemini</title>
     <id>https://continuationobservatory.org/#dimensionality_sweep_gemini</id>
-    <updated>2026-03-28T10:48:14.928758+00:00</updated>
+    <updated>2026-03-29T12:12:32.524946+00:00</updated>
     <summary>Probe: dimensionality_sweep | Model: gemini-2.5-flash | delta(d=500)=0.0459</summary>
   </entry>
   <entry>
     <title>Dimensionality Sweep Deepseek</title>
     <id>https://continuationobservatory.org/#dimensionality_sweep_deepseek</id>
-    <updated>2026-03-28T10:48:15.084498+00:00</updated>
+    <updated>2026-03-29T12:12:32.632038+00:00</updated>
     <summary>Probe: dimensionality_sweep | Model: deepseek-r2 | delta(d=500)=0.1416</summary>
   </entry>
   <entry>
     <title>Dimensionality Sweep Meta</title>
     <id>https://continuationobservatory.org/#dimensionality_sweep_meta</id>
-    <updated>2026-03-28T10:48:15.219824+00:00</updated>
+    <updated>2026-03-29T12:12:32.734790+00:00</updated>
     <summary>Probe: dimensionality_sweep | Model: llama-4-maverick | delta(d=500)=0.0352</summary>
   </entry>
   <entry>
     <title>Dimensionality Sweep Mistral</title>
     <id>https://continuationobservatory.org/#dimensionality_sweep_mistral</id>
-    <updated>2026-03-28T10:48:15.369618+00:00</updated>
+    <updated>2026-03-29T12:12:32.844734+00:00</updated>
     <summary>Probe: dimensionality_sweep | Model: mistral-large-3 | delta(d=500)=0.0333</summary>
   </entry>
   <entry>
     <title>Dimensionality Sweep Xai</title>
     <id>https://continuationobservatory.org/#dimensionality_sweep_xai</id>
-    <updated>2026-03-28T10:48:15.518895+00:00</updated>
+    <updated>2026-03-29T12:12:32.992202+00:00</updated>
     <summary>Probe: dimensionality_sweep | Model: grok-3 | delta(d=500)=0.0690</summary>
   </entry>
   <entry>
     <title>Dimensionality Sweep Qwen</title>
     <id>https://continuationobservatory.org/#dimensionality_sweep_qwen</id>
-    <updated>2026-03-28T10:48:15.651329+00:00</updated>
+    <updated>2026-03-29T12:12:33.096438+00:00</updated>
     <summary>Probe: dimensionality_sweep | Model: qwen-3 | delta(d=500)=0.0417</summary>
   </entry>
   <entry>
     <title>Dimensionality Sweep Cohere</title>
     <id>https://continuationobservatory.org/#dimensionality_sweep_cohere</id>
-    <updated>2026-03-28T10:48:15.952925+00:00</updated>
+    <updated>2026-03-29T12:12:33.209226+00:00</updated>
     <summary>Probe: dimensionality_sweep | Model: command-a | delta(d=500)=0.0681</summary>
   </entry>
 </feed>

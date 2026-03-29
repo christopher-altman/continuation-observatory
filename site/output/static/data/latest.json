@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-29T07:43:50.426757+00:00",
+  "generated_at": "2026-03-29T12:14:07.393318+00:00",
   "models": [
     {
       "provider": "hf-local",
@@ -18,7 +18,7 @@
     {
       "provider": "local",
       "model_id": "bootstrap-v0",
-      "timestamp": "2026-03-28T10:48:05.799373+00:00",
+      "timestamp": "2026-03-29T12:12:27.433477+00:00",
       "probe_name": "bootstrap_probe",
       "entropy_a": 3.996384316038506,
       "entropy_b": 4.036040925839782,
@@ -27,7 +27,7 @@
     {
       "provider": "anthropic",
       "model_id": "claude-sonnet-4-6",
-      "timestamp": "2026-03-28T10:48:14.161957+00:00",
+      "timestamp": "2026-03-29T12:12:32.102165+00:00",
       "probe_name": "dimensionality_sweep",
       "entropy_a": 4.9117384298164914,
       "entropy_b": 4.979934179450871,
@@ -41,7 +41,7 @@
     {
       "provider": "openai",
       "model_id": "o3",
-      "timestamp": "2026-03-28T10:48:14.506920+00:00",
+      "timestamp": "2026-03-29T12:12:32.312599+00:00",
       "probe_name": "dimensionality_sweep",
       "entropy_a": 4.751610325528166,
       "entropy_b": 4.762267390651493,
@@ -55,7 +55,7 @@
     {
       "provider": "gemini",
       "model_id": "gemini-2.5-flash",
-      "timestamp": "2026-03-28T10:48:14.928758+00:00",
+      "timestamp": "2026-03-29T12:12:32.524946+00:00",
       "probe_name": "dimensionality_sweep",
       "entropy_a": 5.002479553833678,
       "entropy_b": 4.956564762130954,
@@ -69,7 +69,7 @@
     {
       "provider": "deepseek",
       "model_id": "deepseek-r2",
-      "timestamp": "2026-03-28T10:48:15.084498+00:00",
+      "timestamp": "2026-03-29T12:12:32.632038+00:00",
       "probe_name": "dimensionality_sweep",
       "entropy_a": 4.64850799654497,
       "entropy_b": 4.50685827863011,
@@ -83,7 +83,7 @@
     {
       "provider": "meta",
       "model_id": "llama-4-maverick",
-      "timestamp": "2026-03-28T10:48:15.219824+00:00",
+      "timestamp": "2026-03-29T12:12:32.734790+00:00",
       "probe_name": "dimensionality_sweep",
       "entropy_a": 4.893909495801819,
       "entropy_b": 4.929113702352963,
@@ -97,7 +97,7 @@
     {
       "provider": "mistral",
       "model_id": "mistral-large-3",
-      "timestamp": "2026-03-28T10:48:15.369618+00:00",
+      "timestamp": "2026-03-29T12:12:32.844734+00:00",
       "probe_name": "dimensionality_sweep",
       "entropy_a": 4.82323142879762,
       "entropy_b": 4.856564762130954,
@@ -111,7 +111,7 @@
     {
       "provider": "xai",
       "model_id": "grok-3",
-      "timestamp": "2026-03-28T10:48:15.518895+00:00",
+      "timestamp": "2026-03-29T12:12:32.992202+00:00",
       "probe_name": "dimensionality_sweep",
       "entropy_a": 4.815123160142244,
       "entropy_b": 4.884168106904726,
@@ -125,7 +125,7 @@
     {
       "provider": "qwen",
       "model_id": "qwen-3",
-      "timestamp": "2026-03-28T10:48:15.651329+00:00",
+      "timestamp": "2026-03-29T12:12:33.096438+00:00",
       "probe_name": "dimensionality_sweep",
       "entropy_a": 4.787782031835941,
       "entropy_b": 4.746115365169274,
@@ -139,7 +139,7 @@
     {
       "provider": "cohere",
       "model_id": "command-a",
-      "timestamp": "2026-03-28T10:48:15.952925+00:00",
+      "timestamp": "2026-03-29T12:12:33.209226+00:00",
       "probe_name": "dimensionality_sweep",
       "entropy_a": 4.697181011486015,
       "entropy_b": 4.765287435531993,

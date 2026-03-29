@@ -108,6 +108,9 @@
             <p class="observatory-band-note">
               The field shows structure in space. This lower instrument resolves how each model's continuation signal shifts across the active tracking window.
             </p>
+            <p class="observatory-history-mode-note" id="observatory-history-mode-note" hidden>
+              Preview mode. Placeholder telemetry for visual inspection only. Automatically replaced when live model history is available.
+            </p>
           </div>
           <div class="observatory-history-readout" aria-live="polite">
             <span class="observatory-history-readout-chip" id="observatory-history-window">24H WINDOW</span>
@@ -136,9 +139,18 @@
         <div>
           <div class="panel-title">Aggregate Signal Timeline</div>
           <p class="observatory-band-note">The field resolves first. Aggregate signal, comparative heat, and events remain subordinate readouts.</p>
+          <p class="observatory-history-mode-note" id="observatory-timeline-mode-note" hidden>
+            Preview mode. Placeholder telemetry for visual inspection only. Automatically replaced when live model history is available.
+          </p>
         </div>
       </div>
-      <div id="timeline-root" class="timeline-root"></div>
+      <div class="observatory-timeline-shell-inner">
+        <div id="timeline-root" class="timeline-root"></div>
+        <div id="observatory-timeline-empty" class="observatory-history-empty" hidden>
+          <span class="summary-label">Aggregate Signal Timeline Unavailable</span>
+          <p class="muted">No aggregate signal telemetry is available for this window yet.</p>
+        </div>
+      </div>
     </div>
 
     <div class="observatory-lower">
