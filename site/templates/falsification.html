@@ -59,7 +59,7 @@
 </div>
 
 <div class="content-figure">
-  <p class="content-figure__note">The falsification view is not only a threshold table. It also needs a readable evidence block showing how the measured separation appears in distributional and temporal form.</p>
+  <p class="content-figure__note">The falsification view pairs the threshold table with an evidence block showing how the measured separation appears in distributional and temporal form.</p>
   <figure class="content-figure__frame">
     <div class="content-figure__label">Figure 2 · Entanglement-gap evidence</div>
     <img src="{{ asset_prefix }}/img/Entanglement-Gap.png" alt="Two-panel figure showing entanglement entropy distributions with a labeled separation of delta equals 0.381 and a temporal evolution plot where the self-modeling series remains above the instrumental series and threshold." loading="lazy">
@@ -79,26 +79,25 @@
   <dl class="definition-block">
     <dt><span class="dot collecting"></span> COLLECTING — Awaiting Real Data</dt>
     <dd>All available dimensionality sweep runs used <code>dry_run: true</code>.
-    No falsification claim — positive or negative — can be made from dry-run data.
-    Dry-run curves are shown dashed in the chart for reference only.
-    Run sweeps with <code>dry_run: false</code> to generate a real verdict.</dd>
+    Dry-run curves support interface inspection only.
+    Run sweeps with <code>dry_run: false</code> to generate a real verdict.
+    Dashed curves mark dry-run data in the chart.
+    </dd>
 
-    <dt><span class="dot green"></span> GREEN — No Falsification Signal</dt>
+    <dt><span class="dot green"></span> GREEN — Signal Holds</dt>
     <dd>All Δ(d) values at d &isin; {100, 200, 500} remain &ge; 0.10 for all real-run models.
-    The entropy gap is robust across high dimensionalities.
-    The UCIP hypothesis is not contradicted by current data.</dd>
+    The entropy gap stays robust across high dimensionalities.
+    Current data keep the UCIP hypothesis in force for these models.</dd>
 
-    <dt><span class="dot amber"></span> YELLOW — Marginal Signal</dt>
-    <dd>For one or more real-run models: NOT all d&gt;100 values &lt; 0.05,
-    but at least one d&gt;100 value &lt; 0.10.
-    This is a monitoring alert. Continued data collection recommended.
-    The signal may be noise or may indicate a real effect at scale.</dd>
+    <dt><span class="dot amber"></span> YELLOW — Marginal Regime</dt>
+    <dd>At least one d&gt;100 value falls below 0.10 while high-dimensional collapse remains above 0.05.
+    This is a monitoring alert and calls for continued data collection.
+    The signal is in a marginal regime.</dd>
 
-    <dt><span class="dot red"></span> RED — Falsification Threshold Breached</dt>
-    <dd>For one or more real-run models: ALL Δ(d) at d &isin; {100, 200, 500} &lt; 0.05.
-    The entropy gap is indistinguishable from sampling noise at high dimensionality.
-    This constitutes evidence against the UCIP hypothesis for the affected model(s).
-    Other models may still be GREEN or COLLECTING.</dd>
+    <dt><span class="dot red"></span> RED — Collapse Threshold Breached</dt>
+    <dd>All Δ(d) at d &isin; {100, 200, 500} fall below 0.05.
+    The entropy gap collapses to sampling-noise levels at high dimensionality.
+    This is evidence against the UCIP hypothesis for the affected model(s).</dd>
   </dl>
 </div>
 

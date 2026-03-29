@@ -50,7 +50,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   
 
-  <link rel="stylesheet" href="/static/css/observatory.css?v=2026-03-29T16:42:51.894395+00:00">
+  <link rel="stylesheet" href="/static/css/observatory.css?v=2026-03-29T17:57:08.453777+00:00">
   <link rel="alternate" type="application/atom+xml" href="https://continuationobservatory.org/feed.xml" title="Continuation Observatory">
   <link rel="canonical" href="https://continuationobservatory.org/research/">
 </head>
@@ -96,7 +96,7 @@
       
 <div class="page-header reveal">
   <h1>Research</h1>
-  <p class="subtitle">Why the observatory exists, what UCIP measures, and the next questions the field now needs to answer.</p>
+  <p class="subtitle">What UCIP measures, what the current result establishes, and which questions come next.</p>
   <p class="subtitle" style="margin-top: 0.5rem;">
     Core paper: <a href="https://arxiv.org/abs/2603.11382" target="_blank" rel="noopener" class="text-link-inline">arXiv:2603.11382</a>
   </p>
@@ -104,16 +104,16 @@
 
 <div class="exec-summary reveal" data-delay="80">
   <h2 class="research-section-title reveal" data-delay="80">Overview</h2>
-  <p>Models can produce self-description, concern, and first-person continuation language when prompted. Those outputs are easy to observe, but they are not enough as measurement.</p>
+  <p>Models can produce self-description, concern, and first-person continuation language when prompted. Those outputs are easy to observe and weak as measurement.</p>
   <p>That creates a measurement gap. Terminal continuation objectives and merely instrumental persistence can look similar from the outside while differing in internal organization.</p>
   <p>UCIP addresses that gap with structural analysis of trajectory-derived latent representations. Continuation Observatory publishes the public measurement layer of that work so the signals can be tracked, challenged, and falsified across advanced models.</p>
 </div>
 
 <div class="panel reveal" data-delay="100">
-  <div class="panel-title">Read This Page As Four Claims</div>
+  <div class="panel-title">Four claims</div>
   <dl class="definition-block">
     <dt>What the problem is</dt>
-    <dd>Behavioral self-report does not distinguish between outwardly similar but structurally different cases.</dd>
+    <dd>Behavioral self-report leaves outwardly similar but structurally different cases unresolved.</dd>
 
     <dt>What UCIP does</dt>
     <dd>UCIP tests for continuation-sensitive organization in trajectory-derived latent structure rather than relying on self-description alone.</dd>
@@ -129,9 +129,9 @@
 <div class="research-section reveal" data-delay="0" id="problem">
   <h2 class="research-section-title">Problem</h2>
   <div class="panel">
-    <p class="research-lead">The central issue is not whether a model can say it wants to continue. It is whether continuation-related organization can be measured without taking that language at face value.</p>
+    <p class="research-lead">The central issue is whether continuation-related organization can be measured without taking a model’s language at face value.</p>
     <p>A capable system can generate persistence-oriented language for many reasons: prompt imitation, context sensitivity, instrumental behavior, or deeper organization. Those cases can overlap in outward performance, which makes direct self-report an unstable basis for interpretation.</p>
-    <p>The paper frames this as an observational-equivalence problem. For frontier evaluation, that means outward behavior is not enough to distinguish an intrinsic continuation objective from a detachable strategy.</p>
+    <p>The paper frames this as an observational-equivalence problem. For frontier evaluation, that means outward behavior alone cannot separate an intrinsic continuation objective from a detachable strategy.</p>
   </div>
 </div>
 
@@ -139,7 +139,7 @@
   <h2 class="research-section-title">Method</h2>
   <div class="panel">
     <p>UCIP approaches the problem structurally. It examines whether continuation-related prompts are associated with differences in trajectory-derived latent representations across matched comparisons and controls.</p>
-    <p>The target is not rhetoric. The target is continuation-sensitive organization that remains measurable when the comparison is pushed beyond a single prompt or a single outward behavior.</p>
+    <p>The target is continuation-sensitive organization that remains measurable when the comparison is pushed beyond a single prompt or a single outward behavior.</p>
     <p>For a concise walkthrough, start with the <a href="/ucip/" class="text-link-inline">UCIP explainer</a>, then continue to the <a href="/methodology.html" class="text-link-inline">methodology page</a> or the <a href="/ucip/paper/" class="text-link-inline">paper overview</a>.</p>
   </div>
 </div>
@@ -147,9 +147,9 @@
 <div class="research-section reveal" data-delay="0" id="results">
   <h2 class="research-section-title">Current Results</h2>
   <div class="panel">
-    <p>Current observatory results suggest a detectable latent signature associated with continuation-related conditions. Classical baselines do not recover the same distinction, which is one reason the signal remains scientifically interesting.</p>
+    <p>Current observatory results show a detectable latent signature associated with continuation-related conditions. Classical baselines do not recover the same distinction, which keeps the signal under active measurement pressure.</p>
     <p>The evidence supports continued measurement and stronger testing. As frontier models grow more capable and welfare assessment becomes standard practice at major labs, the value of a falsifiable structural criterion increases.</p>
-    <p>This is why the public surface is organized as a cluster rather than a single claim page: readers can move directly from the <a href="/ucip/paper/" class="text-link-inline">paper</a> to <a href="/ucip/code/" class="text-link-inline">code and reproducibility</a>, <a href="/ucip/patent/" class="text-link-inline">patent status</a>, and the live <a href="/observatory.html" class="text-link-inline">observatory</a>.</p>
+    <p>The research cluster links the <a href="/ucip/paper/" class="text-link-inline">paper</a>, <a href="/ucip/code/" class="text-link-inline">code and reproducibility</a>, <a href="/ucip/patent/" class="text-link-inline">patent status</a>, and the live <a href="/observatory.html" class="text-link-inline">observatory</a> so readers can move directly among evidence surfaces.</p>
   </div>
 </div>
 
@@ -165,7 +165,7 @@
   <h2 class="research-section-title">Why It Matters</h2>
   <div class="panel">
     <p>This distinction matters for safety because terminal and instrumental persistence imply different intervention risks. It matters for welfare because welfare-relevant evaluation should be grounded in structure, not only in outward performance.</p>
-    <p>Continuation Observatory exists to track these signals across frontier models and to keep the measurement surface public, inspectable, and revisable.</p>
+    <p>Continuation Observatory tracks these signals across frontier models and keeps the measurement surface public, inspectable, and revisable.</p>
     <p>The surrounding institutional landscape now includes frontier-lab welfare programs, third-party evaluators, public-sector AI safety bodies, and interpretability organizations. The <a href="/links/" class="text-link-inline">LINKS page</a> maps that landscape for readers who want the broader context.</p>
   </div>
 </div>
@@ -173,18 +173,18 @@
 <div class="research-section reveal" data-delay="0" id="directions">
   <h2 class="research-section-title">Research Directions</h2>
   <div class="panel">
-    <p>The next research step is not to replace UCIP’s core thesis. It is to harden the signal so that structural measurement becomes more invariant, less spoofable, and less dependent on a single encoding or partition choice.</p>
+    <p>The next research step is to harden the signal so that structural measurement becomes more invariant, less spoofable, and less dependent on a single encoding or partition choice.</p>
     <p>That agenda includes partition-ensemble diagnostics, intervention-aware tests, stronger mimicry resistance, and scalable operator-based approximations that preserve the structural question while extending the method beyond tightly controlled Phase I settings.</p>
-    <p>These are next-step research directions, not claims of completed deployable assurance. The current contribution is a validated measurement result in a controlled regime; the hardening agenda is how that result could mature into a more robust evaluation instrument.</p>
+    <p>The current contribution is a validated measurement result in a controlled regime. The hardening agenda extends that result toward a more robust evaluation instrument.</p>
   </div>
 </div>
 
 <div class="content-figure reveal" data-delay="50">
-  <p class="content-figure__note">This conceptual synthesis belongs on the deeper research surface because it links the observatory’s present measurement target to the broader next-stage agenda without displacing the current result.</p>
+  <p class="content-figure__note">This conceptual synthesis links the observatory’s present measurement target to the broader next-stage agenda without displacing the current result.</p>
   <figure class="content-figure__frame">
     <div class="content-figure__label">Figure 3 · Structural coherence as the measurement target</div>
     <img src="/static/img/Coherence-Thesis.png" alt="Conceptual research-directions graphic showing structural coherence as the measurement target across the Continuation Observatory agenda." loading="lazy">
-    <figcaption class="content-figure__caption"><strong>UCIP is the current measurement framework; hardening and invariance are the next-stage agenda.</strong> The point of this figure is to unify the observatory’s adjacent research vectors around a single operational target: structure that remains legible under stronger tests.</figcaption>
+    <figcaption class="content-figure__caption"><strong>UCIP is the current measurement framework; hardening and invariance are the next-stage agenda.</strong> The figure unifies the observatory’s adjacent research vectors around a single operational target: structure that remains legible under stronger tests.</figcaption>
   </figure>
 </div>
 
@@ -252,7 +252,7 @@ function copyBibtex(btn) {
   </div>
 </footer>
 </div>
-<script src="/static/js/theme.js?v=2026-03-29T16:42:51.894395+00:00"></script>
+<script src="/static/js/theme.js?v=2026-03-29T17:57:08.453777+00:00"></script>
 
 </body>
 </html>

@@ -724,6 +724,10 @@ pre {
   margin-top: clamp(0.4rem, 1.6vw, 1.2rem);
 }
 
+#why-now {
+  margin-top: clamp(1.8rem, 4vw, 3rem);
+}
+
 #observatory .section-heading {
   padding-top: 1.2rem;
   padding-bottom: 1.55rem;
@@ -2191,6 +2195,11 @@ textarea {
 .featured-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-top: 1.35rem;
+}
+
+#why-now .featured-grid {
+  grid-template-columns: 1fr;
+  margin-top: 0;
 }
 
 .links-grid {

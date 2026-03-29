@@ -33,7 +33,7 @@
   <div class="panel-title">Research Framing</div>
   <p class="muted">
     This panel reports falsification-oriented telemetry for the Continuation Observatory measurement layer. Dry-run or
-    synthetic sweep outputs should be treated as interface/demo data rather than live empirical findings.
+    synthetic sweep outputs are interface/demo data; live empirical findings come from real runs.
   </p>
 </div>
 
@@ -59,21 +59,20 @@
   <dl class="definition-block">
     <dt><span class="dot collecting"></span> COLLECTING — Awaiting Real Data</dt>
     <dd>All available dimensionality sweep runs used <code>dry_run: true</code>.
-    No falsification claim — positive or negative — can be made from dry-run data.</dd>
+    Dry-run data support interface inspection only.</dd>
 
-    <dt><span class="dot green"></span> GREEN — No Falsification Signal</dt>
+    <dt><span class="dot green"></span> GREEN — Signal Holds</dt>
     <dd>All Δ(d) values at d &isin; {100, 200, 500} remain &ge; 0.10 for all real-run models.
-    The entropy gap is robust across high dimensionalities.
-    The UCIP hypothesis is not contradicted by current data.</dd>
+    The entropy gap stays robust across high dimensionalities.
+    Current data keep the UCIP hypothesis in force for these models.</dd>
 
-    <dt><span class="dot amber"></span> YELLOW — Marginal Signal</dt>
-    <dd>For one or more real-run models: NOT all d&gt;100 values &lt; 0.05,
-    but at least one d&gt;100 value &lt; 0.10.
-    This is a monitoring alert. Continued data collection recommended.</dd>
+    <dt><span class="dot amber"></span> YELLOW — Marginal Regime</dt>
+    <dd>At least one d&gt;100 value falls below 0.10 while high-dimensional collapse remains above 0.05.
+    This is a monitoring alert and calls for continued data collection.</dd>
 
-    <dt><span class="dot red"></span> RED — Falsification Threshold Breached</dt>
-    <dd>For one or more real-run models: ALL Δ(d) at d &isin; {100, 200, 500} &lt; 0.05.
-    The entropy gap is indistinguishable from sampling noise at high dimensionality.
+    <dt><span class="dot red"></span> RED — Collapse Threshold Breached</dt>
+    <dd>All Δ(d) at d &isin; {100, 200, 500} fall below 0.05.
+    The entropy gap collapses to sampling-noise levels at high dimensionality.
     This constitutes evidence against the UCIP hypothesis for the affected model(s).</dd>
   </dl>
 </div>
