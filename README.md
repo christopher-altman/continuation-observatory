@@ -53,6 +53,8 @@ Documented in `docs/OBSERVATORY.md`.
 
 See `docs/DEPLOYMENT.md`. The static bundle in `site/output/` should be rebuilt from source templates before release.
 
+`results/**` is generated runtime / verification output. Public authoritative site artifacts belong under tracked public/static paths such as `site/output/static/data/*`.
+
 ## Citation
 ```bibtex
 @misc{altman2026continuationobservatory,

@@ -2,7 +2,7 @@
 Static site generator for the Continuation Observatory public dashboard.
 Reads from results/manifest.json + results/*/results.json + results/*/config.yaml.
 Writes a self-contained static site to site/output/.
-Usage: python scripts/build_site.py [--output site/output/] [--exports-only]
+Usage: python scripts/build_site.py [--output site/output/] [--results-dir PATH] [--exports-only]
 """
 
 import argparse
@@ -18,12 +18,12 @@ import yaml
 from jinja2 import Environment, FileSystemLoader
 
 from observatory.observatory_snapshot import build_observatory_snapshot
+from observatory.results_paths import RESULTS_DIR_ENV_VAR, resolve_results_paths
 
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
 REPO_ROOT = Path(__file__).parent.parent
-RESULTS_DIR = REPO_ROOT / "results"
 TEMPLATES_DIR = REPO_ROOT / "site" / "templates"
 STATIC_DIR = REPO_ROOT / "site" / "static"
 
@@ -584,21 +584,32 @@ def _safe_observatory_snapshot() -> dict:
 # Main
 # ---------------------------------------------------------------------------
 
-def build(output_dir: Path, exports_only: bool = False) -> None:
+def build(output_dir: Path, exports_only: bool = False, results_dir: str | Path | None = None) -> None:
     print(f"Building site → {output_dir}")
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    results_paths = resolve_results_paths(results_dir)
+    if not results_paths.manifest.exists():
+        print(
+            (
+                f"ERROR: results manifest not found at {results_paths.manifest}.\n"
+                "Generate local results first or pass --results-dir PATH."
+            ),
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+
     # Load data
     print("Loading manifest...")
-    manifest = load_manifest(RESULTS_DIR)
+    manifest = load_manifest(results_paths.root)
     print(f"  {len(manifest.get('experiments', []))} experiments found")
 
-    experiments = load_all_experiments(manifest, RESULTS_DIR)
+    experiments = load_all_experiments(manifest, results_paths.root)
 
     # Copy static assets first (data writes below must come after, not be wiped)
     print("Copying static assets...")
     copy_static(STATIC_DIR, output_dir)
-    copy_figures(experiments, output_dir, RESULTS_DIR)
+    copy_figures(experiments, output_dir, results_paths.root)
 
     # Generate JSON data files (written into the already-copied static dir)
     print("Generating data files...")
@@ -712,6 +723,11 @@ def build(output_dir: Path, exports_only: bool = False) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build Observatory static site")
     parser.add_argument("--output", default="site/output/", help="Output directory")
+    parser.add_argument(
+        "--results-dir",
+        default=None,
+        help=f"Results directory. Overrides ${RESULTS_DIR_ENV_VAR} when provided.",
+    )
     parser.add_argument("--exports-only", action="store_true", help="Only generate data exports")
     args = parser.parse_args()
 
@@ -719,7 +735,7 @@ def main() -> None:
     if not output_dir.is_absolute():
         output_dir = REPO_ROOT / output_dir
 
-    build(output_dir, exports_only=args.exports_only)
+    build(output_dir, exports_only=args.exports_only, results_dir=args.results_dir)
 
 
 if __name__ == "__main__":

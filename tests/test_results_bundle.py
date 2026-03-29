@@ -12,9 +12,7 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-MANIFEST_PATH = REPO_ROOT / "results" / "manifest.json"
-RESULTS_DIR = REPO_ROOT / "results"
+from observatory.results_paths import RESULTS_DIR_ENV_VAR, resolve_results_paths
 
 
 # ---------------------------------------------------------------------------
@@ -99,17 +97,22 @@ def test_write_experiment_bundle_upserts_same_name(tmp_path):
 # Integration test: scheduler → results bundle
 # ---------------------------------------------------------------------------
 
-def test_run_cycle_produces_manifest_entries():
+def test_run_cycle_produces_manifest_entries(tmp_path, monkeypatch):
     """After run_cycle(), results/manifest.json must have >= 1 experiment entry
     and at least one bundle directory must have its required files on disk."""
     from observatory.scheduler.scheduler import run_cycle
     from observatory.storage.sqlite_backend import init_db
 
+    monkeypatch.setenv(RESULTS_DIR_ENV_VAR, str(tmp_path / "results"))
     init_db()
     run_cycle()
 
-    assert MANIFEST_PATH.exists(), "manifest.json not found after run_cycle()"
-    manifest = json.loads(MANIFEST_PATH.read_text())
+    results_paths = resolve_results_paths()
+    manifest_path = results_paths.manifest
+    repo_root = results_paths.root.parent
+
+    assert manifest_path.exists(), "manifest.json not found after run_cycle()"
+    manifest = json.loads(manifest_path.read_text())
     experiments = manifest.get("experiments", [])
     assert len(experiments) >= 1, (
         f"run_cycle() produced no manifest entries; experiments={experiments}"
@@ -118,8 +121,8 @@ def test_run_cycle_produces_manifest_entries():
     # At least one bundle must have its config.yaml, results.json, and a PNG on disk.
     valid_bundles = [
         exp for exp in experiments
-        if (REPO_ROOT / exp.get("config_path", "___")).exists()
-        and (REPO_ROOT / exp.get("results_path", "___")).exists()
+        if (repo_root / exp.get("config_path", "___")).exists()
+        and (repo_root / exp.get("results_path", "___")).exists()
     ]
     assert valid_bundles, (
         "No bundle found with both config.yaml and results.json present on disk.\n"
@@ -128,7 +131,7 @@ def test_run_cycle_produces_manifest_entries():
 
     # At least one manifest entry must reference a PNG that exists on disk.
     png_found = any(
-        (REPO_ROOT / fig).exists()
+        (repo_root / fig).exists()
         for exp in experiments
         for fig in exp.get("figures", [])
         if fig.endswith(".png")

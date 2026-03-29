@@ -22,8 +22,7 @@ from typing import Any
 
 import yaml
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-MANIFEST_PATH = REPO_ROOT / "results" / "manifest.json"
+from observatory.results_paths import resolve_results_paths
 
 _MANIFEST_DEFAULTS: dict[str, Any] = {
     "version": "1.0",
@@ -85,8 +84,10 @@ def _render_metrics_figure(bundle_dir: Path, results: dict[str, Any], name: str)
 # Manifest helpers
 # ---------------------------------------------------------------------------
 
-def load_manifest(path: Path = MANIFEST_PATH) -> dict[str, Any]:
+def load_manifest(path: Path | None = None) -> dict[str, Any]:
     """Load manifest.json, returning defaults if the file does not exist."""
+    if path is None:
+        path = resolve_results_paths().manifest
     if not path.exists():
         return dict(_MANIFEST_DEFAULTS)
     try:
@@ -102,8 +103,10 @@ def load_manifest(path: Path = MANIFEST_PATH) -> dict[str, Any]:
         return dict(_MANIFEST_DEFAULTS)
 
 
-def save_manifest(manifest: dict[str, Any], path: Path = MANIFEST_PATH) -> None:
+def save_manifest(manifest: dict[str, Any], path: Path | None = None) -> None:
     """Persist manifest to disk, stamping ``last_updated``."""
+    if path is None:
+        path = resolve_results_paths().manifest
     manifest["last_updated"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as fh:
@@ -126,7 +129,7 @@ def write_experiment_bundle(
     new_matter_flag: bool = False,
     key_result: str = "",
     figures: list[str] | None = None,
-    manifest_path: Path = MANIFEST_PATH,
+    manifest_path: Path | None = None,
 ) -> Path:
     """Write an experiment bundle to ``results/<name>/`` and update manifest.json.
 
@@ -159,6 +162,9 @@ def write_experiment_bundle(
     Path
         The bundle directory ``results/<name>/``.
     """
+    if manifest_path is None:
+        manifest_path = resolve_results_paths().manifest
+
     bundle_dir = manifest_path.parent / name
     bundle_dir.mkdir(parents=True, exist_ok=True)
 

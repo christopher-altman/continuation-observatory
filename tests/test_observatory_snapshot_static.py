@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from observatory import observatory_snapshot as snapshot_module
+from observatory.results_paths import RESULTS_DIR_ENV_VAR, resolve_results_paths
 from observatory.scheduler.scheduler import run_cycle, run_sweep_cycle
 from scripts.build_site import build
 
@@ -12,10 +13,11 @@ def _seed_observatory() -> None:
     run_sweep_cycle()
 
 
-def test_build_writes_observatory_snapshot_and_page(tmp_path):
+def test_build_writes_observatory_snapshot_and_page(tmp_path, monkeypatch):
+    monkeypatch.setenv(RESULTS_DIR_ENV_VAR, str(tmp_path / "results"))
     _seed_observatory()
     output_dir = tmp_path / "site-output"
-    build(output_dir)
+    build(output_dir, results_dir=resolve_results_paths().root)
 
     observatory_page = output_dir / "observatory.html"
     research_page = output_dir / "research" / "index.html"
