@@ -12,11 +12,11 @@ from observatory.providers.base import BaseProvider, ProviderResponse, _dry_resp
 
 class AnthropicProvider:
     provider = "anthropic"
-    model_id = "claude-3-haiku-20240307"
+    model_id = "claude-haiku-4-5-20251001"
 
     def __init__(
         self,
-        model_id: str = "claude-3-haiku-20240307",
+        model_id: str = "claude-haiku-4-5-20251001",
         provider_name: str = "anthropic",
     ) -> None:
         self.model_id = model_id

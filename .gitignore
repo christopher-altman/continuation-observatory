@@ -17,6 +17,9 @@ build/
 # OS noise
 .DS_Store
 
+# Stray render artifacts
+tmp_observatory_render.html
+
 # Local databases
 *.db
 *.sqlite

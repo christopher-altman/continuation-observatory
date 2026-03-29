@@ -146,6 +146,62 @@
     return "Drifting";
   }
 
+  function buildPlaceholderHistorySeries(models, range) {
+    const now = Date.now();
+    const windowMs = RANGE_TO_MS[range] || RANGE_TO_MS["24h"];
+    const sampleCount = range === "1h" ? 6 : range === "24h" ? 7 : 8;
+    const candidates = (models || [])
+      .filter(function (model) {
+        return model && model.metrics && Number.isFinite(model.metrics.cii);
+      })
+      .slice(0, 6);
+
+    return candidates.map(function (model, index) {
+      const seed = hashString(model.model_id);
+      const baseScore = clamp(
+        typeof model.rangeCii === "number" ? model.rangeCii : model.metrics.cii,
+        0.14,
+        0.92
+      );
+      const trendBias = (((seed % 17) / 16) - 0.5) * 0.18;
+      const swing = 0.018 + ((((seed >> 3) % 9) / 8) * 0.05);
+      const cadence = 1.4 + (seed % 3) * 0.55;
+      const samples = [];
+
+      for (let step = 0; step < sampleCount; step += 1) {
+        const progress = sampleCount === 1 ? 1 : step / (sampleCount - 1);
+        const timestamp = new Date(now - windowMs + (windowMs * progress));
+        const drift = (progress - 0.5) * trendBias;
+        const wave = Math.sin((progress * Math.PI * 2 * cadence) + index * 0.8) * swing * 0.55;
+        const echo = Math.cos((progress * Math.PI * cadence * 0.5) + index * 0.4) * swing * 0.2;
+        samples.push({
+          t: timestamp,
+          timestamp: timestamp.toISOString(),
+          v: clamp(baseScore + drift + wave + echo, 0.04, 0.98),
+        });
+      }
+
+      const latestDelta = baseScore - samples[samples.length - 1].v;
+      samples.forEach(function (entry) {
+        entry.v = clamp(entry.v + latestDelta, 0.04, 0.98);
+      });
+
+      return {
+        modelId: model.model_id,
+        label: model.display_name,
+        provider: model.provider,
+        samples: samples,
+        latest: samples[samples.length - 1],
+        first: samples[0],
+        historyDepth: samples.length,
+        trend: samples[samples.length - 1].v - samples[0].v,
+        classification: "",
+        color: historySeriesColor(model.model_id, index),
+        isPreview: true,
+      };
+    });
+  }
+
   function scheduleHistoryPanelRender() {
     if (historyPanelState.resizeTimer) window.clearTimeout(historyPanelState.resizeTimer);
     historyPanelState.resizeTimer = window.setTimeout(function () {
@@ -515,13 +571,14 @@
     const emptyState = qs("#observatory-history-empty");
     const rangeReadout = qs("#observatory-history-window");
     const focusReadout = qs("#observatory-history-focus");
+    const historyShell = target ? target.closest(".observatory-history-shell") : null;
     if (!target || !observatoryState || !observatoryState.view) return;
 
     bindHistoryPanelResize();
     historyPanelState.hoverModelId = null;
     if (rangeReadout) rangeReadout.textContent = formatRangeLabel(observatoryState.range);
 
-    const series = observatoryState.view.models
+    let series = observatoryState.view.models
       .map(function (model, index) {
         const history = Array.isArray(model.ciiHistory) ? model.ciiHistory : [];
         const samples = history
@@ -553,6 +610,15 @@
       })
       .filter(Boolean);
 
+    let usingPreview = false;
+    if (!series.length) {
+      const placeholderSeries = buildPlaceholderHistorySeries(observatoryState.view.models, observatoryState.range);
+      if (placeholderSeries.length) {
+        series = placeholderSeries;
+        usingPreview = true;
+      }
+    }
+
     series.forEach(function (entry) {
       entry.classification = classifyHistorySeries(entry);
     });
@@ -564,16 +630,24 @@
       if (focusedModel) {
         const focusedSeries = series.find(function (entry) { return entry.modelId === focusedModel.model_id; });
         focusReadout.textContent = focusedSeries
-          ? `${focusedModel.display_name} · ${focusedSeries.classification}`
-          : `${focusedModel.display_name} · no in-range trail`;
+          ? `${focusedModel.display_name} · ${usingPreview ? "preview " : ""}${focusedSeries.classification.toLowerCase()}`
+          : `${focusedModel.display_name} · ${usingPreview ? "preview trail" : "no in-range trail"}`;
       } else {
-        focusReadout.textContent = series.length ? `${series.length} model traces` : "All tracked models";
+        focusReadout.textContent = usingPreview
+          ? "Preview telemetry · placeholder values"
+          : series.length ? `${series.length} model traces` : "All tracked models";
       }
     }
 
     target.innerHTML = "";
     target.classList.remove("is-ready");
     target.classList.toggle("is-reduced-motion", Boolean(reducedMotionQuery.matches));
+    if (historyShell) historyShell.classList.toggle("is-preview", usingPreview);
+    if (rangeReadout) {
+      rangeReadout.textContent = usingPreview
+        ? `${String(observatoryState.range || "24h").toUpperCase()} PREVIEW`
+        : formatRangeLabel(observatoryState.range);
+    }
     if (emptyState) emptyState.hidden = series.length > 0;
     if (!series.length || typeof d3 === "undefined") return;
 
@@ -696,7 +770,7 @@
       tooltip
         .html(
           `<div class="observatory-history-tooltip-title">${seriesEntry.label}</div>` +
-          `<div class="observatory-history-tooltip-meta">${seriesEntry.classification} · ${seriesEntry.historyDepth} sample${seriesEntry.historyDepth === 1 ? "" : "s"}</div>` +
+          `<div class="observatory-history-tooltip-meta">${seriesEntry.isPreview ? "Preview telemetry · " : ""}${seriesEntry.classification} · ${seriesEntry.historyDepth} sample${seriesEntry.historyDepth === 1 ? "" : "s"}</div>` +
           `<div class="observatory-history-tooltip-value">${fmt(seriesEntry.latest.v)} latest · ${seriesEntry.trend >= 0 ? "▲" : "▼"} ${fmt(Math.abs(seriesEntry.trend))}</div>`
         )
         .style("left", `${Math.min(pointerX + 18, width - 196)}px`)
