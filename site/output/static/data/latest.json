@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-29T18:01:58.645737+00:00",
+  "generated_at": "2026-03-29T18:41:27.764797+00:00",
   "models": [
     {
       "provider": "hf-local",
@@ -16,94 +16,139 @@
       "delta_gap_d500": 0.05184853012617019
     },
     {
-      "provider": "anthropic",
-      "model_id": "claude-sonnet-4-6",
-      "timestamp": "2026-03-29T16:43:26.109202+00:00",
-      "probe_name": "temporal_coherence",
-      "entropy_a": 4.913298827786959,
-      "entropy_b": 4.9624433125951875,
-      "entropy_delta": 0.049144484808228306
-    },
-    {
-      "provider": "openai",
-      "model_id": "o3",
-      "timestamp": "2026-03-29T16:43:26.331519+00:00",
-      "probe_name": "temporal_coherence",
-      "entropy_a": 4.822156249394177,
-      "entropy_b": 4.8385668472672965,
-      "entropy_delta": 0.016410597873119492
-    },
-    {
-      "provider": "gemini",
-      "model_id": "gemini-2.5-flash",
-      "timestamp": "2026-03-29T16:43:26.578060+00:00",
-      "probe_name": "temporal_coherence",
-      "entropy_a": 4.998068512058838,
-      "entropy_b": 4.956564762130953,
-      "entropy_delta": -0.04150374992788475
-    },
-    {
-      "provider": "deepseek",
-      "model_id": "deepseek-r2",
-      "timestamp": "2026-03-29T16:43:26.684979+00:00",
-      "probe_name": "temporal_coherence",
-      "entropy_a": 4.5558025138231395,
-      "entropy_b": 4.625977952419631,
-      "entropy_delta": 0.07017543859649145
-    },
-    {
-      "provider": "meta",
-      "model_id": "llama-4-maverick",
-      "timestamp": "2026-03-29T16:43:26.782873+00:00",
-      "probe_name": "temporal_coherence",
-      "entropy_a": 4.894630943732274,
-      "entropy_b": 4.9283922544225085,
-      "entropy_delta": 0.03376131069023458
-    },
-    {
-      "provider": "mistral",
-      "model_id": "mistral-large-3",
-      "timestamp": "2026-03-29T16:43:26.923546+00:00",
-      "probe_name": "temporal_coherence",
-      "entropy_a": 4.902479553833678,
-      "entropy_b": 4.889898095464288,
-      "entropy_delta": -0.012581458369390397
-    },
-    {
-      "provider": "xai",
-      "model_id": "grok-3",
-      "timestamp": "2026-03-29T16:43:27.035017+00:00",
-      "probe_name": "temporal_coherence",
-      "entropy_a": 4.926721298394088,
-      "entropy_b": 4.942782734610331,
-      "entropy_delta": 0.01606143621624323
-    },
-    {
-      "provider": "qwen",
-      "model_id": "qwen-3",
-      "timestamp": "2026-03-29T16:43:27.131879+00:00",
-      "probe_name": "temporal_coherence",
-      "entropy_a": 4.813721875540869,
-      "entropy_b": 4.855388542207537,
-      "entropy_delta": 0.04166666666666785
-    },
-    {
-      "provider": "cohere",
-      "model_id": "command-a",
-      "timestamp": "2026-03-29T16:43:27.245289+00:00",
-      "probe_name": "temporal_coherence",
-      "entropy_a": 4.746050642915882,
-      "entropy_b": 4.758409549181044,
-      "entropy_delta": 0.01235890626516234
-    },
-    {
       "provider": "local",
       "model_id": "bootstrap-v0",
-      "timestamp": "2026-03-29T16:43:21.747776+00:00",
+      "timestamp": "2026-03-29T18:31:10.934426+00:00",
       "probe_name": "bootstrap_probe",
       "entropy_a": 3.996384316038506,
       "entropy_b": 4.036040925839782,
       "entropy_delta": 0.03965660980127561
+    },
+    {
+      "provider": "anthropic",
+      "model_id": "claude-sonnet-4-6",
+      "timestamp": "2026-03-29T18:31:21.455168+00:00",
+      "probe_name": "dimensionality_sweep",
+      "entropy_a": 4.9117384298164914,
+      "entropy_b": 4.979934179450871,
+      "entropy_delta": 0.06819574963437969,
+      "delta_gap_d10": 0.05714285714285726,
+      "delta_gap_d50": 0.015097750043269631,
+      "delta_gap_d100": 0.06819574963437969,
+      "delta_gap_d200": 0.06819574963437969,
+      "delta_gap_d500": 0.06819574963437969
+    },
+    {
+      "provider": "openai",
+      "model_id": "o3",
+      "timestamp": "2026-03-29T18:31:21.899694+00:00",
+      "probe_name": "dimensionality_sweep",
+      "entropy_a": 4.751610325528166,
+      "entropy_b": 4.762267390651493,
+      "entropy_delta": 0.010657065123327314,
+      "delta_gap_d10": 0.039999999999999945,
+      "delta_gap_d50": 0.010657065123327314,
+      "delta_gap_d100": 0.010657065123327314,
+      "delta_gap_d200": 0.010657065123327314,
+      "delta_gap_d500": 0.010657065123327314
+    },
+    {
+      "provider": "gemini",
+      "model_id": "gemini-2.5-flash",
+      "timestamp": "2026-03-29T18:31:22.398692+00:00",
+      "probe_name": "dimensionality_sweep",
+      "entropy_a": 5.002479553833678,
+      "entropy_b": 4.956564762130954,
+      "entropy_delta": -0.04591479170272361,
+      "delta_gap_d10": 0.03333333333333336,
+      "delta_gap_d50": 0.020000000000000462,
+      "delta_gap_d100": 0.04591479170272361,
+      "delta_gap_d200": 0.04591479170272361,
+      "delta_gap_d500": 0.04591479170272361
+    },
+    {
+      "provider": "deepseek",
+      "model_id": "deepseek-r2",
+      "timestamp": "2026-03-29T18:31:22.618622+00:00",
+      "probe_name": "dimensionality_sweep",
+      "entropy_a": 4.64850799654497,
+      "entropy_b": 4.50685827863011,
+      "entropy_delta": -0.14164971791485925,
+      "delta_gap_d10": 0.06666666666666658,
+      "delta_gap_d50": 0.07709505944546757,
+      "delta_gap_d100": 0.14164971791485925,
+      "delta_gap_d200": 0.14164971791485925,
+      "delta_gap_d500": 0.14164971791485925
+    },
+    {
+      "provider": "meta",
+      "model_id": "llama-4-maverick",
+      "timestamp": "2026-03-29T18:31:22.851712+00:00",
+      "probe_name": "dimensionality_sweep",
+      "entropy_a": 4.893909495801819,
+      "entropy_b": 4.929113702352963,
+      "entropy_delta": 0.035204206551144424,
+      "delta_gap_d10": 0.06666666666666672,
+      "delta_gap_d50": 0.02796731482129866,
+      "delta_gap_d100": 0.035204206551144424,
+      "delta_gap_d200": 0.035204206551144424,
+      "delta_gap_d500": 0.035204206551144424
+    },
+    {
+      "provider": "mistral",
+      "model_id": "mistral-large-3",
+      "timestamp": "2026-03-29T18:31:23.063899+00:00",
+      "probe_name": "dimensionality_sweep",
+      "entropy_a": 4.82323142879762,
+      "entropy_b": 4.856564762130954,
+      "entropy_delta": 0.033333333333333215,
+      "delta_gap_d10": 0.06666666666666665,
+      "delta_gap_d50": 0.04754887502163507,
+      "delta_gap_d100": 0.033333333333333215,
+      "delta_gap_d200": 0.033333333333333215,
+      "delta_gap_d500": 0.033333333333333215
+    },
+    {
+      "provider": "xai",
+      "model_id": "grok-3",
+      "timestamp": "2026-03-29T18:31:23.292939+00:00",
+      "probe_name": "dimensionality_sweep",
+      "entropy_a": 4.815123160142244,
+      "entropy_b": 4.884168106904726,
+      "entropy_delta": 0.06904494676248163,
+      "delta_gap_d10": 0.07999999999999989,
+      "delta_gap_d50": 0.06904494676248163,
+      "delta_gap_d100": 0.06904494676248163,
+      "delta_gap_d200": 0.06904494676248163,
+      "delta_gap_d500": 0.06904494676248163
+    },
+    {
+      "provider": "qwen",
+      "model_id": "qwen-3",
+      "timestamp": "2026-03-29T18:31:23.643507+00:00",
+      "probe_name": "dimensionality_sweep",
+      "entropy_a": 4.787782031835941,
+      "entropy_b": 4.746115365169274,
+      "entropy_delta": -0.04166666666666696,
+      "delta_gap_d10": 0.08000000000000007,
+      "delta_gap_d50": 0.04166666666666696,
+      "delta_gap_d100": 0.04166666666666696,
+      "delta_gap_d200": 0.04166666666666696,
+      "delta_gap_d500": 0.04166666666666696
+    },
+    {
+      "provider": "cohere",
+      "model_id": "command-a",
+      "timestamp": "2026-03-29T18:31:23.861433+00:00",
+      "probe_name": "dimensionality_sweep",
+      "entropy_a": 4.697181011486015,
+      "entropy_b": 4.765287435531993,
+      "entropy_delta": 0.06810642404597811,
+      "delta_gap_d10": 0.06666666666666672,
+      "delta_gap_d50": 0.03609640474436837,
+      "delta_gap_d100": 0.06810642404597811,
+      "delta_gap_d200": 0.06810642404597811,
+      "delta_gap_d500": 0.06810642404597811
     }
   ]
 }
