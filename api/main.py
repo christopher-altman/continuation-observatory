@@ -138,6 +138,9 @@ def page_context(page_name: str) -> dict[str, Any]:
         "contact_href": "mailto:x@christopheraltman.com",
         "site_url": "",
         "page_path": "/" if page_name == "home" else f"/{page_name}",
+        "observatory_mode": "live",
+        "observatory_snapshot_url": "/api/observatory/snapshot",
+        "observatory_socket_enabled": True,
     }
     context.update(_bundle_context())
     if not context.get("marquee_models"):

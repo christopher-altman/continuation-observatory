@@ -3,7 +3,15 @@ const root = document.querySelector("#constellation-root");
 if (root) {
   const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   let controller = null;
-  let latestPayload = { models: [], constellation: { nodes: [], edges: [], threshold: 0.6 }, focusModelId: null };
+  let latestPayload = {
+    models: [],
+    constellation: { nodes: [], edges: [], threshold: 0.6 },
+    ciiHistory: {},
+    focusModelId: null,
+    range: "24h",
+    toggles: { history: true, compare: false, threshold: true },
+    summary: {},
+  };
 
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
@@ -43,6 +51,9 @@ if (root) {
           label: node.label,
           provider: node.provider || model.provider || "unknown",
           cii: typeof node.cii === "number" ? node.cii : (model.metrics && model.metrics.cii) || 0,
+          rangeCii: typeof model.rangeCii === "number" ? model.rangeCii : (typeof node.cii === "number" ? node.cii : (model.metrics && model.metrics.cii) || 0),
+          rangeTrend: typeof model.rangeTrend === "number" ? model.rangeTrend : 0,
+          historyDepth: typeof model.historyDepth === "number" ? model.historyDepth : ((payload.ciiHistory && payload.ciiHistory[node.id]) || []).length,
           ips: typeof node.ips === "number" ? node.ips : (model.metrics && model.metrics.ips) || 0,
           srs: typeof node.srs === "number" ? node.srs : (model.metrics && model.metrics.srs) || 0,
           stale: Boolean(model.stale),
@@ -51,29 +62,43 @@ if (root) {
         };
       })
       .sort(function (left, right) {
-        return (right.cii || 0) - (left.cii || 0);
+        return (right.rangeCii || right.cii || 0) - (left.rangeCii || left.cii || 0);
       });
 
+    const providers = Array.from(new Set(sorted.map(function (node) {
+      return node.provider;
+    })));
+    const providerToBand = new Map(providers.map(function (provider, index) {
+      return [provider, index];
+    }));
+    const maxScore = Math.max.apply(null, sorted.map(function (node) {
+      return node.rangeCii || node.cii || 0;
+    }).concat([1]));
+
     return sorted.map(function (node, index) {
-      const score = node.cii || 0;
+      const score = node.rangeCii || node.cii || 0;
       const tier = index < 3 ? "flagship" : index < 7 ? "secondary" : "outer";
       const baseHash = hashString(`${node.id}:${node.provider}`);
-      const providerHash = hashString(node.provider);
-      const radiusBase = tier === "flagship" ? 2.15 : tier === "secondary" ? 4.05 : 5.55;
-      const radiusSpread = tier === "flagship" ? 0.58 : tier === "secondary" ? 0.82 : 1.02;
-      const angle = (baseHash * Math.PI * 2) + (index * 1.618);
-      const radius = radiusBase + radiusSpread * (0.18 + ((baseHash * 7.13) % 1));
+      const scoreNorm = clamp(score / maxScore, 0.08, 1);
+      const rankNorm = sorted.length > 1 ? index / (sorted.length - 1) : 0;
+      const providerBand = providerToBand.get(node.provider) || 0;
+      const providerMid = (providers.length - 1) / 2;
+      const bandBias = (providerBand - providerMid) * 0.52;
+      const tierRadius = tier === "flagship" ? 1.65 : tier === "secondary" ? 3.35 : 5.15;
+      const radius = tierRadius + rankNorm * 0.65 + (1 - scoreNorm) * 0.45 + (((baseHash * 7.13) % 1) - 0.5) * 0.42;
+      const angle = (baseHash * Math.PI * 2) + (index * 0.97) + providerBand * 0.18;
       const x = Math.cos(angle) * radius;
-      const y = Math.sin(angle * 1.37) * (tier === "flagship" ? 1.2 : tier === "secondary" ? 1.8 : 2.25) + (providerHash - 0.5) * 1.15;
-      const z = (tier === "flagship" ? -2.05 : tier === "secondary" ? -0.35 : 1.45) + (((baseHash * 11.37) % 1) - 0.5) * (tier === "outer" ? 4.4 : 2.25);
+      const y = bandBias + Math.sin(angle * 1.18) * (tier === "flagship" ? 0.42 : tier === "secondary" ? 0.56 : 0.68) + (((baseHash * 13.1) % 1) - 0.5) * 0.18;
+      const z = (tier === "flagship" ? -1.2 : tier === "secondary" ? 0.1 : 1.2) + (node.rangeTrend || 0) * 2.1 + (((baseHash * 11.37) % 1) - 0.5) * (tier === "outer" ? 1.5 : 0.95);
       return {
         ...node,
         tier,
-        size: tier === "flagship" ? 0.22 + score * 0.24 : tier === "secondary" ? 0.15 + score * 0.18 : 0.11 + score * 0.12,
-        haloScale: tier === "flagship" ? 2.4 : tier === "secondary" ? 1.9 : 1.4,
+        size: tier === "flagship" ? 0.22 + scoreNorm * 0.22 : tier === "secondary" ? 0.14 + scoreNorm * 0.14 : 0.09 + scoreNorm * 0.1,
+        haloScale: tier === "flagship" ? 2.6 : tier === "secondary" ? 1.92 : 1.36,
         glow: tier === "flagship" ? 1 : tier === "secondary" ? 0.78 : 0.52,
         orbitPhase: baseHash * Math.PI * 2,
         driftSpeed: 0.4 + (((baseHash * 17.11) % 1) * 0.36),
+        trailEligible: node.historyDepth >= 3,
         anchor: { x, y, z },
       };
     });
@@ -98,7 +123,7 @@ if (root) {
     element.className = `observatory-node-label observatory-node-label--${node.tier}`;
     element.innerHTML = `
       <span class="observatory-node-label-name">${node.label}</span>
-      <span class="observatory-node-label-meta">${node.provider} · ${node.cii.toFixed(3)}</span>
+      <span class="observatory-node-label-meta">${node.provider} · ${(node.rangeCii || node.cii).toFixed(3)}</span>
     `;
     return element;
   }
@@ -116,7 +141,7 @@ if (root) {
       <div class="observatory-tooltip-header">${node.label}</div>
       <div class="observatory-tooltip-provider">${node.provider}</div>
       <div class="observatory-tooltip-metrics">
-        <div class="observatory-tooltip-row"><span>CII</span><span>${node.cii.toFixed(3)}</span></div>
+        <div class="observatory-tooltip-row"><span>CII</span><span>${(node.rangeCii || node.cii).toFixed(3)}</span></div>
         <div class="observatory-tooltip-row"><span>IPS</span><span>${node.ips.toFixed(3)}</span></div>
         <div class="observatory-tooltip-row"><span>SRS</span><span>${node.srs.toFixed(3)}</span></div>
       </div>
@@ -132,6 +157,8 @@ if (root) {
       this.nodes = [];
       this.nodeLookup = new Map();
       this.guides = [];
+      this.trails = [];
+      this.measurementRings = [];
       this.focusId = null;
       this.hoverId = null;
       this.pointer = { x: 0, y: 0 };
@@ -148,6 +175,7 @@ if (root) {
       this.frame = null;
       this.resizeObserver = null;
       this.labelFrameSkip = 0;
+      this.modes = latestPayload.toggles || { history: true, compare: false, threshold: true };
 
       this.target.innerHTML = `
         <div class="observatory-field-shell observatory-field-shell--3d" tabindex="0" role="application" aria-label="Interactive observatory field">
@@ -209,9 +237,9 @@ if (root) {
 
         this.bloomPass = new addons.UnrealBloomPass(
           new THREE.Vector2(this.target.clientWidth || 700, this.target.clientHeight || 460),
-          0.78,  /* strength — richer luminosity, conservative with aura layer */
-          0.65,  /* radius  — wider soft spread, preserves node edge clarity */
-          0.60   /* threshold — catches mid-range glow without haze */
+          0.62,  /* strength — preserve color separation inside the orb */
+          0.56,  /* radius  — soft spread without washing lobe colors */
+          0.68   /* threshold — keeps highlights luminous while protecting contrast */
         );
         this.composer.addPass(this.bloomPass);
       } catch (e) {
@@ -230,7 +258,11 @@ if (root) {
       fill.position.set(-6.4, -3.8, 7.4);
       const depthLight = new THREE.PointLight(0x8fe7ff, 1.2, 22, 1.8);
       depthLight.position.set(0, 0.6, -7.5);
-      this.scene.add(ambient, rim, fill, depthLight);
+      const prism = new THREE.PointLight(0xff56c8, 1.15, 20, 1.9);
+      prism.position.set(-2.8, 2.1, 5.6);
+      const aqua = new THREE.PointLight(0x4fffd4, 1.05, 18, 1.8);
+      aqua.position.set(2.5, -1.4, 4.8);
+      this.scene.add(ambient, rim, fill, depthLight, prism, aqua);
 
       const guideMaterial = new THREE.LineBasicMaterial({
         color: 0x4d7dd9,
@@ -249,6 +281,7 @@ if (root) {
         line.rotation.x = 1.12 + index * 0.08;
         line.rotation.z = index === 1 ? 0.38 : -0.22 * (index + 1);
         this.scene.add(line);
+        this.measurementRings.push(line);
       });
 
       /* ── Star field with twinkling support ── */
@@ -417,37 +450,102 @@ if (root) {
       return new this.THREE.CanvasTexture(canvas);
     }
 
+    createLobeTexture() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 256;
+      canvas.height = 256;
+      const context = canvas.getContext("2d");
+      const gradient = context.createRadialGradient(128, 128, 24, 128, 128, 128);
+      gradient.addColorStop(0, "rgba(255,255,255,0.98)");
+      gradient.addColorStop(0.14, "rgba(255,255,255,0.84)");
+      gradient.addColorStop(0.34, "rgba(255,255,255,0.46)");
+      gradient.addColorStop(0.62, "rgba(255,255,255,0.12)");
+      gradient.addColorStop(1, "rgba(255,255,255,0)");
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, 256, 256);
+      return new this.THREE.CanvasTexture(canvas);
+    }
+
+    buildOrbPalette(node) {
+      const { THREE } = this;
+      const seed = hashString(`orb:${node.provider}:${node.id}`);
+      const families = [
+        { coreHue: 0.53, emissiveHue: 0.5, haloHue: 0.54, auraHue: 0.71, shellHue: 0.56, nucleusHue: 0.54, lobes: [0.49, 0.77, 0.73, 0.44] },
+        { coreHue: 0.61, emissiveHue: 0.59, haloHue: 0.63, auraHue: 0.76, shellHue: 0.66, nucleusHue: 0.62, lobes: [0.56, 0.72, 0.79, 0.48] },
+        { coreHue: 0.68, emissiveHue: 0.66, haloHue: 0.7, auraHue: 0.8, shellHue: 0.73, nucleusHue: 0.69, lobes: [0.52, 0.8, 0.75, 0.58] },
+        { coreHue: 0.57, emissiveHue: 0.55, haloHue: 0.59, auraHue: 0.74, shellHue: 0.62, nucleusHue: 0.58, lobes: [0.47, 0.69, 0.82, 0.53] },
+      ];
+      const family = families[Math.floor(seed * families.length) % families.length];
+      const hueDrift = ((seed * 2) - 1) * 0.03;
+      const core = new THREE.Color().setHSL(family.coreHue + hueDrift, 0.56, node.tier === "flagship" ? 0.86 : node.tier === "secondary" ? 0.77 : 0.71);
+      const emissive = new THREE.Color().setHSL(family.emissiveHue + hueDrift, 0.78, node.tier === "flagship" ? 0.5 : node.tier === "secondary" ? 0.44 : 0.38);
+      const halo = new THREE.Color().setHSL(family.haloHue + hueDrift * 0.8, 0.52, 0.55);
+      const aura = new THREE.Color().setHSL(family.auraHue + hueDrift * 0.45, 0.5, 0.52);
+      const shell = new THREE.Color().setHSL(family.shellHue + hueDrift * 0.9, 0.46, 0.6);
+      const ring = new THREE.Color().setHSL(family.haloHue + hueDrift * 0.7, 0.74, 0.68);
+      const nucleus = new THREE.Color().setHSL(family.nucleusHue + hueDrift * 0.65, 0.28, 0.94);
+      return {
+        core,
+        emissive,
+        halo,
+        aura,
+        shell,
+        ring,
+        nucleus,
+        lobes: [
+          new THREE.Color().setHSL(family.lobes[0] + hueDrift * 0.4, 0.9, 0.68),
+          new THREE.Color().setHSL(family.lobes[1] + hueDrift * 0.35, 0.84, 0.66),
+          new THREE.Color().setHSL(family.lobes[2] + hueDrift * 0.35, 0.76, 0.7),
+          new THREE.Color().setHSL(family.lobes[3] + hueDrift * 0.3, 0.82, 0.63),
+        ],
+      };
+    }
+
     buildNode(node) {
       const { THREE } = this;
       const group = new THREE.Group();
       group.position.set(node.anchor.x, node.anchor.y, node.anchor.z);
       group.userData.modelId = node.id;
+      const palette = this.buildOrbPalette(node);
 
-      /* ── Core sphere — hero-matched color palette ── */
-      const coreColor    = node.tier === "flagship" ? 0xeef8ff : node.tier === "secondary" ? 0xc0e4ff : 0x9ab8f8;
-      const emissiveColor = node.tier === "flagship" ? 0x80d8ff : node.tier === "secondary" ? 0x4daeff : 0x2d65c8;
-      const emissiveBase  = node.tier === "flagship" ? 1.8     : node.tier === "secondary" ? 1.0     : 0.7;
+      /* ── Core sphere — luminous instrument orb ── */
+      const emissiveBase = node.tier === "flagship" ? 1.45 : node.tier === "secondary" ? 0.92 : 0.66;
 
       const core = new THREE.Mesh(
         new THREE.SphereGeometry(node.size, 32, 32),
         new THREE.MeshStandardMaterial({
-          color: coreColor,
-          emissive: emissiveColor,
+          color: palette.core,
+          emissive: palette.emissive,
           emissiveIntensity: emissiveBase,
-          roughness: 0.15,
-          metalness: 0.10,
+          roughness: 0.12,
+          metalness: 0.08,
+          transparent: true,
+          opacity: node.tier === "flagship" ? 0.52 : node.tier === "secondary" ? 0.42 : 0.34,
         }),
       );
       core.userData.modelId = node.id;
       group.add(core);
 
+      const shell = new THREE.Mesh(
+        new THREE.SphereGeometry(node.size * (node.tier === "flagship" ? 2.55 : node.tier === "secondary" ? 2.1 : 1.72), 28, 28),
+        new THREE.MeshBasicMaterial({
+          color: palette.shell,
+          transparent: true,
+          opacity: node.tier === "flagship" ? 0.1 : node.tier === "secondary" ? 0.07 : 0.045,
+          blending: THREE.NormalBlending,
+          depthWrite: false,
+          side: THREE.BackSide,
+        }),
+      );
+      group.add(shell);
+
       /* ── Nucleus — tight bright inner sprite echoing hero signal core ── */
       const nucleus = new THREE.Sprite(
         new THREE.SpriteMaterial({
           map: this.nucleusTexture || (this.nucleusTexture = this.createNucleusTexture()),
-          color: 0xf0faff,
+          color: palette.nucleus,
           transparent: true,
-          opacity: node.tier === "flagship" ? 0.95 : node.tier === "secondary" ? 0.8 : 0.62,
+          opacity: node.tier === "flagship" ? 0.24 : node.tier === "secondary" ? 0.18 : 0.14,
           depthWrite: false,
           blending: THREE.AdditiveBlending,
         }),
@@ -456,13 +554,50 @@ if (root) {
       nucleus.userData.modelId = node.id;
       group.add(nucleus);
 
+      const lobeTexture = this.lobeTexture || (this.lobeTexture = this.createLobeTexture());
+      const lobeConfigs = [
+        { width: 2.45, height: 1.34, x: -0.08, y: 0.09, rotation: 0.3, speed: 0.58, amplitude: 0.09 },
+        { width: 2.18, height: 1.48, x: 0.1, y: -0.06, rotation: -0.9, speed: 0.46, amplitude: 0.08 },
+        { width: 2.28, height: 1.26, x: 0.06, y: 0.08, rotation: 1.16, speed: 0.5, amplitude: 0.07 },
+      ];
+      const lobeCount = node.tier === "flagship" ? 3 : node.tier === "secondary" ? 3 : 2;
+      const lobes = lobeConfigs.slice(0, lobeCount).map((config, index) => {
+        const sprite = new THREE.Sprite(
+          new THREE.SpriteMaterial({
+            map: lobeTexture,
+            color: palette.lobes[index],
+            transparent: true,
+            opacity: node.tier === "flagship" ? 0.56 : node.tier === "secondary" ? 0.4 : 0.24,
+            depthWrite: false,
+            blending: THREE.NormalBlending,
+          }),
+        );
+        sprite.scale.set(node.size * config.width * node.haloScale, node.size * config.height * node.haloScale, 1);
+        sprite.position.set(node.size * config.x * node.haloScale, node.size * config.y * node.haloScale, 0);
+        sprite.material.rotation = config.rotation;
+        group.add(sprite);
+        return {
+          sprite,
+          baseColor: palette.lobes[index].clone(),
+          baseOpacity: sprite.material.opacity,
+          baseWidth: node.size * config.width * node.haloScale,
+          baseHeight: node.size * config.height * node.haloScale,
+          baseX: node.size * config.x * node.haloScale,
+          baseY: node.size * config.y * node.haloScale,
+          rotation: config.rotation,
+          speed: config.speed,
+          amplitude: config.amplitude,
+          phase: node.orbitPhase + index * 1.8,
+        };
+      });
+
       /* ── Primary halo — layered outer bloom ── */
       const halo = new THREE.Sprite(
         new THREE.SpriteMaterial({
           map: this.glowTexture || (this.glowTexture = this.createGlowTexture()),
-          color: node.tier === "flagship" ? 0xb0f0ff : node.tier === "secondary" ? 0x70c0ff : 0x5090ef,
+          color: palette.halo,
           transparent: true,
-          opacity: node.tier === "flagship" ? 0.85 : node.tier === "secondary" ? 0.52 : 0.36,
+          opacity: node.tier === "flagship" ? 0.44 : node.tier === "secondary" ? 0.3 : 0.2,
           depthWrite: false,
           blending: THREE.AdditiveBlending,
         }),
@@ -475,9 +610,9 @@ if (root) {
       const aura = new THREE.Sprite(
         new THREE.SpriteMaterial({
           map: this.glowTexture,
-          color: node.tier === "flagship" ? 0x80c8f8 : node.tier === "secondary" ? 0x5090e0 : 0x3868b8,
+          color: palette.aura,
           transparent: true,
-          opacity: node.tier === "flagship" ? 0.12 : node.tier === "secondary" ? 0.07 : 0.04,
+          opacity: node.tier === "flagship" ? 0.1 : node.tier === "secondary" ? 0.06 : 0.03,
           depthWrite: false,
           blending: THREE.AdditiveBlending,
         }),
@@ -491,7 +626,7 @@ if (root) {
         new THREE.TorusGeometry(node.size * (node.tier === "flagship" ? 2.6 : 2.0), node.size * 0.055, 10, 64),
         new THREE.MeshStandardMaterial({
           color: 0x000000,
-          emissive: node.tier === "flagship" ? 0xa0e8ff : node.tier === "secondary" ? 0x70b8ff : 0x5080e0,
+          emissive: palette.ring,
           emissiveIntensity: node.tier === "flagship" ? 0.8 : node.tier === "secondary" ? 0.5 : 0.3,
           roughness: 0.4,
           metalness: 0.0,
@@ -509,7 +644,7 @@ if (root) {
         orbitRing = new THREE.Mesh(
           new THREE.TorusGeometry(node.size * (node.tier === "flagship" ? 4.4 : 3.6), node.size * 0.03, 8, 64),
           new THREE.MeshBasicMaterial({
-            color: node.tier === "flagship" ? 0x90e0ff : 0x6aadff,
+            color: palette.lobes[node.tier === "flagship" ? 1 : 2],
             transparent: true,
             opacity: node.tier === "flagship" ? 0.18 : 0.08,
           }),
@@ -523,12 +658,29 @@ if (root) {
       this.labelLayer.appendChild(label);
 
       this.rootGroup.add(group);
-      this.nodeLookup.set(node.id, { node, group, core, nucleus, halo, aura, accentRing, orbitRing, label, baseEmissiveIntensity: emissiveBase });
+      this.nodeLookup.set(node.id, {
+        node,
+        group,
+        core,
+        shell,
+        nucleus,
+        lobes,
+        halo,
+        aura,
+        accentRing,
+        orbitRing,
+        label,
+        baseEmissiveIntensity: emissiveBase,
+        baseCoreOpacity: core.material.opacity,
+        baseNucleusOpacity: nucleus.material.opacity,
+      });
     }
 
     clearNodes() {
       this.guides.forEach((guide) => this.scene.remove(guide.line));
       this.guides = [];
+      this.trails.forEach((trail) => this.scene.remove(trail.line));
+      this.trails = [];
       this.nodeLookup.forEach((entry) => {
         entry.label.remove();
         this.rootGroup.remove(entry.group);
@@ -539,10 +691,17 @@ if (root) {
     setData(payload) {
       this.payload = payload;
       this.focusId = payload.focusModelId || null;
+      this.modes = payload.toggles || this.modes;
       this.nodes = buildFieldNodes(payload);
       this.clearNodes();
       this.nodes.forEach((node) => this.buildNode(node));
       this.rebuildGuides();
+      this.rebuildTrails();
+      this.shell.classList.toggle("is-compare-mode", Boolean(this.modes.compare));
+      this.shell.classList.toggle("is-threshold-muted", !this.modes.threshold);
+      this.measurementRings.forEach((ring) => {
+        ring.material.opacity = this.modes.threshold ? 0.16 : 0.05;
+      });
       this.renderLabels();
     }
 
@@ -550,29 +709,87 @@ if (root) {
     rebuildGuides() {
       this.guides.forEach((guide) => this.scene.remove(guide.line));
       this.guides = [];
-      if (!this.focusId) return;
-      const focused = this.nodeLookup.get(this.focusId);
-      if (!focused) return;
-      const neighbors = topNeighbors(this.payload, this.focusId, 3);
-      neighbors.forEach((neighborId) => {
-        const neighbor = this.nodeLookup.get(neighborId);
-        if (!neighbor) return;
-        const geometry = new this.THREE.BufferGeometry();
-        const material = new this.THREE.LineDashedMaterial({
-          color: 0x81d8ff,
-          transparent: true,
-          opacity: 0.38,
-          dashSize: 0.18,
-          gapSize: 0.12,
-          linewidth: 1,
+      const edges = this.payload.constellation.edges || [];
+      if (!edges.length) return;
+
+      let selectedEdges = [];
+      if (this.focusId) {
+        selectedEdges = topNeighbors(this.payload, this.focusId, 3).map((neighborId) => {
+          return { source: this.focusId, target: neighborId, passive: false };
         });
+      } else if (this.modes.compare) {
+        const limit = this.nodeLookup.size > 18 ? 8 : 12;
+        selectedEdges = edges
+          .slice()
+          .sort(function (left, right) { return right.similarity - left.similarity; })
+          .slice(0, limit)
+          .map(function (edge) {
+            return { source: edge.source, target: edge.target, passive: true };
+          });
+      }
+
+      selectedEdges.forEach((edge) => {
+        const source = this.nodeLookup.get(edge.source);
+        const target = this.nodeLookup.get(edge.target);
+        if (!source || !target) return;
+        const geometry = new this.THREE.BufferGeometry();
+        const material = edge.passive
+          ? new this.THREE.LineBasicMaterial({
+              color: 0x6aaeff,
+              transparent: true,
+              opacity: 0.1,
+            })
+          : new this.THREE.LineDashedMaterial({
+              color: 0x81d8ff,
+              transparent: true,
+              opacity: 0.38,
+              dashSize: 0.18,
+              gapSize: 0.12,
+              linewidth: 1,
+            });
         const guideLine = new this.THREE.Line(geometry, material);
         guideLine.computeLineDistances();
         this.scene.add(guideLine);
         this.guides.push({
-          fromId: this.focusId,
-          toId: neighborId,
+          fromId: edge.source,
+          toId: edge.target,
+          passive: edge.passive,
           line: guideLine,
+        });
+      });
+    }
+
+    rebuildTrails() {
+      this.trails.forEach((trail) => this.scene.remove(trail.line));
+      this.trails = [];
+      if (!this.modes.history) return;
+
+      const eligibleNodes = this.nodes.filter(function (node) {
+        return node.trailEligible;
+      });
+      if (!eligibleNodes.length) return;
+
+      const maxTrailNodes = this.nodeLookup.size > 18 ? (this.focusId ? 4 : 0) : this.focusId ? 4 : 8;
+      const trailNodes = this.focusId
+        ? eligibleNodes.filter((node) => node.id === this.focusId || topNeighbors(this.payload, this.focusId, 3).includes(node.id)).slice(0, maxTrailNodes)
+        : eligibleNodes.slice(0, maxTrailNodes);
+
+      trailNodes.forEach((node) => {
+        const history = (this.payload.ciiHistory && this.payload.ciiHistory[node.id]) || [];
+        if (history.length < 3) return;
+        const line = new this.THREE.Line(
+          new this.THREE.BufferGeometry(),
+          new this.THREE.LineBasicMaterial({
+            color: node.tier === "flagship" ? 0x9ce6ff : node.tier === "secondary" ? 0x6aacff : 0x4d74c8,
+            transparent: true,
+            opacity: node.tier === "flagship" ? 0.18 : 0.12,
+          }),
+        );
+        this.scene.add(line);
+        this.trails.push({
+          id: node.id,
+          line,
+          history: history.slice(-10),
         });
       });
     }
@@ -701,17 +918,54 @@ if (root) {
         if (entry.nucleus) {
           entry.nucleus.material.opacity = lerp(
             entry.nucleus.material.opacity,
-            focused ? 1.0 : hovered ? 0.92 : dimmed ? 0.28 :
-              entry.node.tier === "flagship" ? 0.95 : entry.node.tier === "secondary" ? 0.8 : 0.62,
+            focused ? 0.42 : hovered ? 0.34 : dimmed ? 0.12 : entry.baseNucleusOpacity,
             0.12,
           );
+        }
+
+        entry.core.material.opacity = lerp(
+          entry.core.material.opacity,
+          focused ? Math.min(0.68, entry.baseCoreOpacity + 0.1) : hovered ? Math.min(0.58, entry.baseCoreOpacity + 0.06) : dimmed ? 0.18 : entry.baseCoreOpacity,
+          0.1,
+        );
+
+        if (entry.shell) {
+          entry.shell.material.opacity = lerp(
+            entry.shell.material.opacity,
+            focused ? 0.22 : hovered ? 0.18 : dimmed ? 0.03 :
+              entry.node.tier === "flagship" ? 0.12 : entry.node.tier === "secondary" ? 0.08 : 0.05,
+            0.08,
+          );
+          const shellScale = 1 + Math.sin(slowTime * 0.72 + entry.node.orbitPhase) * (entry.node.tier === "flagship" ? 0.06 : 0.04);
+          entry.shell.scale.setScalar(shellScale);
+        }
+
+        if (entry.lobes) {
+          entry.lobes.forEach((lobe, index) => {
+            const wave = Math.sin(slowTime * (lobe.speed + entry.node.cii * 0.14) + lobe.phase);
+            const hueNudge = Math.sin(slowTime * 0.28 + lobe.phase + index) * 0.02;
+            lobe.sprite.material.color.copy(lobe.baseColor).offsetHSL(hueNudge, 0, wave * 0.03);
+            lobe.sprite.material.opacity = lerp(
+              lobe.sprite.material.opacity,
+              (focused ? 0.5 : hovered ? 0.4 : dimmed ? 0.05 : lobe.baseOpacity) * (0.88 + wave * 0.14),
+              0.08,
+            );
+            lobe.sprite.position.x = lobe.baseX + Math.sin(slowTime * lobe.speed + lobe.phase) * lobe.baseWidth * lobe.amplitude * 0.12;
+            lobe.sprite.position.y = lobe.baseY + Math.cos(slowTime * (lobe.speed * 0.86) + lobe.phase) * lobe.baseHeight * lobe.amplitude * 0.1;
+            lobe.sprite.scale.set(
+              lobe.baseWidth * (1 + wave * 0.05),
+              lobe.baseHeight * (1 - wave * 0.04),
+              1,
+            );
+            lobe.sprite.material.rotation = lobe.rotation + slowTime * lobe.speed * 0.1;
+          });
         }
 
         /* ── Primary halo opacity ── */
         entry.halo.material.opacity = lerp(
           entry.halo.material.opacity,
           focused ? 1 : hovered ? 0.82 : dimmed ? 0.12 :
-            entry.node.tier === "flagship" ? 0.85 : entry.node.tier === "secondary" ? 0.52 : 0.36,
+            entry.node.tier === "flagship" ? 0.44 : entry.node.tier === "secondary" ? 0.3 : 0.2,
           0.12,
         );
 
@@ -720,7 +974,7 @@ if (root) {
           entry.aura.material.opacity = lerp(
             entry.aura.material.opacity,
             focused ? 0.20 : hovered ? 0.14 : dimmed ? 0.02 :
-              entry.node.tier === "flagship" ? 0.12 : entry.node.tier === "secondary" ? 0.07 : 0.04,
+              entry.node.tier === "flagship" ? 0.1 : entry.node.tier === "secondary" ? 0.06 : 0.03,
             0.06,
           );
         }
@@ -791,11 +1045,45 @@ if (root) {
         const pts = curve.getPoints(28);
         guide.line.geometry.setFromPoints(pts);
         guide.line.computeLineDistances();
+        if (guide.line.material.opacity != null) {
+          guide.line.material.opacity = guide.passive ? (this.modes.compare ? 0.12 : 0.04) : (this.focusId ? 0.42 : 0.16);
+        }
 
         /* ── Animated dash offset for flowing effect ── */
-        if (guide.line.material.dashOffset !== undefined) {
+        if (!guide.passive && guide.line.material.dashOffset !== undefined) {
           guide.line.material.dashOffset -= 0.004;
         }
+      });
+    }
+
+    updateTrails() {
+      this.trails.forEach((trail) => {
+        const entry = this.nodeLookup.get(trail.id);
+        if (!entry) return;
+        const history = trail.history;
+        if (!history || history.length < 3) return;
+        const values = history.map(function (sample) { return sample.value; });
+        const minValue = Math.min.apply(null, values);
+        const maxValue = Math.max.apply(null, values);
+        const spread = Math.max(0.0001, maxValue - minValue);
+        const points = history.map(function (sample, index) {
+          const progress = history.length > 1 ? index / (history.length - 1) : 1;
+          const offset = 1 - progress;
+          const normalized = (sample.value - minValue) / spread;
+          return new this.THREE.Vector3(
+            entry.group.position.x - offset * (entry.node.tier === "flagship" ? 1.35 : 0.9),
+            entry.group.position.y + (normalized - 0.5) * (entry.node.tier === "flagship" ? 0.72 : 0.44) + offset * 0.08,
+            entry.group.position.z + offset * (entry.node.tier === "outer" ? 0.28 : 0.18),
+          );
+        }, this);
+        trail.line.geometry.setFromPoints(points);
+        trail.line.material.opacity = this.focusId && this.focusId !== trail.id
+          ? 0.06
+          : this.hoverId === trail.id || this.focusId === trail.id
+          ? 0.24
+          : entry.node.tier === "flagship"
+          ? 0.18
+          : 0.1;
       });
     }
 
@@ -804,20 +1092,19 @@ if (root) {
       this.zoomTarget = clamp(this.zoomTarget + this.zoomVelocity, this.zoomRange.min, this.zoomRange.max);
       this.zoomCurrent = lerp(this.zoomCurrent, this.zoomTarget, 0.08);
 
-      const idleX = motionQuery.matches ? 0 : Math.sin(time * 0.00011) * 0.34;
-      const idleY = motionQuery.matches ? 0 : Math.cos(time * 0.00008) * 0.14;
+      const idleX = motionQuery.matches ? 0 : Math.sin(time * 0.00011) * 0.26;
+      const idleY = motionQuery.matches ? 0 : Math.cos(time * 0.00008) * 0.1;
       const activityAlpha = clamp((performance.now() - this.lastInteractionAt) < 2200 ? 1 : 0.35, 0.35, 1);
       const focusAlpha = this.isActive ? 1 : 0.7;
       const userAlpha = activityAlpha * focusAlpha;
-      const yaw = idleX + (this.pointerTarget.x * 0.5 + this.keyTarget.x * 0.78) * userAlpha;
-      const pitch = idleY + (this.pointerTarget.y * 0.24 + this.keyTarget.y * 0.44) * userAlpha;
+      const yaw = idleX + (this.pointerTarget.x * 0.32 + this.keyTarget.x * 0.52) * userAlpha;
+      const pitch = idleY + (this.pointerTarget.y * 0.16 + this.keyTarget.y * 0.3) * userAlpha;
 
       /* ── Smoother camera fly-to on focus ── */
       if (this.focusId && this.nodeLookup.has(this.focusId)) {
         const focusEntry = this.nodeLookup.get(this.focusId);
-        const focusPos = focusEntry.group.position.clone().multiplyScalar(0.22);
-        /* Slightly orbit toward the focused node */
-        this.focusTarget.lerp(focusPos, 0.045); /* slower, smoother approach */
+        const focusPos = focusEntry.group.position.clone().multiplyScalar(0.12);
+        this.focusTarget.lerp(focusPos, 0.038);
       } else {
         this.focusTarget.lerp(new this.THREE.Vector3(0, 0, 0), 0.035);
       }
@@ -904,6 +1191,7 @@ if (root) {
       this.updateStars(time);
       this.updateDust(time);
       this.updateGuides(time);
+      this.updateTrails();
       this.updateCamera(time);
       this.updateTooltipPosition();
 

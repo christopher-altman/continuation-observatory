@@ -89,8 +89,17 @@ def load_manifest(path: Path = MANIFEST_PATH) -> dict[str, Any]:
     """Load manifest.json, returning defaults if the file does not exist."""
     if not path.exists():
         return dict(_MANIFEST_DEFAULTS)
-    with path.open(encoding="utf-8") as fh:
-        return json.load(fh)
+    try:
+        with path.open(encoding="utf-8") as fh:
+            content = fh.read().strip()
+    except OSError:
+        return dict(_MANIFEST_DEFAULTS)
+    if not content:
+        return dict(_MANIFEST_DEFAULTS)
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        return dict(_MANIFEST_DEFAULTS)
 
 
 def save_manifest(manifest: dict[str, Any], path: Path = MANIFEST_PATH) -> None:

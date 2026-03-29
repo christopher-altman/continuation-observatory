@@ -34,12 +34,23 @@ def test_observatory_endpoints_return_200():
     assert "nodes" in payload
     assert "edges" in payload
 
+    snapshot = client.get("/api/observatory/snapshot")
+    assert snapshot.status_code == 200
+    snapshot_payload = snapshot.json()
+    assert "summary" in snapshot_payload
+    assert "models" in snapshot_payload
+    assert "events" in snapshot_payload
+    assert "constellation" in snapshot_payload
+    assert "pcii_series" in snapshot_payload
+    assert "cii_history" in snapshot_payload
+
 
 def test_observatory_pages_render():
     _seed_observatory()
     resp = client.get("/observatory")
     assert resp.status_code == 200
     assert b"Continuation Observatory" in resp.content
+    assert b"observatory-history-root" in resp.content
 
     resp = client.get("/")
     assert resp.status_code == 200

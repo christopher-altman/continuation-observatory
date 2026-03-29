@@ -17,6 +17,8 @@ from xml.etree import ElementTree as ET
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
+from observatory.observatory_snapshot import build_observatory_snapshot
+
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
@@ -435,6 +437,32 @@ def _write_json(path: Path, data: dict | list) -> None:
         json.dump(data, f, indent=2, default=str)
 
 
+def _safe_observatory_snapshot() -> dict:
+    try:
+        return build_observatory_snapshot(history_range="30d", event_limit=40)
+    except Exception as exc:
+        print(f"  WARNING: Could not build observatory snapshot: {exc}", file=sys.stderr)
+        return {
+            "generated_at": _now_iso(),
+            "summary": {
+                "history_range": "30d",
+                "tracked_models": 0,
+                "live_models": 0,
+                "focused_metric": "cii",
+                "constellation_threshold": 0.60,
+                "similarity_window_days": 7,
+                "latest_pcii": None,
+                "latest_pcii_timestamp": None,
+                "available_ranges": ["1h", "24h", "7d", "30d"],
+            },
+            "models": [],
+            "events": [],
+            "constellation": {"nodes": [], "edges": [], "threshold": 0.60, "window_days": 7},
+            "pcii_series": [],
+            "cii_history": {},
+        }
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -471,6 +499,9 @@ def build(output_dir: Path, exports_only: bool = False) -> None:
 
     models = generate_models(experiments)
     _write_json(data_dir / "models.json", models)
+
+    observatory_snapshot = _safe_observatory_snapshot()
+    _write_json(data_dir / "observatory_snapshot.json", observatory_snapshot)
 
     # Generate exports
     print("Generating exports...")
@@ -531,6 +562,9 @@ def build(output_dir: Path, exports_only: bool = False) -> None:
         "contact_href": "mailto:x@christopheraltman.com",
         "marquee_models": marquee_models,
         "home_signal_score": home_signal_score,
+        "observatory_mode": "static",
+        "observatory_snapshot_url": "static/data/observatory_snapshot.json",
+        "observatory_socket_enabled": False,
     }
 
     render_templates(output_dir, TEMPLATES_DIR, context)

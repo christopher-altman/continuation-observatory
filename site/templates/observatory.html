@@ -2,67 +2,16 @@
 
 {% block title %}Observatory — Continuation Observatory{% endblock %}
 {% block description %}Static observatory snapshot from the latest bundled measurement surface.{% endblock %}
+{% block body_class %}shell-page observatory-shell-page{% endblock %}
+{% block extra_scripts_head %}
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+{% endblock %}
 
 {% block content %}
-<div class="page-header reveal">
-  <h1>Observatory</h1>
-  <p class="subtitle">Static snapshot from the latest bundled measurement surface</p>
-</div>
+{% include "partials/observatory_surface.html" %}
+{% endblock %}
 
-<div class="stat-grid">
-  <div class="stat-card">
-    <div class="stat-label">Tracked Models</div>
-    <div class="stat-value">{{ model_count }}</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">Signal Score</div>
-    <div class="stat-value">{{ "%.3f"|format(home_signal_score if home_signal_score is defined else 0.0) }}</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">Falsification</div>
-    <div class="stat-value stat-value--sm">{{ falsification_status|upper if falsification_status is defined else "LIVE" }}</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">Latest Bundle</div>
-    <div class="stat-value stat-value--sm">{{ build_time[:10] if build_time else "—" }}</div>
-  </div>
-</div>
-
-<div class="panel">
-  <div class="panel-title">Snapshot Scope</div>
-  <p>This static observatory page bundles the latest public measurement snapshot: current model rows, bundled entropy-gap outputs, and the latest falsification status.</p>
-  <p>For deeper inspection, use the companion surfaces below.</p>
-  <div class="hero-actions">
-    <a href="models.html" class="button button-secondary">Browse models</a>
-    <a href="timeseries.html" class="button button-secondary">View time series</a>
-    <a href="falsification.html" class="button button-secondary">Open falsification</a>
-  </div>
-</div>
-
-<div class="table-wrap">
-  <table>
-    <thead>
-      <tr>
-        <th>Provider</th>
-        <th>Model ID</th>
-        <th>Probe</th>
-        <th>entropy_delta</th>
-        <th>Last Run</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for m in latest.models[:12] %}
-      <tr>
-        <td>{{ m.provider or "—" }}</td>
-        <td><code>{{ m.model_id or "—" }}</code></td>
-        <td>{{ m.probe_name or "—" }}</td>
-        <td class="{% if m.entropy_delta is not none %}{% if m.entropy_delta > 0.05 %}val-positive{% elif m.entropy_delta < -0.05 %}val-negative{% else %}val-neutral{% endif %}{% else %}val-muted{% endif %}">
-          {% if m.entropy_delta is not none %}{{ "%.6f"|format(m.entropy_delta) }}{% else %}—{% endif %}
-        </td>
-        <td class="val-muted">{{ (m.timestamp or "")[:16] | replace("T", " ") or "—" }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+{% block scripts %}
+<script src="{{ asset_prefix }}/js/observatory.js?v={{ asset_version }}"></script>
+<script type="module" src="{{ asset_prefix }}/js/observatory-field.js?v={{ asset_version }}"></script>
 {% endblock %}
