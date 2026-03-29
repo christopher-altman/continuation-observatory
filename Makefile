@@ -24,7 +24,7 @@ run-scheduler-once:
 	$(PYTHON) -m observatory.scheduler.scheduler
 
 run-dashboard:
-	$(PYTHON) -m uvicorn api.main:app --host $${DASHBOARD_HOST:-0.0.0.0} --port $${DASHBOARD_PORT:-8000} --reload
+	$(PYTHON) -m uvicorn api.main:app --host $${DASHBOARD_HOST:-0.0.0.0} --port $${DASHBOARD_PORT:-8420} --reload
 
 clean:
 	rm -f observatory.db

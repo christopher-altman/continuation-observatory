@@ -19,8 +19,8 @@ def test_runtime_providers_expand_configured_models():
     providers = build_runtime_providers()
     model_ids = {provider.model_id for provider in providers}
     assert "gpt-5" in model_ids
-    assert "claude-opus-4-6" in model_ids
-    assert "deepseek-r2" in model_ids
+    assert "claude-haiku-4-5-20251001" in model_ids
+    assert "deepseek-r2" not in model_ids
 
 
 def test_generic_openai_provider_dry_run_response():

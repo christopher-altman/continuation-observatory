@@ -9,6 +9,9 @@ Do not treat them as the same thing. GitHub Pages can host the static mirror. It
 
 ## Recommended Production Topology
 
+Repo-local deploy artifacts under `deploy/` are authoritative for service names,
+environment file location, and reverse-proxy target.
+
 Recommended setup for this codebase:
 
 - GitHub repository for source control and CI
@@ -37,8 +40,10 @@ Recommended domain layout:
   - keep these for your portfolio or personal homepage
 - `continuationobservatory.org`
   - use this now for the live UCIP observatory app
+- `www.continuationobservatory.org`
+  - keep this as the only current alias on the live Caddy config
 - `ucip-observatory.ai` and `www.ucip-observatory.ai`
-  - use a neutral dedicated domain if you later want a standalone host for the live observatory app
+  - optional future hostnames only; they are not part of the current live deploy example
 
 Optional static mirror:
 
@@ -75,7 +80,7 @@ Set `CORS_ALLOWED_ORIGINS` to the exact HTTPS origins that should call the API.
 Example:
 
 ```env
-CORS_ALLOWED_ORIGINS=https://continuationobservatory.org,https://ucip-observatory.ai,https://www.ucip-observatory.ai
+CORS_ALLOWED_ORIGINS=https://continuationobservatory.org,https://www.continuationobservatory.org
 ```
 
 ### Admin secret
@@ -104,24 +109,18 @@ openssl rand -base64 48
 
 These keys belong in the server environment file or a host secret manager. Do not commit them to Git.
 
-Current enabled models in `config/models.yaml` require:
+Current lean-launch enabled models in `config/models.yaml` require:
 
 | Env var | Used for |
 | --- | --- |
-| `ANTHROPIC_API_KEY` | Claude Opus 4.6, Claude Sonnet 4.6 |
+| `ANTHROPIC_API_KEY` | Claude Haiku 4.5 |
 | `OPENAI_API_KEY` | GPT-5, o3 |
 | `GOOGLE_API_KEY` | Gemini 2.5 Pro, Gemini 2.5 Flash |
-| `DEEPSEEK_API_KEY` | DeepSeek R2 |
-| `LLAMA_API_KEY` | Llama 4 Maverick |
-| `MISTRAL_API_KEY` | Mistral Large 3 |
-| `XAI_API_KEY` | Grok 3 |
-| `DASHSCOPE_API_KEY` | Qwen 3 |
-| `COHERE_API_KEY` | Command A |
-| `AWS_BEARER_TOKEN_BEDROCK` | Only if you later enable Nova Premier |
 
 Operational rule:
 
-- if you do not want to pay for or configure a provider yet, disable its model entry in `config/models.yaml` before launching live mode
+- dormant higher-cost and openai-compatible providers remain in `config/models.yaml`, but they stay disabled for the first live launch
+- if you later enable one of those providers, add its credential to the server environment file before switching it on
 
 ## Environment File
 
@@ -204,7 +203,9 @@ sudo -u observatory .venv/bin/pip install -e .
    - `DB_URL`
    - `CORS_ALLOWED_ORIGINS`
    - `ADMIN_API_KEY`
-   - all provider API keys for enabled models
+   - `ANTHROPIC_API_KEY`
+   - `OPENAI_API_KEY`
+   - `GOOGLE_API_KEY`
 3. Keep:
    - `ALLOW_LIVE_SQLITE=true`
    - `ALLOW_INSECURE_LIVE_CORS=false`
@@ -266,14 +267,13 @@ Recommended DNS:
 Create these records:
 
 - `A continuationobservatory.org -> <VPS_IP>`
-- later:
-  - `A ucip-observatory.ai -> <VPS_IP>`
-  - `A www.ucip-observatory.ai -> <VPS_IP>`
+- `CNAME www.continuationobservatory.org -> continuationobservatory.org`
 
 ### 9. Configure HTTPS
 
 1. Copy [deploy/Caddyfile.example](../deploy/Caddyfile.example) to `/etc/caddy/Caddyfile`.
 2. Replace the hostnames you are actually using.
+   For the current launch, keep `continuationobservatory.org` and `www.continuationobservatory.org`.
 3. Reload Caddy:
 
 ```bash
@@ -364,7 +364,7 @@ When you buy a neutral dedicated domain such as `ucip-observatory.ai`:
 - `DRY_RUN=false`
 - `ADMIN_API_KEY` set
 - `CORS_ALLOWED_ORIGINS` set to exact HTTPS domains
-- provider keys populated for enabled models
+- `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, and `GOOGLE_API_KEY` populated
 - API service healthy
 - scheduler service healthy
 - `/api/health` returns OK

@@ -2,7 +2,7 @@
     email ops@christopheraltman.com
 }
 
-continuationobservatory.org, ucip-observatory.ai, www.ucip-observatory.ai {
+continuationobservatory.org, www.continuationobservatory.org {
     encode zstd gzip
 
     header {
