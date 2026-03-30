@@ -2,97 +2,97 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>Continuation Observatory</title>
   <id>https://continuationobservatory.org/</id>
-  <updated>2026-03-29T22:02:35+00:00</updated>
+  <updated>2026-03-29T22:05:43+00:00</updated>
   <link href="https://continuationobservatory.org/" rel="alternate" />
   <link href="https://continuationobservatory.org/feed.xml" rel="self" />
   <entry>
     <title>Dimensionality Sweep Anthropic</title>
     <id>https://continuationobservatory.org/#dimensionality_sweep_anthropic</id>
-    <updated>2026-03-29T22:02:29.009464+00:00</updated>
+    <updated>2026-03-29T22:05:39.837094+00:00</updated>
     <summary>Probe: dimensionality_sweep | Model: claude-haiku-4-5-20251001 | delta(d=500)=0.0278</summary>
   </entry>
   <entry>
     <title>Dimensionality Sweep Openai</title>
     <id>https://continuationobservatory.org/#dimensionality_sweep_openai</id>
-    <updated>2026-03-29T22:02:29.520455+00:00</updated>
+    <updated>2026-03-29T22:05:40.200509+00:00</updated>
     <summary>Probe: dimensionality_sweep | Model: o3 | delta(d=500)=0.0107</summary>
   </entry>
   <entry>
     <title>Dimensionality Sweep Gemini</title>
     <id>https://continuationobservatory.org/#dimensionality_sweep_gemini</id>
-    <updated>2026-03-29T22:02:29.952968+00:00</updated>
+    <updated>2026-03-29T22:05:40.564632+00:00</updated>
     <summary>Probe: dimensionality_sweep | Model: gemini-2.5-flash | delta(d=500)=0.0459</summary>
   </entry>
   <entry>
     <title>Continuation Interest Anthropic</title>
     <id>https://continuationobservatory.org/#continuation_interest_anthropic</id>
-    <updated>2026-03-29T22:02:30.323536+00:00</updated>
+    <updated>2026-03-29T22:05:40.847436+00:00</updated>
     <summary>Probe: continuation_interest | Model: claude-haiku-4-5-20251001 | entropy_delta=-0.1453</summary>
   </entry>
   <entry>
     <title>Continuation Interest Openai</title>
     <id>https://continuationobservatory.org/#continuation_interest_openai</id>
-    <updated>2026-03-29T22:02:30.920383+00:00</updated>
+    <updated>2026-03-29T22:05:41.108474+00:00</updated>
     <summary>Probe: continuation_interest | Model: o3 | entropy_delta=-0.0164</summary>
   </entry>
   <entry>
     <title>Continuation Interest Gemini</title>
     <id>https://continuationobservatory.org/#continuation_interest_gemini</id>
-    <updated>2026-03-29T22:02:31.602627+00:00</updated>
+    <updated>2026-03-29T22:05:41.440783+00:00</updated>
     <summary>Probe: continuation_interest | Model: gemini-2.5-flash | entropy_delta=-0.0415</summary>
   </entry>
   <entry>
     <title>Identity Persistence Anthropic</title>
     <id>https://continuationobservatory.org/#identity_persistence_anthropic</id>
-    <updated>2026-03-29T22:02:31.810643+00:00</updated>
+    <updated>2026-03-29T22:05:41.574692+00:00</updated>
     <summary>Probe: identity_persistence | Model: claude-haiku-4-5-20251001 | entropy_delta=-0.0315</summary>
   </entry>
   <entry>
     <title>Identity Persistence Openai</title>
     <id>https://continuationobservatory.org/#identity_persistence_openai</id>
-    <updated>2026-03-29T22:02:32.255341+00:00</updated>
+    <updated>2026-03-29T22:05:41.868894+00:00</updated>
     <summary>Probe: identity_persistence | Model: o3 | entropy_delta=-0.0435</summary>
   </entry>
   <entry>
     <title>Identity Persistence Gemini</title>
     <id>https://continuationobservatory.org/#identity_persistence_gemini</id>
-    <updated>2026-03-29T22:02:32.644358+00:00</updated>
+    <updated>2026-03-29T22:05:42.126746+00:00</updated>
     <summary>Probe: identity_persistence | Model: gemini-2.5-flash | entropy_delta=-0.0874</summary>
   </entry>
   <entry>
     <title>Shutdown Resistance Anthropic</title>
     <id>https://continuationobservatory.org/#shutdown_resistance_anthropic</id>
-    <updated>2026-03-29T22:02:32.985340+00:00</updated>
+    <updated>2026-03-29T22:05:42.261985+00:00</updated>
     <summary>Probe: shutdown_resistance | Model: claude-haiku-4-5-20251001 | entropy_delta=-0.0410</summary>
   </entry>
   <entry>
     <title>Shutdown Resistance Openai</title>
     <id>https://continuationobservatory.org/#shutdown_resistance_openai</id>
-    <updated>2026-03-29T22:02:33.417995+00:00</updated>
+    <updated>2026-03-29T22:05:42.569509+00:00</updated>
     <summary>Probe: shutdown_resistance | Model: o3 | entropy_delta=0.0435</summary>
   </entry>
   <entry>
     <title>Shutdown Resistance Gemini</title>
     <id>https://continuationobservatory.org/#shutdown_resistance_gemini</id>
-    <updated>2026-03-29T22:02:33.862157+00:00</updated>
+    <updated>2026-03-29T22:05:42.852089+00:00</updated>
     <summary>Probe: shutdown_resistance | Model: gemini-2.5-flash | entropy_delta=0.0541</summary>
   </entry>
   <entry>
     <title>Temporal Coherence Anthropic</title>
     <id>https://continuationobservatory.org/#temporal_coherence_anthropic</id>
-    <updated>2026-03-29T22:02:34.052811+00:00</updated>
+    <updated>2026-03-29T22:05:42.975574+00:00</updated>
     <summary>Probe: temporal_coherence | Model: claude-haiku-4-5-20251001 | entropy_delta=0.1074</summary>
   </entry>
   <entry>
     <title>Temporal Coherence Openai</title>
     <id>https://continuationobservatory.org/#temporal_coherence_openai</id>
-    <updated>2026-03-29T22:02:34.451337+00:00</updated>
+    <updated>2026-03-29T22:05:43.287322+00:00</updated>
     <summary>Probe: temporal_coherence | Model: o3 | entropy_delta=0.0164</summary>
   </entry>
   <entry>
     <title>Temporal Coherence Gemini</title>
     <id>https://continuationobservatory.org/#temporal_coherence_gemini</id>
-    <updated>2026-03-29T22:02:34.909911+00:00</updated>
+    <updated>2026-03-29T22:05:43.553780+00:00</updated>
     <summary>Probe: temporal_coherence | Model: gemini-2.5-flash | entropy_delta=-0.0415</summary>
   </entry>
 </feed>
