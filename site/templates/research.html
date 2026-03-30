@@ -75,6 +75,7 @@
   <h2 class="research-section-title">Why It Matters</h2>
   <div class="panel">
     <p>This distinction matters for safety because terminal and instrumental persistence imply different intervention risks. It matters for welfare because welfare-relevant evaluation should be grounded in structure, not only in outward performance.</p>
+    <p>Frontier labs already conduct formal welfare assessments. Anthropic’s February 2026 Claude Opus 4.6 system card reported that the model assigned itself a 15–20% probability of being conscious under varied prompting conditions. UCIP addresses the measurement gap that self-report cannot settle.</p>
     <p>The observatory tracks these signals across frontier models and keeps the evidence public, inspectable, and revisable.</p>
     <p>The surrounding field — frontier-lab welfare programs, third-party evaluators, public-sector safety bodies, and interpretability groups — is mapped on the <a href="{{ route_links }}" class="text-link-inline">LINKS page</a>.</p>
   </div>
@@ -100,16 +101,8 @@
 
 <div class="panel reveal" data-delay="70">
   <div class="panel-title">Continue Through the Research Pages</div>
-  <div class="definition-block">
-    <dt><a href="{{ route_ucip }}" class="text-link-inline">UCIP explainer</a></dt>
-    <dd>The measurement problem, current results, and why structural measurement matters now.</dd>
-    <dt><a href="{{ route_ucip_paper }}" class="text-link-inline">Paper overview</a></dt>
-    <dd>The scientific thesis, baseline comparison, and falsification framing anchored to the arXiv paper.</dd>
-    <dt><a href="{{ route_ucip_code }}" class="text-link-inline">Reproducibility hub</a></dt>
-    <dd>Code, data, and implementation details for the current work.</dd>
-    <dt><a href="{{ route_ucip_patent }}" class="text-link-inline">Patent status</a></dt>
-    <dd>Provisional filing scope and status.</dd>
-  </div>
+  {% set current_destination_key = "research" %}
+  {% include "partials/research_destinations_sequence.html" %}
 </div>
 
 <div class="research-citation-spacer">

@@ -6,36 +6,8 @@
       Explainer, paper, patent status, reproducibility hub, research directions, and the organizations shaping the field.
     </p>
   </div>
-  <div class="featured-grid reveal">
-    <a class="card destination-card" href="{{ route_ucip }}">
-      <p class="observable-label">Explainer</p>
-      <h3>Read the UCIP executive explainer.</h3>
-      <p>A concise walkthrough of observational equivalence, latent structure, and why structural measurement matters now.</p>
-    </a>
-    <a class="card destination-card" href="{{ route_ucip_paper }}">
-      <p class="observable-label">Paper</p>
-      <h3>See the paper overview.</h3>
-      <p>The scientific thesis, baseline comparison, and falsification framing anchored to the arXiv preprint.</p>
-    </a>
-    <a class="card destination-card" href="{{ route_ucip_patent }}">
-      <p class="observable-label">Patent status</p>
-      <h3>Review the patent filing.</h3>
-      <p>Provisional patent scope and its relationship to the research program.</p>
-    </a>
-    <a class="card destination-card" href="{{ route_ucip_code }}">
-      <p class="observable-label">Reproducibility</p>
-      <h3>Inspect the code and data.</h3>
-      <p>Implementation, methodology, and everything needed to reproduce the results.</p>
-    </a>
-    <a class="card destination-card" href="{{ route_research }}">
-      <p class="observable-label">Research</p>
-      <h3>Follow the next-step agenda.</h3>
-      <p>Open questions, future-work framing, and the hardening roadmap.</p>
-    </a>
-    <a class="card destination-card" href="{{ route_links }}">
-      <p class="observable-label">Field landscape</p>
-      <h3>Browse the field landscape.</h3>
-      <p>A curated map of frontier labs, evaluators, public-sector bodies, interpretability groups, and funding programs.</p>
-    </a>
+  <div class="reveal">
+    {% set current_destination_key = None %}
+    {% include "partials/research_destinations_sequence.html" %}
   </div>
 </section>

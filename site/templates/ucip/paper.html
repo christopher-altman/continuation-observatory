@@ -65,15 +65,9 @@
 </div>
 
 <div class="panel ucip-paper-section-gap reveal" data-delay="70">
-  <div class="panel-title">Related destinations</div>
-  <div class="definition-block">
-    <dt><a href="{{ route_ucip }}" class="text-link-inline">UCIP explainer</a></dt>
-    <dd>The measurement problem and why structural measurement matters now.</dd>
-    <dt><a href="{{ route_ucip_code }}" class="text-link-inline">Reproducibility hub</a></dt>
-    <dd>Code, scripts, and data referenced by the paper.</dd>
-    <dt><a href="{{ route_ucip_patent }}" class="text-link-inline">Patent status</a></dt>
-    <dd>Provisional filing scope and status.</dd>
-  </div>
+  <div class="panel-title">Continue Through the Research Pages</div>
+  {% set current_destination_key = "ucip_paper" %}
+  {% include "partials/research_destinations_sequence.html" %}
 </div>
 
 {% include "partials/citation_block.html" %}

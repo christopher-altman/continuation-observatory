@@ -47,38 +47,8 @@
 
 <div class="panel ucip-section-gap reveal" data-delay="60">
   <div class="panel-title">Continue Through the Research Pages</div>
-  <div class="featured-grid">
-    <a class="card destination-card" href="{{ route_ucip_paper }}">
-      <p class="observable-label">Paper</p>
-      <h3>Read the paper overview.</h3>
-      <p>The core thesis, baseline comparison, and falsification framing anchored to the arXiv preprint.</p>
-    </a>
-    <a class="card destination-card" href="{{ route_ucip_patent }}">
-      <p class="observable-label">Patent status</p>
-      <h3>Review the patent filing.</h3>
-      <p>Scope of the provisional filing and its relationship to the research.</p>
-    </a>
-    <a class="card destination-card" href="{{ route_ucip_code }}">
-      <p class="observable-label">Reproducibility</p>
-      <h3>Inspect the code and data.</h3>
-      <p>Implementation, methodology, and everything needed to reproduce the current results.</p>
-    </a>
-    <a class="card destination-card" href="{{ route_methodology }}">
-      <p class="observable-label">Methodology</p>
-      <h3>See the structural measurement stack.</h3>
-      <p>Operational readouts, metric definitions, and the current falsification criterion.</p>
-    </a>
-    <a class="card destination-card" href="{{ route_research }}">
-      <p class="observable-label">Research</p>
-      <h3>Follow the next-step agenda.</h3>
-      <p>The deeper research page for hardening, invariance, and future-work framing.</p>
-    </a>
-    <a class="card destination-card" href="{{ route_links }}">
-      <p class="observable-label">Field landscape</p>
-      <h3>Browse the field landscape.</h3>
-      <p>Frontier labs, evaluators, public-sector bodies, and adjacent organizations.</p>
-    </a>
-  </div>
+  {% set current_destination_key = "ucip" %}
+  {% include "partials/research_destinations_sequence.html" %}
 </div>
 
 {% include "partials/citation_block.html" %}

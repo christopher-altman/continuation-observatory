@@ -1,0 +1,61 @@
+{% set current_destination_key = current_destination_key | default(None) %}
+{% set research_destinations = [
+  {
+    "key": "ucip",
+    "route": route_ucip,
+    "label": "Explainer",
+    "title": "Read the UCIP executive explainer.",
+    "body": "A concise walkthrough of observational equivalence, latent structure, and why structural measurement matters now."
+  },
+  {
+    "key": "ucip_paper",
+    "route": route_ucip_paper,
+    "label": "Paper",
+    "title": "See the paper overview.",
+    "body": "The scientific thesis, baseline comparison, and falsification framing anchored to the arXiv preprint."
+  },
+  {
+    "key": "ucip_patent",
+    "route": route_ucip_patent,
+    "label": "Patent status",
+    "title": "Review the patent filing.",
+    "body": "Provisional patent scope and its relationship to the research program."
+  },
+  {
+    "key": "ucip_code",
+    "route": route_ucip_code,
+    "label": "Reproducibility",
+    "title": "Inspect the code and data.",
+    "body": "Implementation, methodology, and everything needed to reproduce the current results."
+  },
+  {
+    "key": "research",
+    "route": route_research,
+    "label": "Research",
+    "title": "Follow the next-step agenda.",
+    "body": "Open questions, future-work framing, and the hardening roadmap."
+  },
+  {
+    "key": "links",
+    "route": route_links,
+    "label": "Field landscape",
+    "title": "Browse the field landscape.",
+    "body": "A curated map of frontier labs, evaluators, public-sector bodies, interpretability groups, and funding programs."
+  }
+] %}
+<div class="featured-grid">
+  {% for destination in research_destinations %}
+    {% set is_current = destination.key == current_destination_key %}
+    <a
+      class="card destination-card"
+      href="{{ destination.route }}"
+      {% if is_current %}aria-current="page"{% endif %}
+    >
+      <p class="observable-label">
+        {{ destination.label }}{% if is_current %} · Current page{% endif %}
+      </p>
+      <h3>{{ destination.title }}</h3>
+      <p>{{ destination.body }}</p>
+    </a>
+  {% endfor %}
+</div>

@@ -20,17 +20,6 @@
       <div class="panel-title">Overview</div>
       <p>The filing covers the measurement architecture for detecting continuation structure in advanced AI systems, including the observatory's structural readouts and falsification framework.</p>
     </div>
-    <div class="panel">
-      <div class="panel-title">Related pages</div>
-      <div class="definition-block">
-        <dt><a href="{{ route_ucip_paper }}" class="text-link-inline">Paper overview</a></dt>
-        <dd>Scientific framing, baseline comparisons, and falsification logic.</dd>
-        <dt><a href="{{ route_ucip_code }}" class="text-link-inline">Reproducibility hub</a></dt>
-        <dd>Code, scripts, and implementation details.</dd>
-        <dt><a href="{{ route_ucip }}" class="text-link-inline">UCIP explainer</a></dt>
-        <dd>The measurement problem, current results, and why this matters now.</dd>
-      </div>
-    </div>
   </div>
   <div class="content-figure" style="margin-top: 0;">
     <p class="content-figure__note">USPTO provisional filing confirmation.</p>
@@ -41,6 +30,12 @@
       </a>
     </figure>
   </div>
+</div>
+
+<div class="panel reveal" data-delay="70">
+  <div class="panel-title">Continue Through the Research Pages</div>
+  {% set current_destination_key = "ucip_patent" %}
+  {% include "partials/research_destinations_sequence.html" %}
 </div>
 
 {% include "partials/citation_block.html" %}
