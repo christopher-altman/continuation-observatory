@@ -11,20 +11,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}{{ page_title }} — Continuation Observatory{% endblock %}</title>
-  <meta name="description" content="{% block description %}Continuation Observatory is a research platform for structural measurement of continuation-related signals in advanced AI systems. Powered by UCIP.{% endblock %}">
+  <meta name="description" content="{% block description %}Continuation Observatory: structural measurement for continuation signals in advanced AI systems. Powered by UCIP.{% endblock %}">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Continuation Observatory">
   <meta property="og:title" content="{% block og_title %}{{ page_title }} — Continuation Observatory{% endblock %}">
-  <meta property="og:description" content="{% block og_description %}Structural measurement for continuation-related signals in advanced AI systems, powered by UCIP.{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}Structural measurement for continuation signals in advanced AI systems, powered by UCIP.{% endblock %}">
   <meta property="og:url" content="{{ site_url }}{{ page_path }}">
   <meta property="og:image" content="{{ site_url }}/static/og-image.png">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{% block tw_title %}{{ page_title }} — Continuation Observatory{% endblock %}">
-  <meta name="twitter:description" content="{% block tw_description %}Structural measurement for continuation-related signals in advanced AI systems, powered by UCIP.{% endblock %}">
+  <meta name="twitter:description" content="{% block tw_description %}Structural measurement for continuation signals in advanced AI systems, powered by UCIP.{% endblock %}">
   <meta name="twitter:image" content="{{ site_url }}/static/og-image.png">
 
   <!-- schema.org JSON-LD -->
@@ -33,7 +33,7 @@
     "@context": "https://schema.org",
     "@type": "ResearchProject",
     "name": "Continuation Observatory",
-    "description": "Research platform for structural measurement of continuation-related signals in advanced AI systems.",
+    "description": "Structural measurement for continuation signals in advanced AI systems.",
     "url": "{{ site_url }}",
     "dateModified": "{{ build_time[:10] }}",
     "author": {

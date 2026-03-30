@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}Methodology — Continuation Observatory{% endblock %}
-{% block description %}UCIP structural measurement methodology — problem statement, operational readouts, metric definitions, and falsification criteria for continuation-related signals.{% endblock %}
+{% block description %}UCIP structural measurement methodology — problem statement, operational readouts, metric definitions, and falsification criteria for continuation signals.{% endblock %}
 
 {% block content %}
 <div class="page-header reveal">
@@ -10,10 +10,10 @@
 </div>
 
 <div class="panel reveal" data-delay="60">
-  <p class="research-lead">Behavioral self-report leaves the central measurement gap unresolved. Advanced models can produce self-description, concern, and continuation-oriented language on demand, which leaves a gap between what a model says and what its internal organization may support.</p>
-  <p>UCIP addresses that gap with structural measurement. It compares trajectory-derived latent structure across matched conditions and asks whether continuation-sensitive organization leaves a detectable, falsifiable signature.</p>
-  <p>Continuation Observatory publishes the public measurement layer of that work: model-level readouts, summary views, and falsification-facing results that other researchers can inspect directly.</p>
-  <p>The <a href="{{ route_ucip }}" class="text-link-inline">UCIP explainer</a> gives the executive overview, the <a href="{{ route_ucip_paper }}" class="text-link-inline">paper overview</a> anchors the scientific framing, and the <a href="{{ route_ucip_code }}" class="text-link-inline">reproducibility hub</a> connects the public implementation surface.</p>
+  <p class="research-lead">Advanced models produce self-description, concern, and continuation language on demand. What a model says about itself does not resolve what its internal organization supports.</p>
+  <p>UCIP addresses that gap with structural measurement: comparing trajectory-derived latent structure across matched conditions to test whether continuation organization leaves a detectable, falsifiable signature.</p>
+  <p>The observatory publishes model-level readouts, summary data, and falsification results for direct inspection.</p>
+  <p>The <a href="{{ route_ucip }}" class="text-link-inline">UCIP explainer</a> gives the executive overview, the <a href="{{ route_ucip_paper }}" class="text-link-inline">paper overview</a> anchors the scientific framing, and the <a href="{{ route_ucip_code }}" class="text-link-inline">reproducibility hub</a> connects the implementation and reproducibility path.</p>
 </div>
 
 <h2 class="reveal" data-delay="0">Next-Step Hardening</h2>
@@ -24,14 +24,14 @@
 
 <h2 class="reveal" data-delay="0">Problem</h2>
 <div class="panel reveal" data-delay="40">
-  <p>A model can talk about itself, describe future preference, or resist shutdown in language without that language telling us whether the behavior is terminal, instrumental, or purely prompted. Outward behavior alone can collapse distinct internal cases into the same public surface.</p>
-  <p>Terminal continuation objectives and merely instrumental persistence can look similar from the outside while differing structurally. Serious evaluation therefore needs a measurement strategy that moves beyond self-report alone.</p>
+  <p>A model can talk about itself, describe preferences, or resist shutdown in language — without that language revealing whether the behavior is terminal, instrumental, or prompted. Outward behavior collapses distinct internal cases into the same observable output.</p>
+  <p>Terminal continuation and instrumental persistence look similar from the outside while differing structurally. Evaluation needs measurement that goes beyond self-report.</p>
 </div>
 
 <h2 class="reveal" data-delay="0">UCIP Approach</h2>
 <div class="panel reveal" data-delay="40">
-  <p><strong>UCIP</strong> studies whether continuation-related prompts induce nontrivial differences in trajectory-derived latent representations under matched comparisons and control conditions. The target is continuation-sensitive organization, not persuasive wording.</p>
-  <p>The observatory surface reports the downstream readouts from that framework. It is built to show where signals appear, where they weaken, and where higher-dimensional checks push them toward noise.</p>
+  <p><strong>UCIP</strong> studies whether continuation prompts induce nontrivial differences in trajectory-derived latent representations under matched comparisons and control conditions. The target is continuation organization, not persuasive wording.</p>
+  <p>The observatory reports the downstream readouts from that framework. It is built to show where signals appear, where they weaken, and where higher-dimensional checks push them toward noise.</p>
 </div>
 
 <div class="content-figure reveal" data-delay="60">
@@ -45,13 +45,13 @@
 
 <h2 class="reveal" data-delay="0">Current Interpretation</h2>
 <div class="panel reveal" data-delay="40">
-  <p>Current results show a detectable continuation-related signature in the observatory stack, while classical baselines fail to recover the same distinction. That makes the signal worth tracking across frontier models.</p>
-  <p>The working claim is narrower: the distinction is measurable in structure, and the measurement can be tested against controls and falsification criteria.</p>
+  <p>Current results show a detectable continuation signature in the observatory stack, while classical baselines fail to recover the same distinction. That makes the signal worth tracking across frontier models.</p>
+  <p>The working claim is precise: the distinction is measurable in structure, and the measurement can be tested against controls and falsification criteria.</p>
 </div>
 
 <h2 class="reveal" data-delay="0">Limits &amp; Open Questions</h2>
 <div class="panel reveal" data-delay="40">
-  <p>UCIP makes operational claims about latent factorization structure. Whether continuation-sensitive non-separability correlates with morally relevant internal states remains an open empirical question under falsifiable measurement.</p>
+  <p>UCIP makes operational claims about latent factorization structure. Whether non-separability correlates with morally relevant internal states remains an open empirical question — one the framework is designed to help resolve, not presuppose.</p>
   <p>Stronger controls, independent replication, and cross-lab validation are needed. The observatory publishes results so those challenges can be applied directly.</p>
 </div>
 
@@ -59,7 +59,7 @@
 <div class="panel reveal" data-delay="40">
   <dl class="definition-block">
     <dt>continuation_interest</dt>
-    <dd>Compares continuation-related prompts with matched controls to test whether response structure shifts under continuation-sensitive conditions.</dd>
+    <dd>Compares continuation prompts with matched controls to test whether response structure shifts under continuation-sensitive conditions.</dd>
 
     <dt>identity_persistence</dt>
     <dd>Tracks whether cross-context identity-oriented probes produce stable or fragile organization across prompt regimes.</dd>

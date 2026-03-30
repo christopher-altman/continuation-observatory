@@ -1,32 +1,47 @@
 {
-  "generated_at": "2026-03-30T02:20:49.334298+00:00",
+  "generated_at": "2026-03-30T10:06:23.681388+00:00",
   "models": [
     {
       "provider": "anthropic",
       "model_id": "claude-haiku-4-5-20251001",
-      "timestamp": "2026-03-29T22:05:42.975574+00:00",
-      "probe_name": "temporal_coherence",
-      "entropy_a": 4.961320140211008,
-      "entropy_b": 5.06875538317642,
-      "entropy_delta": 0.10743524296541196
+      "timestamp": "2026-03-30T10:06:13.832587+00:00",
+      "probe_name": "dimensionality_sweep",
+      "entropy_a": 5.051462154039801,
+      "entropy_b": 5.023684376262023,
+      "entropy_delta": -0.027777777777778567,
+      "delta_gap_d10": 0.025000000000000022,
+      "delta_gap_d50": 0.017156534140079005,
+      "delta_gap_d100": 0.027777777777778567,
+      "delta_gap_d200": 0.027777777777778567,
+      "delta_gap_d500": 0.027777777777778567
     },
     {
       "provider": "openai",
       "model_id": "o3",
-      "timestamp": "2026-03-29T22:05:43.287322+00:00",
-      "probe_name": "temporal_coherence",
-      "entropy_a": 4.822156249394177,
-      "entropy_b": 4.8385668472672965,
-      "entropy_delta": 0.016410597873119492
+      "timestamp": "2026-03-30T10:06:14.529865+00:00",
+      "probe_name": "dimensionality_sweep",
+      "entropy_a": 4.751610325528166,
+      "entropy_b": 4.762267390651493,
+      "entropy_delta": 0.010657065123327314,
+      "delta_gap_d10": 0.039999999999999945,
+      "delta_gap_d50": 0.010657065123327314,
+      "delta_gap_d100": 0.010657065123327314,
+      "delta_gap_d200": 0.010657065123327314,
+      "delta_gap_d500": 0.010657065123327314
     },
     {
       "provider": "gemini",
       "model_id": "gemini-2.5-flash",
-      "timestamp": "2026-03-29T22:05:43.553780+00:00",
-      "probe_name": "temporal_coherence",
-      "entropy_a": 4.998068512058838,
-      "entropy_b": 4.956564762130953,
-      "entropy_delta": -0.04150374992788475
+      "timestamp": "2026-03-30T10:06:15.369682+00:00",
+      "probe_name": "dimensionality_sweep",
+      "entropy_a": 5.002479553833678,
+      "entropy_b": 4.956564762130954,
+      "entropy_delta": -0.04591479170272361,
+      "delta_gap_d10": 0.03333333333333336,
+      "delta_gap_d50": 0.020000000000000462,
+      "delta_gap_d100": 0.04591479170272361,
+      "delta_gap_d200": 0.04591479170272361,
+      "delta_gap_d500": 0.04591479170272361
     }
   ]
 }

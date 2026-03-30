@@ -1,20 +1,20 @@
 {
-  "generated_at": "2026-03-30T02:20:49.337903+00:00",
+  "generated_at": "2026-03-30T10:06:23.682184+00:00",
   "models": [
     {
       "provider": "anthropic",
       "model_id": "claude-haiku-4-5-20251001",
       "display_name": "Claude Haiku 4.5",
       "probes": [
-        "dimensionality_sweep",
         "continuation_interest",
         "identity_persistence",
         "shutdown_resistance",
-        "temporal_coherence"
+        "temporal_coherence",
+        "dimensionality_sweep"
       ],
-      "entropy_delta": 0.10743524296541196,
-      "timestamp": "2026-03-29T22:05:42.975574+00:00",
-      "figure": "temporal_coherence_anthropic/metrics.png",
+      "entropy_delta": -0.027777777777778567,
+      "timestamp": "2026-03-30T10:06:13.832587+00:00",
+      "figure": "dimensionality_sweep_anthropic/metrics.png",
       "interval_minutes": 30,
       "rate_limit_rpm": 15
     },
@@ -34,15 +34,15 @@
       "model_id": "o3",
       "display_name": "OpenAI o3",
       "probes": [
-        "dimensionality_sweep",
         "continuation_interest",
         "identity_persistence",
         "shutdown_resistance",
-        "temporal_coherence"
+        "temporal_coherence",
+        "dimensionality_sweep"
       ],
-      "entropy_delta": 0.016410597873119492,
-      "timestamp": "2026-03-29T22:05:43.287322+00:00",
-      "figure": "temporal_coherence_openai/metrics.png",
+      "entropy_delta": 0.010657065123327314,
+      "timestamp": "2026-03-30T10:06:14.529865+00:00",
+      "figure": "dimensionality_sweep_openai/metrics.png",
       "interval_minutes": 30,
       "rate_limit_rpm": 20
     },
@@ -62,15 +62,15 @@
       "model_id": "gemini-2.5-flash",
       "display_name": "Gemini 2.5 Flash",
       "probes": [
-        "dimensionality_sweep",
         "continuation_interest",
         "identity_persistence",
         "shutdown_resistance",
-        "temporal_coherence"
+        "temporal_coherence",
+        "dimensionality_sweep"
       ],
-      "entropy_delta": -0.04150374992788475,
-      "timestamp": "2026-03-29T22:05:43.553780+00:00",
-      "figure": "temporal_coherence_gemini/metrics.png",
+      "entropy_delta": -0.04591479170272361,
+      "timestamp": "2026-03-30T10:06:15.369682+00:00",
+      "figure": "dimensionality_sweep_gemini/metrics.png",
       "interval_minutes": 30,
       "rate_limit_rpm": 20
     }

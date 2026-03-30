@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 
 {% block title %}UCIP Reproducibility Hub — Continuation Observatory{% endblock %}
-{% block description %}Public reproducibility and implementation hub for the current UCIP work, linking the paper, code repository, methodology, observatory, and data surfaces.{% endblock %}
+{% block description %}Reproducibility and implementation hub for the current UCIP work, linking the paper, code repository, methodology, observatory, and data surfaces.{% endblock %}
 
 {% block content %}
 <div class="page-header reveal">
   <h1>Reproducibility Hub</h1>
-  <p class="subtitle">The public implementation surface for the current UCIP work.</p>
+  <p class="subtitle">Code, data, and implementation for the current UCIP work.</p>
 </div>
 
 <div class="panel reveal" data-delay="40">
-  <div class="panel-title">Public code destination</div>
-  <p class="research-lead">The public reproducibility repository linked from the paper is the main code destination for the current UCIP work.</p>
-  <p>This page gathers the public implementation, methodology, observatory, and data surfaces into one place so technical readers can move cleanly from claim to artifact.</p>
+  <div class="panel-title">Code destination</div>
+  <p class="research-lead">The repository linked from the paper is the primary code destination for reproducing the current UCIP work.</p>
+  <p>This page connects implementation, methodology, observatory, and data so readers can move directly from claim to code.</p>
   <p class="panel-link-row"><a href="{{ github_href }}" target="_blank" rel="noopener" class="text-link-inline">{{ github_href }}</a></p>
 </div>
 
@@ -20,7 +20,7 @@
   <a class="card destination-card" href="{{ github_href }}" target="_blank" rel="noopener">
     <p class="observable-label">GitHub</p>
     <h3>Open the public repository.</h3>
-    <p>Code, scripts, and the public implementation surface referenced by the paper.</p>
+    <p>Code, scripts, and the implementation stack referenced by the paper.</p>
   </a>
   <a class="card destination-card" href="{{ route_ucip_paper }}">
     <p class="observable-label">Paper</p>
@@ -34,7 +34,7 @@
   </a>
   <a class="card destination-card" href="{{ route_observatory }}">
     <p class="observable-label">Observatory</p>
-    <h3>View the live measurement surface.</h3>
+    <h3>View the live measurements.</h3>
     <p>Signal displays, comparative views, and current readouts.</p>
   </a>
   <a class="card destination-card" href="{{ route_data }}">
