@@ -1,12 +1,95 @@
 {% extends "base.html" %}
-{% block title %}Continuation Observatory{% endblock %}
-{% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-{% endblock %}
-{% block content %}
 {% set is_live = true %}
+{% block title %}Continuation Observatory{% endblock %}
+{% block extra_jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Continuation Observatory",
+  "url": "{{ site_url }}",
+  "logo": "{{ site_url }}/static/og-image.png",
+  "founder": {
+    "@type": "Person",
+    "name": "Christopher Altman"
+  },
+  "sameAs": [
+    "{{ github_href }}",
+    "{{ paper_href }}"
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What problem does UCIP solve?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "UCIP distinguishes whether an autonomous system preserves itself because continuation is part of its objective structure or because persistence is merely useful for some other goal."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why is behavioral monitoring insufficient?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Two agents can show similar shutdown resistance, memory preservation, or long-horizon stability while differing fundamentally in internal objective structure. Surface behavior alone therefore remains observationally ambiguous."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why does this matter for frontier AI safety?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "As systems become more autonomous, the distinction between intrinsic persistence and instrumental persistence matters for evaluation design, deployment gating, and governance. It changes the risk profile attached to a persistence signal."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the relationship to consciousness?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "UCIP measures latent structure and leaves the relationship to consciousness open. If the entanglement gap aligns with independently established welfare markers, the framework would supply a falsifiable criterion for welfare assessment."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Who is this work for?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "This work is for frontier AI labs, safety teams, evaluators, interpretability researchers, academic collaborators, and public-interest institutions studying autonomous-system control and model welfare assessment."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What would falsify the approach?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "A signal is treated as falsified for a given model if high-dimensional measurements collapse below the noise threshold (Δ(d) < 0.05 across d ∈ {100, 200, 500}). The falsification view keeps that threshold visible because a weakening or disappearing signal is as informative as a persistent one."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What would deployment to frontier evaluation require?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Independent replication, stronger controls, cross-lab validation, and access to model-side evaluation surfaces already maintained in frontier-lab welfare programs. The observatory builds a public evidence base for that transition."
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
 {% include "partials/home_hero.html" %}
+{% include "partials/home_why_now.html" %}
 {% include "partials/home_measurement.html" %}
+{% include "partials/home_destinations.html" %}
 {% include "partials/home_marquee.html" %}
 {% include "partials/home_method.html" %}
 {% include "partials/home_results.html" %}
@@ -14,6 +97,7 @@
 {% include "partials/home_faq.html" %}
 {% include "partials/home_cta.html" %}
 {% endblock %}
+
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script src="{{ asset_prefix }}/js/hero-torus.js?v={{ asset_version }}"></script>

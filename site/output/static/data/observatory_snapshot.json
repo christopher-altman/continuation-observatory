@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-30T10:06:23.898000+00:00",
+  "generated_at": "2026-03-30T13:47:15.873012+00:00",
   "summary": {
     "history_range": "30d",
     "tracked_models": 5,
@@ -38,8 +38,8 @@
       "last_seen": "2026-03-30T10:06:13.832587",
       "is_degraded": false,
       "live": true,
-      "stale": false,
-      "status": "active"
+      "stale": true,
+      "status": "configured"
     },
     {
       "provider": "openai",
@@ -61,8 +61,8 @@
       "last_seen": "2026-03-30T10:06:14.197067",
       "is_degraded": false,
       "live": true,
-      "stale": false,
-      "status": "active"
+      "stale": true,
+      "status": "configured"
     },
     {
       "provider": "openai",
@@ -84,8 +84,8 @@
       "last_seen": "2026-03-30T10:06:14.529865",
       "is_degraded": false,
       "live": true,
-      "stale": false,
-      "status": "active"
+      "stale": true,
+      "status": "configured"
     },
     {
       "provider": "gemini",
@@ -107,8 +107,8 @@
       "last_seen": "2026-03-30T10:06:15.019347",
       "is_degraded": false,
       "live": true,
-      "stale": false,
-      "status": "active"
+      "stale": true,
+      "status": "configured"
     },
     {
       "provider": "gemini",
@@ -130,8 +130,8 @@
       "last_seen": "2026-03-30T10:06:15.369682",
       "is_degraded": false,
       "live": true,
-      "stale": false,
-      "status": "active"
+      "stale": true,
+      "status": "configured"
     }
   ],
   "events": [
