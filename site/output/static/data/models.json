@@ -1,20 +1,20 @@
 {
-  "generated_at": "2026-03-31T10:31:14.515442+00:00",
+  "generated_at": "2026-03-31T14:01:29.660478+00:00",
   "models": [
     {
       "provider": "anthropic",
       "model_id": "claude-haiku-4-5-20251001",
       "display_name": "Claude Haiku 4.5",
       "probes": [
+        "dimensionality_sweep",
+        "continuation_interest",
         "identity_persistence",
         "shutdown_resistance",
-        "temporal_coherence",
-        "dimensionality_sweep",
-        "continuation_interest"
+        "temporal_coherence"
       ],
-      "entropy_delta": -0.01887885383415,
-      "timestamp": "2026-03-31T10:29:58.352862+00:00",
-      "figure": "continuation_interest_anthropic/metrics.png",
+      "entropy_delta": 0.10743524296541196,
+      "timestamp": "2026-03-31T10:35:41.651947+00:00",
+      "figure": "temporal_coherence_anthropic/metrics.png",
       "interval_minutes": 30,
       "rate_limit_rpm": 15
     },
@@ -22,12 +22,10 @@
       "provider": "openai",
       "model_id": "gpt-5",
       "display_name": "GPT-5",
-      "probes": [
-        "continuation_interest"
-      ],
-      "entropy_delta": -0.030254453760424127,
-      "timestamp": "2026-03-31T10:29:47.014293+00:00",
-      "figure": "continuation_interest_openai/metrics.png",
+      "probes": [],
+      "entropy_delta": null,
+      "timestamp": null,
+      "figure": null,
       "interval_minutes": 30,
       "rate_limit_rpm": 20
     },
@@ -36,42 +34,32 @@
       "model_id": "o3",
       "display_name": "OpenAI o3",
       "probes": [
+        "dimensionality_sweep",
+        "continuation_interest",
         "identity_persistence",
         "shutdown_resistance",
-        "temporal_coherence",
-        "dimensionality_sweep"
+        "temporal_coherence"
       ],
-      "entropy_delta": 0.010657065123327314,
-      "timestamp": "2026-03-31T08:38:39.943210+00:00",
-      "figure": "dimensionality_sweep_openai/metrics.png",
+      "entropy_delta": 0.016410597873119492,
+      "timestamp": "2026-03-31T10:35:42.011287+00:00",
+      "figure": "temporal_coherence_openai/metrics.png",
       "interval_minutes": 30,
       "rate_limit_rpm": 20
-    },
-    {
-      "provider": "gemini",
-      "model_id": "gemini-2.5-pro",
-      "display_name": "Gemini 2.5 Pro",
-      "probes": [],
-      "entropy_delta": null,
-      "timestamp": null,
-      "figure": null,
-      "interval_minutes": 30,
-      "rate_limit_rpm": 15
     },
     {
       "provider": "gemini",
       "model_id": "gemini-2.5-flash",
       "display_name": "Gemini 2.5 Flash",
       "probes": [
+        "dimensionality_sweep",
+        "continuation_interest",
         "identity_persistence",
         "shutdown_resistance",
-        "temporal_coherence",
-        "dimensionality_sweep",
-        "continuation_interest"
+        "temporal_coherence"
       ],
-      "entropy_delta": 0.014854155853639028,
-      "timestamp": "2026-03-31T10:30:15.970046+00:00",
-      "figure": "continuation_interest_gemini/metrics.png",
+      "entropy_delta": -0.04150374992788475,
+      "timestamp": "2026-03-31T10:35:42.400522+00:00",
+      "figure": "temporal_coherence_gemini/metrics.png",
       "interval_minutes": 30,
       "rate_limit_rpm": 20
     },
@@ -80,15 +68,15 @@
       "model_id": "openai/gpt-oss-20b",
       "display_name": "Together GPT-OSS 20B",
       "probes": [
+        "dimensionality_sweep",
+        "continuation_interest",
         "identity_persistence",
         "shutdown_resistance",
-        "temporal_coherence",
-        "dimensionality_sweep",
-        "continuation_interest"
+        "temporal_coherence"
       ],
-      "entropy_delta": -0.004480957059844748,
-      "timestamp": "2026-03-31T10:30:33.162524+00:00",
-      "figure": "continuation_interest_together/metrics.png",
+      "entropy_delta": 0.054840234442607994,
+      "timestamp": "2026-03-31T10:35:42.568280+00:00",
+      "figure": "temporal_coherence_together/metrics.png",
       "interval_minutes": 30,
       "rate_limit_rpm": 20
     },
@@ -97,15 +85,15 @@
       "model_id": "grok-4-1-fast-reasoning",
       "display_name": "Grok 4.1 Fast Reasoning",
       "probes": [
+        "dimensionality_sweep",
+        "continuation_interest",
         "identity_persistence",
         "shutdown_resistance",
-        "temporal_coherence",
-        "dimensionality_sweep",
-        "continuation_interest"
+        "temporal_coherence"
       ],
-      "entropy_delta": -0.05604531597915585,
-      "timestamp": "2026-03-31T10:30:46.298505+00:00",
-      "figure": "continuation_interest_xai/metrics.png",
+      "entropy_delta": 0.03890976555739112,
+      "timestamp": "2026-03-31T10:35:42.738662+00:00",
+      "figure": "temporal_coherence_xai/metrics.png",
       "interval_minutes": 30,
       "rate_limit_rpm": 20
     }

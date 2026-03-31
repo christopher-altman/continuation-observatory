@@ -38,7 +38,7 @@ models:
     provider: gemini
     model_string: gemini-2.5-pro
     display_name: Gemini 2.5 Pro
-    enabled: true
+    enabled: false
     interval_minutes: 30
     rate_limit_rpm: 15
   - id: gemini-2.5-flash

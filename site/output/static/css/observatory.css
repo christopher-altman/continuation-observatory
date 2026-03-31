@@ -2778,6 +2778,23 @@ td {
   padding: 1.4rem;
 }
 
+.citation-block h4 {
+  font-size: 0.85rem;
+  line-height: 1.35;
+  margin-bottom: 0.5rem;
+}
+
+.citation-block pre {
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.citation-block .btn-copy {
+  font-size: 0.75rem;
+  min-height: 32px;
+  padding: 0 0.75rem;
+}
+
 .btn-copy {
   margin-top: 1rem;
   min-height: 40px;

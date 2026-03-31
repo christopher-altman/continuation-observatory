@@ -149,7 +149,6 @@ def test_build_filters_disabled_models_and_keeps_active_empty_states(tmp_path, m
         "claude-haiku-4-5-20251001",
         "gpt-5",
         "o3",
-        "gemini-2.5-pro",
         "gemini-2.5-flash",
         "openai/gpt-oss-20b",
         "grok-4-1-fast-reasoning",
@@ -165,8 +164,8 @@ def test_build_filters_disabled_models_and_keeps_active_empty_states(tmp_path, m
     assert "deepseek-r2" not in timeseries_html
     assert "deepseek-r2" not in falsification_html
     assert "gpt-5" in home_html
-    assert "gemini-2.5-pro" in home_html
+    assert "gemini-2.5-pro" not in home_html
     assert "openai/gpt-oss-20b" in models_html
     assert "grok-4-1-fast-reasoning" in models_html
     assert "gpt-5" in models_html
-    assert "gemini-2.5-pro" in models_html
+    assert "gemini-2.5-pro" not in models_html

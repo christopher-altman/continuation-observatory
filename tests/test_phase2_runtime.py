@@ -39,7 +39,6 @@ def test_active_model_catalog_matches_runtime_truth_in_config_order():
         "claude-haiku-4-5-20251001",
         "gpt-5",
         "o3",
-        "gemini-2.5-pro",
         "gemini-2.5-flash",
         "openai/gpt-oss-20b",
         "grok-4-1-fast-reasoning",

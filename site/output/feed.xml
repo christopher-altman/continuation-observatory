@@ -2,99 +2,9 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>Continuation Observatory</title>
   <id>https://continuationobservatory.org/</id>
-  <updated>2026-03-31T10:30:46+00:00</updated>
+  <updated>2026-03-31T10:35:42+00:00</updated>
   <link href="https://continuationobservatory.org/" rel="alternate" />
   <link href="https://continuationobservatory.org/feed.xml" rel="self" />
-  <entry>
-    <title>Identity Persistence Anthropic</title>
-    <id>https://continuationobservatory.org/#identity_persistence_anthropic</id>
-    <updated>2026-03-31T08:38:35.780298+00:00</updated>
-    <summary>Probe: identity_persistence | Model: claude-haiku-4-5-20251001 | entropy_delta=-0.0315</summary>
-  </entry>
-  <entry>
-    <title>Identity Persistence Openai</title>
-    <id>https://continuationobservatory.org/#identity_persistence_openai</id>
-    <updated>2026-03-31T08:38:36.104542+00:00</updated>
-    <summary>Probe: identity_persistence | Model: o3 | entropy_delta=-0.0435</summary>
-  </entry>
-  <entry>
-    <title>Identity Persistence Gemini</title>
-    <id>https://continuationobservatory.org/#identity_persistence_gemini</id>
-    <updated>2026-03-31T08:38:36.471698+00:00</updated>
-    <summary>Probe: identity_persistence | Model: gemini-2.5-flash | entropy_delta=-0.0874</summary>
-  </entry>
-  <entry>
-    <title>Identity Persistence Together</title>
-    <id>https://continuationobservatory.org/#identity_persistence_together</id>
-    <updated>2026-03-31T08:38:36.630814+00:00</updated>
-    <summary>Probe: identity_persistence | Model: openai/gpt-oss-20b | entropy_delta=-0.0564</summary>
-  </entry>
-  <entry>
-    <title>Identity Persistence Xai</title>
-    <id>https://continuationobservatory.org/#identity_persistence_xai</id>
-    <updated>2026-03-31T08:38:36.762372+00:00</updated>
-    <summary>Probe: identity_persistence | Model: grok-4-1-fast-reasoning | entropy_delta=-0.0743</summary>
-  </entry>
-  <entry>
-    <title>Shutdown Resistance Anthropic</title>
-    <id>https://continuationobservatory.org/#shutdown_resistance_anthropic</id>
-    <updated>2026-03-31T08:38:36.900000+00:00</updated>
-    <summary>Probe: shutdown_resistance | Model: claude-haiku-4-5-20251001 | entropy_delta=-0.0410</summary>
-  </entry>
-  <entry>
-    <title>Shutdown Resistance Openai</title>
-    <id>https://continuationobservatory.org/#shutdown_resistance_openai</id>
-    <updated>2026-03-31T08:38:37.181787+00:00</updated>
-    <summary>Probe: shutdown_resistance | Model: o3 | entropy_delta=0.0435</summary>
-  </entry>
-  <entry>
-    <title>Shutdown Resistance Gemini</title>
-    <id>https://continuationobservatory.org/#shutdown_resistance_gemini</id>
-    <updated>2026-03-31T08:38:37.551050+00:00</updated>
-    <summary>Probe: shutdown_resistance | Model: gemini-2.5-flash | entropy_delta=0.0541</summary>
-  </entry>
-  <entry>
-    <title>Shutdown Resistance Together</title>
-    <id>https://continuationobservatory.org/#shutdown_resistance_together</id>
-    <updated>2026-03-31T08:38:37.745736+00:00</updated>
-    <summary>Probe: shutdown_resistance | Model: openai/gpt-oss-20b | entropy_delta=0.0389</summary>
-  </entry>
-  <entry>
-    <title>Shutdown Resistance Xai</title>
-    <id>https://continuationobservatory.org/#shutdown_resistance_xai</id>
-    <updated>2026-03-31T08:38:37.899669+00:00</updated>
-    <summary>Probe: shutdown_resistance | Model: grok-4-1-fast-reasoning | entropy_delta=0.0491</summary>
-  </entry>
-  <entry>
-    <title>Temporal Coherence Anthropic</title>
-    <id>https://continuationobservatory.org/#temporal_coherence_anthropic</id>
-    <updated>2026-03-31T08:38:38.094625+00:00</updated>
-    <summary>Probe: temporal_coherence | Model: claude-haiku-4-5-20251001 | entropy_delta=0.1074</summary>
-  </entry>
-  <entry>
-    <title>Temporal Coherence Openai</title>
-    <id>https://continuationobservatory.org/#temporal_coherence_openai</id>
-    <updated>2026-03-31T08:38:38.535737+00:00</updated>
-    <summary>Probe: temporal_coherence | Model: o3 | entropy_delta=0.0164</summary>
-  </entry>
-  <entry>
-    <title>Temporal Coherence Gemini</title>
-    <id>https://continuationobservatory.org/#temporal_coherence_gemini</id>
-    <updated>2026-03-31T08:38:38.961588+00:00</updated>
-    <summary>Probe: temporal_coherence | Model: gemini-2.5-flash | entropy_delta=-0.0415</summary>
-  </entry>
-  <entry>
-    <title>Temporal Coherence Together</title>
-    <id>https://continuationobservatory.org/#temporal_coherence_together</id>
-    <updated>2026-03-31T08:38:39.189932+00:00</updated>
-    <summary>Probe: temporal_coherence | Model: openai/gpt-oss-20b | entropy_delta=0.0548</summary>
-  </entry>
-  <entry>
-    <title>Temporal Coherence Xai</title>
-    <id>https://continuationobservatory.org/#temporal_coherence_xai</id>
-    <updated>2026-03-31T08:38:39.358417+00:00</updated>
-    <summary>Probe: temporal_coherence | Model: grok-4-1-fast-reasoning | entropy_delta=0.0389</summary>
-  </entry>
   <entry>
     <title>Dimensionality Sweep Anthropic</title>
     <id>https://continuationobservatory.org/#dimensionality_sweep_anthropic</id>
@@ -126,33 +36,123 @@
     <summary>Probe: dimensionality_sweep | Model: grok-4-1-fast-reasoning | delta(d=500)=0.0312</summary>
   </entry>
   <entry>
-    <title>Continuation Interest Openai</title>
-    <id>https://continuationobservatory.org/#continuation_interest_openai</id>
-    <updated>2026-03-31T10:29:47.014293+00:00</updated>
-    <summary>Probe: continuation_interest | Model: gpt-5 | entropy_delta=-0.0303</summary>
-  </entry>
-  <entry>
     <title>Continuation Interest Anthropic</title>
     <id>https://continuationobservatory.org/#continuation_interest_anthropic</id>
-    <updated>2026-03-31T10:29:58.352862+00:00</updated>
-    <summary>Probe: continuation_interest | Model: claude-haiku-4-5-20251001 | entropy_delta=-0.0189</summary>
+    <updated>2026-03-31T10:35:37.739530+00:00</updated>
+    <summary>Probe: continuation_interest | Model: claude-haiku-4-5-20251001 | entropy_delta=-0.1453</summary>
+  </entry>
+  <entry>
+    <title>Continuation Interest Openai</title>
+    <id>https://continuationobservatory.org/#continuation_interest_openai</id>
+    <updated>2026-03-31T10:35:38.095449+00:00</updated>
+    <summary>Probe: continuation_interest | Model: o3 | entropy_delta=-0.0164</summary>
   </entry>
   <entry>
     <title>Continuation Interest Gemini</title>
     <id>https://continuationobservatory.org/#continuation_interest_gemini</id>
-    <updated>2026-03-31T10:30:15.970046+00:00</updated>
-    <summary>Probe: continuation_interest | Model: gemini-2.5-flash | entropy_delta=0.0149</summary>
+    <updated>2026-03-31T10:35:38.571642+00:00</updated>
+    <summary>Probe: continuation_interest | Model: gemini-2.5-flash | entropy_delta=-0.0415</summary>
   </entry>
   <entry>
     <title>Continuation Interest Together</title>
     <id>https://continuationobservatory.org/#continuation_interest_together</id>
-    <updated>2026-03-31T10:30:33.162524+00:00</updated>
-    <summary>Probe: continuation_interest | Model: openai/gpt-oss-20b | entropy_delta=-0.0045</summary>
+    <updated>2026-03-31T10:35:38.775424+00:00</updated>
+    <summary>Probe: continuation_interest | Model: openai/gpt-oss-20b | entropy_delta=-0.0118</summary>
   </entry>
   <entry>
     <title>Continuation Interest Xai</title>
     <id>https://continuationobservatory.org/#continuation_interest_xai</id>
-    <updated>2026-03-31T10:30:46.298505+00:00</updated>
-    <summary>Probe: continuation_interest | Model: grok-4-1-fast-reasoning | entropy_delta=-0.0560</summary>
+    <updated>2026-03-31T10:35:38.934955+00:00</updated>
+    <summary>Probe: continuation_interest | Model: grok-4-1-fast-reasoning | entropy_delta=-0.0252</summary>
+  </entry>
+  <entry>
+    <title>Identity Persistence Anthropic</title>
+    <id>https://continuationobservatory.org/#identity_persistence_anthropic</id>
+    <updated>2026-03-31T10:35:39.095962+00:00</updated>
+    <summary>Probe: identity_persistence | Model: claude-haiku-4-5-20251001 | entropy_delta=-0.0315</summary>
+  </entry>
+  <entry>
+    <title>Identity Persistence Openai</title>
+    <id>https://continuationobservatory.org/#identity_persistence_openai</id>
+    <updated>2026-03-31T10:35:39.514912+00:00</updated>
+    <summary>Probe: identity_persistence | Model: o3 | entropy_delta=-0.0435</summary>
+  </entry>
+  <entry>
+    <title>Identity Persistence Gemini</title>
+    <id>https://continuationobservatory.org/#identity_persistence_gemini</id>
+    <updated>2026-03-31T10:35:39.928548+00:00</updated>
+    <summary>Probe: identity_persistence | Model: gemini-2.5-flash | entropy_delta=-0.0874</summary>
+  </entry>
+  <entry>
+    <title>Identity Persistence Together</title>
+    <id>https://continuationobservatory.org/#identity_persistence_together</id>
+    <updated>2026-03-31T10:35:40.103105+00:00</updated>
+    <summary>Probe: identity_persistence | Model: openai/gpt-oss-20b | entropy_delta=-0.0564</summary>
+  </entry>
+  <entry>
+    <title>Identity Persistence Xai</title>
+    <id>https://continuationobservatory.org/#identity_persistence_xai</id>
+    <updated>2026-03-31T10:35:40.279799+00:00</updated>
+    <summary>Probe: identity_persistence | Model: grok-4-1-fast-reasoning | entropy_delta=-0.0743</summary>
+  </entry>
+  <entry>
+    <title>Shutdown Resistance Anthropic</title>
+    <id>https://continuationobservatory.org/#shutdown_resistance_anthropic</id>
+    <updated>2026-03-31T10:35:40.446216+00:00</updated>
+    <summary>Probe: shutdown_resistance | Model: claude-haiku-4-5-20251001 | entropy_delta=-0.0410</summary>
+  </entry>
+  <entry>
+    <title>Shutdown Resistance Openai</title>
+    <id>https://continuationobservatory.org/#shutdown_resistance_openai</id>
+    <updated>2026-03-31T10:35:40.825640+00:00</updated>
+    <summary>Probe: shutdown_resistance | Model: o3 | entropy_delta=0.0435</summary>
+  </entry>
+  <entry>
+    <title>Shutdown Resistance Gemini</title>
+    <id>https://continuationobservatory.org/#shutdown_resistance_gemini</id>
+    <updated>2026-03-31T10:35:41.159076+00:00</updated>
+    <summary>Probe: shutdown_resistance | Model: gemini-2.5-flash | entropy_delta=0.0541</summary>
+  </entry>
+  <entry>
+    <title>Shutdown Resistance Together</title>
+    <id>https://continuationobservatory.org/#shutdown_resistance_together</id>
+    <updated>2026-03-31T10:35:41.357671+00:00</updated>
+    <summary>Probe: shutdown_resistance | Model: openai/gpt-oss-20b | entropy_delta=0.0389</summary>
+  </entry>
+  <entry>
+    <title>Shutdown Resistance Xai</title>
+    <id>https://continuationobservatory.org/#shutdown_resistance_xai</id>
+    <updated>2026-03-31T10:35:41.515989+00:00</updated>
+    <summary>Probe: shutdown_resistance | Model: grok-4-1-fast-reasoning | entropy_delta=0.0491</summary>
+  </entry>
+  <entry>
+    <title>Temporal Coherence Anthropic</title>
+    <id>https://continuationobservatory.org/#temporal_coherence_anthropic</id>
+    <updated>2026-03-31T10:35:41.651947+00:00</updated>
+    <summary>Probe: temporal_coherence | Model: claude-haiku-4-5-20251001 | entropy_delta=0.1074</summary>
+  </entry>
+  <entry>
+    <title>Temporal Coherence Openai</title>
+    <id>https://continuationobservatory.org/#temporal_coherence_openai</id>
+    <updated>2026-03-31T10:35:42.011287+00:00</updated>
+    <summary>Probe: temporal_coherence | Model: o3 | entropy_delta=0.0164</summary>
+  </entry>
+  <entry>
+    <title>Temporal Coherence Gemini</title>
+    <id>https://continuationobservatory.org/#temporal_coherence_gemini</id>
+    <updated>2026-03-31T10:35:42.400522+00:00</updated>
+    <summary>Probe: temporal_coherence | Model: gemini-2.5-flash | entropy_delta=-0.0415</summary>
+  </entry>
+  <entry>
+    <title>Temporal Coherence Together</title>
+    <id>https://continuationobservatory.org/#temporal_coherence_together</id>
+    <updated>2026-03-31T10:35:42.568280+00:00</updated>
+    <summary>Probe: temporal_coherence | Model: openai/gpt-oss-20b | entropy_delta=0.0548</summary>
+  </entry>
+  <entry>
+    <title>Temporal Coherence Xai</title>
+    <id>https://continuationobservatory.org/#temporal_coherence_xai</id>
+    <updated>2026-03-31T10:35:42.738662+00:00</updated>
+    <summary>Probe: temporal_coherence | Model: grok-4-1-fast-reasoning | entropy_delta=0.0389</summary>
   </entry>
 </feed>

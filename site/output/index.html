@@ -103,7 +103,7 @@
       "name": "Who is this work for?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "This work is for frontier AI labs, safety teams, evaluators, interpretability researchers, academic collaborators, and public-interest institutions studying autonomous-system control and model welfare assessment."
+        "text": "This work is for frontier AI labs, safety teams, red teams, evaluators, interpretability researchers, national-security analysts, policymakers, academic collaborators, and public-interest institutions studying autonomous-system evaluation and model welfare."
       }
     },
     {
@@ -132,7 +132,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   
 
-  <link rel="stylesheet" href="/static/css/observatory.css?v=2026-03-31T10:31:14.774725+00:00">
+  <link rel="stylesheet" href="/static/css/observatory.css?v=2026-03-31T14:01:30.237271+00:00">
   <link rel="alternate" type="application/atom+xml" href="https://continuationobservatory.org/feed.xml" title="Continuation Observatory">
   <link rel="canonical" href="https://continuationobservatory.org/">
 </head>
@@ -242,8 +242,8 @@
     <div class="featured-grid">
       <article class="card destination-card">
         <p class="observable-label">Evaluation</p>
-        <h3>Objective structure requires structural measurement.</h3>
-        <p>Two systems can both resist shutdown or preserve continuity while differing fundamentally in whether continuation is terminal or merely useful.</p>
+        <h3>Autonomous agents need structural measurement now.</h3>
+        <p>Two systems can both resist shutdown or preserve continuity while differing fundamentally in whether continuation is terminal or merely useful. As agents gain delegated authority, that distinction becomes safety-critical.</p>
       </article>
       <article class="card destination-card">
         <p class="observable-label">Welfare</p>
@@ -252,8 +252,8 @@
       </article>
       <article class="card destination-card">
         <p class="observable-label">Governance</p>
-        <h3>Structural measurement needs public-interest infrastructure.</h3>
-        <p>UCIP turns a previously rhetorical question into a falsifiable measurement program that can be challenged, replicated, and improved.</p>
+        <h3>Structural measurement is public-interest infrastructure.</h3>
+        <p>UCIP turns a previously rhetorical question into a falsifiable measurement program. The evaluation infrastructure the field needs should be open, challengeable, and independent of any single lab.</p>
       </article>
     </div>
   </div>
@@ -405,8 +405,6 @@
           
           <span class="marquee-item">o3</span>
           
-          <span class="marquee-item">gemini-2.5-pro</span>
-          
           <span class="marquee-item">gemini-2.5-flash</span>
           
           <span class="marquee-item">openai/gpt-oss-20b</span>
@@ -420,8 +418,6 @@
           <span class="marquee-item">gpt-5</span>
           
           <span class="marquee-item">o3</span>
-          
-          <span class="marquee-item">gemini-2.5-pro</span>
           
           <span class="marquee-item">gemini-2.5-flash</span>
           
@@ -437,8 +433,6 @@
       <div class="marquee-track">
         
           
-          <span class="marquee-item">gemini-2.5-pro</span>
-          
           <span class="marquee-item">gemini-2.5-flash</span>
           
           <span class="marquee-item">openai/gpt-oss-20b</span>
@@ -452,8 +446,6 @@
           <span class="marquee-item">o3</span>
           
         
-          
-          <span class="marquee-item">gemini-2.5-pro</span>
           
           <span class="marquee-item">gemini-2.5-flash</span>
           
@@ -475,35 +467,31 @@
       <div class="marquee-track">
         
           
-          <span class="marquee-item">grok-4-1-fast-reasoning</span>
-          
           <span class="marquee-item">claude-haiku-4-5-20251001</span>
           
           <span class="marquee-item">gpt-5</span>
           
           <span class="marquee-item">o3</span>
           
-          <span class="marquee-item">gemini-2.5-pro</span>
-          
           <span class="marquee-item">gemini-2.5-flash</span>
           
           <span class="marquee-item">openai/gpt-oss-20b</span>
+          
+          <span class="marquee-item">grok-4-1-fast-reasoning</span>
           
         
           
-          <span class="marquee-item">grok-4-1-fast-reasoning</span>
-          
           <span class="marquee-item">claude-haiku-4-5-20251001</span>
           
           <span class="marquee-item">gpt-5</span>
           
           <span class="marquee-item">o3</span>
           
-          <span class="marquee-item">gemini-2.5-pro</span>
-          
           <span class="marquee-item">gemini-2.5-flash</span>
           
           <span class="marquee-item">openai/gpt-oss-20b</span>
+          
+          <span class="marquee-item">grok-4-1-fast-reasoning</span>
           
         
       </div>
@@ -548,13 +536,13 @@
   <div class="results-bridge reveal">
     <a class="results-column" href="/observatory.html">
       <p class="results-label">Observatory</p>
-      <strong id="live-home-model-count">7</strong>
+      <strong id="live-home-model-count">6</strong>
       <span>tracked systems inside the current field</span>
     </a>
     <a class="results-column" href="/timeseries.html">
       <p class="results-label">Aggregate score</p>
       <strong id="live-home-score">
-        0.023
+        0.052
       </strong>
       <span id="live-home-latest">
         
@@ -611,9 +599,7 @@
       <p>
         <strong>The measurement gap is growing.</strong> Frontier labs now conduct formal
         model welfare assessments, but current methods rely on self-report and behavioral
-        observation. As models grow dramatically more capable, the need for externally computable, falsifiable criteria
-        that go beyond a system's testimony about itself becomes urgent. Detect dangerous persistence incentives before
-        they harden into operational behavior that is radically harder to reverse.
+        observation. As models grow dramatically more capable — and as self-improving autonomous systems take on longer-horizon tasks — the need for externally computable criteria that go beyond a system's testimony about itself becomes urgent. UCIP provides the missing measurement layer: detect when self-preservation is becoming a terminal objective before it hardens into operational behavior that is far harder to contain.
       </p>
       <p>
         <strong>Transparent, challengeable evidence.</strong> Publishing the full measurement record makes replication,
@@ -647,7 +633,7 @@
     </details>
     <details class="faq-item">
       <summary>Who is this work for?</summary>
-      <p>This work is for frontier AI labs, safety teams, evaluators, interpretability researchers, academic collaborators, and public-interest institutions studying autonomous-system control and model welfare assessment.</p>
+      <p>This work is for frontier AI labs, safety teams, red teams, evaluators, interpretability researchers, national-security analysts, policymakers, academic collaborators, and public-interest institutions studying autonomous-system evaluation and model welfare.</p>
     </details>
     <details class="faq-item">
       <summary>What would falsify the approach?</summary>
@@ -696,10 +682,10 @@
   </div>
 </footer>
 </div>
-<script src="/static/js/theme.js?v=2026-03-31T10:31:14.774725+00:00"></script>
+<script src="/static/js/theme.js?v=2026-03-31T14:01:30.237271+00:00"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-<script src="/static/js/hero-torus.js?v=2026-03-31T10:31:14.774725+00:00"></script>
+<script src="/static/js/hero-torus.js?v=2026-03-31T14:01:30.237271+00:00"></script>
 
 </body>
 </html>
