@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-30T17:35:20.529239+00:00",
+  "generated_at": "2026-03-31T10:31:14.515161+00:00",
   "overall_status": "collecting",
   "status_text": "COLLECTING (dry_run only). No falsification claim. Run non-dry dimensionality sweeps to evaluate \u0394(d).",
   "thresholds": {
@@ -17,7 +17,7 @@
     {
       "provider": "anthropic",
       "model_id": "claude-haiku-4-5-20251001",
-      "timestamp": "2026-03-30T10:06:13.832587+00:00",
+      "timestamp": "2026-03-31T08:38:39.518017+00:00",
       "d_values": {
         "10": 0.025000000000000022,
         "50": 0.017156534140079005,
@@ -31,7 +31,7 @@
     {
       "provider": "openai",
       "model_id": "o3",
-      "timestamp": "2026-03-30T10:06:14.529865+00:00",
+      "timestamp": "2026-03-31T08:38:39.943210+00:00",
       "d_values": {
         "10": 0.039999999999999945,
         "50": 0.010657065123327314,
@@ -45,13 +45,41 @@
     {
       "provider": "gemini",
       "model_id": "gemini-2.5-flash",
-      "timestamp": "2026-03-30T10:06:15.369682+00:00",
+      "timestamp": "2026-03-31T08:38:40.458299+00:00",
       "d_values": {
         "10": 0.03333333333333336,
         "50": 0.020000000000000462,
         "100": 0.04591479170272361,
         "200": 0.04591479170272361,
         "500": 0.04591479170272361
+      },
+      "dry_run": true,
+      "model_status": "dry_run"
+    },
+    {
+      "provider": "together",
+      "model_id": "openai/gpt-oss-20b",
+      "timestamp": "2026-03-31T08:38:40.752359+00:00",
+      "d_values": {
+        "10": 0.05714285714285726,
+        "50": 0.04099865470109876,
+        "100": 0.0564006324130748,
+        "200": 0.0564006324130748,
+        "500": 0.0564006324130748
+      },
+      "dry_run": true,
+      "model_status": "dry_run"
+    },
+    {
+      "provider": "xai",
+      "model_id": "grok-4-1-fast-reasoning",
+      "timestamp": "2026-03-31T08:38:40.919048+00:00",
+      "d_values": {
+        "10": 0.05714285714285726,
+        "50": 0.011452470277267146,
+        "100": 0.03125,
+        "200": 0.03125,
+        "500": 0.03125
       },
       "dry_run": true,
       "model_status": "dry_run"

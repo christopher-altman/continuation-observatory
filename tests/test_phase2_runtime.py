@@ -9,6 +9,7 @@ from observatory.config import (
     load_observatory_config,
     resolve_runtime_model_spec,
     load_weights_config,
+    settings,
 )
 from observatory.metrics.observatory_metrics import ObservatoryMetrics
 from observatory.probes.registry import discover_probes
@@ -47,7 +48,8 @@ def test_active_model_catalog_matches_runtime_truth_in_config_order():
     assert "deepseek-r2" not in active_model_ids
 
 
-def test_generic_openai_provider_dry_run_response():
+def test_generic_openai_provider_dry_run_response(monkeypatch):
+    monkeypatch.setattr(settings, "dry_run", True)
     provider = GenericOpenAIProvider(
         model_id="deepseek-r2",
         provider_name="deepseek",

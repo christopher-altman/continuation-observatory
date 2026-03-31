@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import pytest
 from fastapi import HTTPException
+from pydantic_settings import SettingsConfigDict
 
 from observatory.config import (
+    Settings,
     get_cors_allowed_origins,
     parse_cors_allowed_origins,
     required_live_env_vars,
@@ -73,3 +76,38 @@ def test_validate_live_configuration_accepts_hardened_live_mode(monkeypatch):
 
     validate_live_configuration()
     assert get_cors_allowed_origins() == ["https://observatory.example"]
+
+
+def test_settings_ignore_provider_env_keys(tmp_path: Path, monkeypatch):
+    monkeypatch.delenv("DRY_RUN", raising=False)
+    monkeypatch.delenv("DB_URL", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    env_path = tmp_path / ".env"
+    env_path.write_text(
+        "\n".join(
+            [
+                "DRY_RUN=false",
+                "DB_URL=sqlite:///observatory.db",
+                "OPENAI_API_KEY=test-openai",
+                "ANTHROPIC_API_KEY=test-anthropic",
+                "GOOGLE_API_KEY=test-google",
+                "TOGETHER_API_KEY=test-together",
+                "XAI_API_KEY=test-xai",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    class TestSettings(Settings):
+        model_config = SettingsConfigDict(
+            env_file=str(env_path),
+            env_prefix="",
+            case_sensitive=False,
+            populate_by_name=True,
+            extra="ignore",
+        )
+
+    loaded = TestSettings()
+    assert loaded.dry_run is False
+    assert loaded.db_url == "sqlite:///observatory.db"

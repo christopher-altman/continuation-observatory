@@ -5,8 +5,16 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from dotenv import load_dotenv
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+ENV_FILE = REPO_ROOT / ".env"
+
+# Provider SDKs read credentials from process env, so keep `.env` hydration
+# aligned with pydantic-settings instead of only parsing it into Settings().
+load_dotenv(ENV_FILE, override=False)
 
 
 class Settings(BaseSettings):
@@ -46,16 +54,15 @@ class Settings(BaseSettings):
     )
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(ENV_FILE),
         env_prefix="",
         case_sensitive=False,
         populate_by_name=True,
+        extra="ignore",
     )
 
 
 settings = Settings()
-
-REPO_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_DIR = REPO_ROOT / "config"
 _YAML_CACHE: dict[str, tuple[float | None, dict[str, Any]]] = {}
 _NATIVE_PROVIDER_API_KEYS = {
