@@ -58,6 +58,15 @@ settings = Settings()
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_DIR = REPO_ROOT / "config"
 _YAML_CACHE: dict[str, tuple[float | None, dict[str, Any]]] = {}
+_NATIVE_PROVIDER_API_KEYS = {
+    "anthropic": "ANTHROPIC_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "gemini": "GOOGLE_API_KEY",
+}
+_OPENAI_COMPATIBLE_BASE_URL_DEFAULTS = {
+    "together": "https://api.together.xyz/v1",
+    "xai": "https://api.x.ai/v1",
+}
 
 
 def _load_yaml_file(filename: str) -> dict[str, Any]:
@@ -92,6 +101,46 @@ def load_observatory_config() -> dict[str, Any]:
     return _load_yaml_file("observatory.yaml")
 
 
+def _provider_base_url_env_name(provider_name: str) -> str:
+    normalized = provider_name.upper().replace("-", "_")
+    return f"{normalized}_BASE_URL"
+
+
+def resolve_runtime_model_spec(
+    spec: dict[str, Any],
+    *,
+    observatory_config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Resolve the effective runtime provider surface for one model spec."""
+    observatory_config = observatory_config or load_observatory_config()
+    provider_kind = str(spec.get("provider") or "")
+    model_id = spec.get("model_string")
+    resolved = dict(spec)
+    resolved["provider_kind"] = provider_kind
+    resolved["model_id"] = model_id
+    resolved["effective_provider"] = provider_kind
+    resolved["effective_api_key_env"] = _NATIVE_PROVIDER_API_KEYS.get(provider_kind)
+    resolved["effective_base_url"] = None
+
+    if provider_kind == "openai-compatible":
+        compat_cfg = observatory_config.get("providers", {}).get("openai-compatible", {})
+        compat = compat_cfg.get(spec.get("id"), {})
+        provider_name = str(compat.get("provider_name", "openai-compatible"))
+        api_key_env = str(compat.get("api_key_env", "OPENAI_API_KEY"))
+        configured_base_url = compat.get("base_url") or _OPENAI_COMPATIBLE_BASE_URL_DEFAULTS.get(
+            provider_name
+        )
+        base_url = os.getenv(_provider_base_url_env_name(provider_name)) or configured_base_url
+        resolved["effective_provider"] = provider_name
+        resolved["effective_api_key_env"] = api_key_env
+        resolved["effective_base_url"] = base_url
+
+    # Expose the effective provider label on the projected runtime record so
+    # API/static payloads and scheduler/runtime construction stay aligned.
+    resolved["provider"] = resolved["effective_provider"]
+    return resolved
+
+
 def load_active_model_catalog() -> tuple[list[dict[str, Any]], set[str]]:
     """Return the effective active model catalog in configured order.
 
@@ -108,13 +157,11 @@ def load_active_model_catalog() -> tuple[list[dict[str, Any]], set[str]]:
     for spec in load_models_config().get("models", []):
         if not spec.get("enabled", False):
             continue
-        provider = spec.get("provider")
-        if provider == "openai-compatible":
+        if spec.get("provider") == "openai-compatible":
             compat = compat_cfg.get(spec.get("id"), {})
             if not compat.get("enabled", True):
                 continue
-        record = dict(spec)
-        record["model_id"] = spec.get("model_string")
+        record = resolve_runtime_model_spec(spec, observatory_config=observatory_config)
         active_models.append(record)
         if record["model_id"]:
             active_model_ids.add(str(record["model_id"]))
@@ -136,20 +183,11 @@ def get_cors_allowed_origins() -> list[str]:
 
 def required_live_env_vars() -> list[str]:
     required: set[str] = set()
-    observatory_config = load_observatory_config()
-    openai_compat = observatory_config.get("providers", {}).get("openai-compatible", {})
     active_models, _ = load_active_model_catalog()
     for spec in active_models:
-        provider = spec.get("provider")
-        if provider == "anthropic":
-            required.add("ANTHROPIC_API_KEY")
-        elif provider == "openai":
-            required.add("OPENAI_API_KEY")
-        elif provider == "gemini":
-            required.add("GOOGLE_API_KEY")
-        elif provider == "openai-compatible":
-            compat = openai_compat.get(spec.get("id"), {})
-            required.add(str(compat.get("api_key_env", "OPENAI_API_KEY")))
+        api_key_env = spec.get("effective_api_key_env")
+        if api_key_env:
+            required.add(str(api_key_env))
     return sorted(required)
 
 

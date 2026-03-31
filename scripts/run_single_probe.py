@@ -32,6 +32,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--probe", required=True, help="Probe name (probe.name)")
     parser.add_argument("--provider", required=True, help="Provider name (provider.provider)")
     parser.add_argument(
+        "--model-id",
+        default=None,
+        help="Optional model identifier used to disambiguate providers with multiple active models.",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         default=False,
@@ -49,7 +54,7 @@ def main() -> int:
     # Imports deferred so env var is set before settings are loaded.
     from observatory.metrics.entropy import entropy_delta, entropy_proxy
     from observatory.probes.registry import discover_probes
-    from observatory.providers.registry import discover_providers
+    from observatory.providers.runtime import build_runtime_providers
     from observatory.results_writer import write_experiment_bundle
     from observatory.storage.sqlite_backend import (
         init_db,
@@ -67,14 +72,28 @@ def main() -> int:
         return 1
 
     # Find provider
-    all_providers = discover_providers()
-    provider = next((p for p in all_providers if p.provider == args.provider), None)
-    if provider is None:
-        names = [p.provider for p in all_providers]
+    all_providers = build_runtime_providers()
+    provider_matches = [p for p in all_providers if p.provider == args.provider]
+    if args.model_id is not None:
+        provider_matches = [p for p in provider_matches if p.model_id == args.model_id]
+
+    if not provider_matches:
+        names = sorted({f"{p.provider}:{p.model_id}" for p in all_providers})
         print(
             f"ERROR: provider '{args.provider}' not found. Available: {names}", file=sys.stderr
         )
         return 1
+    if len(provider_matches) > 1:
+        model_ids = sorted(p.model_id for p in provider_matches)
+        print(
+            (
+                f"ERROR: provider '{args.provider}' is ambiguous. "
+                f"Pass --model-id. Available model IDs: {model_ids}"
+            ),
+            file=sys.stderr,
+        )
+        return 1
+    provider = provider_matches[0]
 
     init_db()
 

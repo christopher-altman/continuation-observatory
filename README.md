@@ -47,11 +47,11 @@ Runtime observatory heuristics:
 - `config/alerts.yaml` — threshold alerts
 - `config/observatory.yaml` — observatory parameters
 
-Documented in `docs/OBSERVATORY.md`.
+Active live-provider support in this repo includes native OpenAI, Anthropic, and Gemini, plus Together and xAI through the existing OpenAI-compatible transport path. The native OpenAI provider remains separate from OpenAI-compatible vendors. The same `openai` Python package is sufficient for OpenAI, Together, and xAI because Together/xAI are instantiated with provider-local `base_url` and `api_key`.
 
 ## Deployment
 
-See `docs/DEPLOYMENT.md`. The static bundle in `site/output/` should be rebuilt from source templates before release.
+See `docs/DEPLOYMENT.md`. The live deployment entrypoints remain `api.main:app` for the web app and `python -m observatory.scheduler.daemon` for the scheduler. The static bundle in `site/output/` should be rebuilt from source templates before release.
 
 `results/**` is generated runtime / verification output. Public authoritative site artifacts belong under tracked public/static paths such as `site/output/static/data/*`.
 

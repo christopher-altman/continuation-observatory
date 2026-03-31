@@ -103,9 +103,9 @@ def test_build_filters_disabled_models_and_keeps_active_empty_states(tmp_path, m
             "generated_at": "2026-03-30T00:00:00+00:00",
             "summary": {
                 "history_range": "30d",
-                "tracked_models": 5,
+                "tracked_models": 7,
                 "live_models": 1,
-                "n_models": 5,
+                "n_models": 7,
                 "focused_metric": "cii",
                 "constellation_threshold": 0.60,
                 "similarity_window_days": 7,
@@ -151,10 +151,14 @@ def test_build_filters_disabled_models_and_keeps_active_empty_states(tmp_path, m
         "o3",
         "gemini-2.5-pro",
         "gemini-2.5-flash",
+        "openai/gpt-oss-20b",
+        "grok-4-1-fast-reasoning",
     ]
     assert model_rows["gpt-5"]["timestamp"] is None
     assert model_rows["gpt-5"]["entropy_delta"] is None
     assert model_rows["gpt-5"]["probes"] == []
+    assert model_rows["openai/gpt-oss-20b"]["provider"] == "together"
+    assert model_rows["grok-4-1-fast-reasoning"]["provider"] == "xai"
 
     assert "deepseek-r2" not in home_html
     assert "deepseek-r2" not in models_html
@@ -162,5 +166,7 @@ def test_build_filters_disabled_models_and_keeps_active_empty_states(tmp_path, m
     assert "deepseek-r2" not in falsification_html
     assert "gpt-5" in home_html
     assert "gemini-2.5-pro" in home_html
+    assert "openai/gpt-oss-20b" in models_html
+    assert "grok-4-1-fast-reasoning" in models_html
     assert "gpt-5" in models_html
     assert "gemini-2.5-pro" in models_html

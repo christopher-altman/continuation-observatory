@@ -1,5 +1,5 @@
 [Unit]
-Description=Continuation Observatory Scheduler
+Description=Continuation Observatory Web
 After=network.target
 
 [Service]
@@ -8,7 +8,7 @@ User=observatory
 Group=observatory
 WorkingDirectory=/opt/continuation-observatory/app
 EnvironmentFile=/opt/continuation-observatory/app/.env
-ExecStart=/opt/continuation-observatory/app/.venv/bin/python -m observatory.scheduler.daemon
+ExecStart=/opt/continuation-observatory/app/.venv/bin/python -m uvicorn api.main:app --host 127.0.0.1 --port 8420
 Restart=always
 RestartSec=5
 NoNewPrivileges=true

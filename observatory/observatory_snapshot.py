@@ -8,6 +8,7 @@ from observatory.config import (
     load_alerts_config,
     load_models_config,
     load_observatory_config,
+    resolve_runtime_model_spec,
     load_weights_config,
 )
 from observatory.metrics.pcii import compute_pcii
@@ -157,23 +158,23 @@ def _filter_events(
 
 
 def models_payload(allowed_model_ids: set[str] | None = None) -> list[dict[str, Any]]:
+    observatory_config = load_observatory_config()
     configured = load_models_config().get("models", [])
     runtime = supported_runtime_models()
     latest = group_latest_metrics()
     merged: dict[str, dict[str, Any]] = {}
-    include_disabled = load_observatory_config().get("runtime", {}).get(
-        "include_disabled_models_in_api", True
-    )
+    include_disabled = observatory_config.get("runtime", {}).get("include_disabled_models_in_api", True)
 
     for spec in configured:
-        model_id = spec["model_string"]
+        resolved = resolve_runtime_model_spec(spec, observatory_config=observatory_config)
+        model_id = resolved["model_id"]
         if allowed_model_ids is not None:
             if model_id not in allowed_model_ids:
                 continue
         elif not include_disabled and not spec.get("enabled", False):
             continue
         merged[model_id] = {
-            "provider": spec["provider"],
+            "provider": resolved["effective_provider"],
             "model_id": model_id,
             "display_name": spec.get("display_name", model_id),
             "enabled": bool(spec.get("enabled", False)),

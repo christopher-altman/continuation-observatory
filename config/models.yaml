@@ -48,6 +48,34 @@ models:
     enabled: true
     interval_minutes: 30
     rate_limit_rpm: 20
+  - id: openai-gpt-oss-20b
+    provider: openai-compatible
+    model_string: openai/gpt-oss-20b
+    display_name: Together GPT-OSS 20B
+    enabled: true
+    interval_minutes: 30
+    rate_limit_rpm: 20
+  - id: grok-4-1-fast-reasoning
+    provider: openai-compatible
+    model_string: grok-4-1-fast-reasoning
+    display_name: Grok 4.1 Fast Reasoning
+    enabled: true
+    interval_minutes: 30
+    rate_limit_rpm: 20
+  - id: openai-gpt-oss-120b
+    provider: openai-compatible
+    model_string: openai/gpt-oss-120b
+    display_name: Together GPT-OSS 120B
+    enabled: false
+    interval_minutes: 30
+    rate_limit_rpm: 10
+  - id: grok-4.20-reasoning
+    provider: openai-compatible
+    model_string: grok-4.20-reasoning
+    display_name: Grok 4.20 Reasoning
+    enabled: false
+    interval_minutes: 60
+    rate_limit_rpm: 10
   - id: deepseek-r2
     provider: openai-compatible
     model_string: deepseek-r2

@@ -116,23 +116,26 @@ Current lean-launch enabled models in `config/models.yaml` require:
 | `ANTHROPIC_API_KEY` | Claude Haiku 4.5 |
 | `OPENAI_API_KEY` | GPT-5, o3 |
 | `GOOGLE_API_KEY` | Gemini 2.5 Pro, Gemini 2.5 Flash |
+| `TOGETHER_API_KEY` | Together GPT-OSS 20B |
+| `XAI_API_KEY` | Grok 4.1 Fast Reasoning |
 
 Operational rule:
 
-- dormant higher-cost and openai-compatible providers remain in `config/models.yaml`, but they stay disabled for the first live launch
+- Together and xAI use the existing OpenAI-compatible transport path with provider-local credentials and base URLs; native OpenAI traffic remains on the native OpenAI client path
+- higher-cost companion models remain in `config/models.yaml`, but they stay disabled until you explicitly enable them
 - if you later enable one of those providers, add its credential to the server environment file before switching it on
 
 ## Environment File
 
-Use [.env.production.example](../.env.production.example) as the template for the server-side environment file.
+Use [.env.example](../.env.example) as the template for the server-side environment file.
 
 Recommended live file location:
 
 ```text
-/opt/continuation-observatory/.env.production
+/opt/continuation-observatory/app/.env
 ```
 
-Do not copy this file into the repo checkout.
+This repo loads `.env` from the app working directory, so the deployed environment file should live alongside the app checkout.
 
 ## Step-by-Step Launch Roadmap
 
@@ -197,7 +200,7 @@ sudo -u observatory .venv/bin/pip install -e .
 
 ### 5. Create the live environment file
 
-1. Copy `.env.production.example` into `/opt/continuation-observatory/.env.production`.
+1. Copy `.env.example` into `/opt/continuation-observatory/app/.env`.
 2. Fill in:
    - `DRY_RUN=false`
    - `DB_URL`
@@ -206,6 +209,8 @@ sudo -u observatory .venv/bin/pip install -e .
    - `ANTHROPIC_API_KEY`
    - `OPENAI_API_KEY`
    - `GOOGLE_API_KEY`
+   - `TOGETHER_API_KEY`
+   - `XAI_API_KEY`
 3. Keep:
    - `ALLOW_LIVE_SQLITE=true`
    - `ALLOW_INSECURE_LIVE_CORS=false`
@@ -214,29 +219,29 @@ sudo -u observatory .venv/bin/pip install -e .
 
 ```bash
 cd /opt/continuation-observatory/app
-sudo -u observatory env $(grep -v '^#' /opt/continuation-observatory/.env.production | xargs) .venv/bin/python -m observatory.storage.sqlite_backend
+sudo -u observatory env $(grep -v '^#' /opt/continuation-observatory/app/.env | xargs) .venv/bin/python -m observatory.storage.sqlite_backend
 ```
 
 ### 7. Install systemd services
 
 1. Copy:
-   - [deploy/continuation-observatory-api.service](../deploy/continuation-observatory-api.service)
+   - [deploy/continuation-observatory-web.service](../deploy/continuation-observatory-web.service)
    - [deploy/continuation-observatory-scheduler.service](../deploy/continuation-observatory-scheduler.service)
 2. Place them in `/etc/systemd/system/`.
 3. Reload and enable:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now continuation-observatory-api
+sudo systemctl enable --now continuation-observatory-web
 sudo systemctl enable --now continuation-observatory-scheduler
 ```
 
 4. Check health:
 
 ```bash
-systemctl status continuation-observatory-api --no-pager
+systemctl status continuation-observatory-web --no-pager
 systemctl status continuation-observatory-scheduler --no-pager
-journalctl -u continuation-observatory-api -n 100 --no-pager
+journalctl -u continuation-observatory-web -n 100 --no-pager
 journalctl -u continuation-observatory-scheduler -n 100 --no-pager
 ```
 
@@ -253,7 +258,7 @@ sudo visudo -f /etc/sudoers.d/continuation-observatory-deploy
 Add:
 
 ```text
-<deploy-user> ALL=NOPASSWD: /bin/systemctl restart continuation-observatory-api, /bin/systemctl restart continuation-observatory-scheduler, /bin/systemctl status continuation-observatory-api, /bin/systemctl status continuation-observatory-scheduler
+<deploy-user> ALL=NOPASSWD: /bin/systemctl restart continuation-observatory-web, /bin/systemctl restart continuation-observatory-scheduler, /bin/systemctl status continuation-observatory-web, /bin/systemctl status continuation-observatory-scheduler
 ```
 
 ### 8. Configure DNS
@@ -324,8 +329,8 @@ DEPLOY_HOST=<your-vps-host-or-ip>
 DEPLOY_USER=<your-ssh-user>
 DEPLOY_SSH_PORT=22
 DEPLOY_APP_DIR=/opt/continuation-observatory/app
-DEPLOY_ENV_FILE=/opt/continuation-observatory/.env.production
-DEPLOY_API_SERVICE=continuation-observatory-api
+DEPLOY_ENV_FILE=/opt/continuation-observatory/app/.env
+DEPLOY_API_SERVICE=continuation-observatory-web
 DEPLOY_SCHEDULER_SERVICE=continuation-observatory-scheduler
 ```
 

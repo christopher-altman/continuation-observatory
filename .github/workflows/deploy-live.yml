@@ -58,8 +58,8 @@ jobs:
           ssh -p "${DEPLOY_SSH_PORT:-22}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
             "chmod +x /tmp/continuation-observatory-remote-update.sh && \
              APP_DIR='${DEPLOY_APP_DIR:-/opt/continuation-observatory/app}' \
-             ENV_FILE='${DEPLOY_ENV_FILE:-/opt/continuation-observatory/.env.production}' \
-             API_SERVICE='${DEPLOY_API_SERVICE:-continuation-observatory-api}' \
+             ENV_FILE='${DEPLOY_ENV_FILE:-/opt/continuation-observatory/app/.env}' \
+             API_SERVICE='${DEPLOY_API_SERVICE:-continuation-observatory-web}' \
              SCHEDULER_SERVICE='${DEPLOY_SCHEDULER_SERVICE:-continuation-observatory-scheduler}' \
              BRANCH='${{ github.ref_name }}' \
              /tmp/continuation-observatory-remote-update.sh"

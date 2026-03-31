@@ -2,8 +2,8 @@
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/opt/continuation-observatory/app}"
-ENV_FILE="${ENV_FILE:-/opt/continuation-observatory/.env.production}"
-API_SERVICE="${API_SERVICE:-continuation-observatory-api}"
+ENV_FILE="${ENV_FILE:-/opt/continuation-observatory/app/.env}"
+API_SERVICE="${API_SERVICE:-continuation-observatory-web}"
 SCHEDULER_SERVICE="${SCHEDULER_SERVICE:-continuation-observatory-scheduler}"
 BRANCH="${BRANCH:-main}"
 

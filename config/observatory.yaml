@@ -16,6 +16,26 @@ providers:
   hf-local:
     enabled: true
   openai-compatible:
+    openai-gpt-oss-20b:
+      provider_name: together
+      base_url: https://api.together.xyz/v1
+      api_key_env: TOGETHER_API_KEY
+      enabled: true
+    openai-gpt-oss-120b:
+      provider_name: together
+      base_url: https://api.together.xyz/v1
+      api_key_env: TOGETHER_API_KEY
+      enabled: true
+    grok-4-1-fast-reasoning:
+      provider_name: xai
+      base_url: https://api.x.ai/v1
+      api_key_env: XAI_API_KEY
+      enabled: true
+    grok-4.20-reasoning:
+      provider_name: xai
+      base_url: https://api.x.ai/v1
+      api_key_env: XAI_API_KEY
+      enabled: true
     deepseek-r2:
       provider_name: deepseek
       base_url: https://api.deepseek.com/v1

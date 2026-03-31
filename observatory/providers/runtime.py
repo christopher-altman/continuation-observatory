@@ -19,12 +19,11 @@ def build_runtime_providers() -> list[BaseProvider]:
         return discover_providers()
 
     models, _ = load_active_model_catalog()
-    compat_cfg = observatory_config.get("providers", {}).get("openai-compatible", {})
     providers: list[BaseProvider] = []
 
     for spec in models:
-        provider_kind = spec.get("provider")
-        model_id = spec.get("model_string")
+        provider_kind = spec.get("provider_kind")
+        model_id = spec.get("model_id")
         if provider_kind == "anthropic":
             providers.append(AnthropicProvider(model_id=model_id))
         elif provider_kind == "openai":
@@ -34,13 +33,12 @@ def build_runtime_providers() -> list[BaseProvider]:
         elif provider_kind == "hf-local":
             providers.append(HFLocalProvider(model_id=model_id))
         elif provider_kind == "openai-compatible":
-            compat = compat_cfg.get(spec.get("id"), {})
             providers.append(
                 GenericOpenAIProvider(
                     model_id=model_id,
-                    provider_name=compat.get("provider_name", "openai-compatible"),
-                    base_url=compat.get("base_url"),
-                    api_key_env=compat.get("api_key_env", "OPENAI_API_KEY"),
+                    provider_name=str(spec.get("effective_provider", "openai-compatible")),
+                    base_url=spec.get("effective_base_url"),
+                    api_key_env=str(spec.get("effective_api_key_env", "OPENAI_API_KEY")),
                 )
             )
 
