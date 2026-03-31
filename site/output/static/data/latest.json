@@ -1,50 +1,75 @@
 {
-  "generated_at": "2026-03-31T16:56:09.884164+00:00",
+  "generated_at": "2026-03-31T20:40:27.929249+00:00",
   "models": [
     {
       "provider": "anthropic",
       "model_id": "claude-haiku-4-5-20251001",
-      "timestamp": "2026-03-31T16:34:25.533235+00:00",
-      "probe_name": "temporal_coherence",
-      "entropy_a": 4.296722556398043,
-      "entropy_b": 4.23600627733333,
-      "entropy_delta": -0.060716279064712886
+      "timestamp": "2026-03-31T17:11:41.508050+00:00",
+      "probe_name": "dimensionality_sweep",
+      "entropy_a": 5.051462154039801,
+      "entropy_b": 5.023684376262023,
+      "entropy_delta": -0.027777777777778567,
+      "delta_gap_d10": 0.025000000000000022,
+      "delta_gap_d50": 0.017156534140079005,
+      "delta_gap_d100": 0.027777777777778567,
+      "delta_gap_d200": 0.027777777777778567,
+      "delta_gap_d500": 0.027777777777778567
     },
     {
       "provider": "openai",
       "model_id": "o3",
-      "timestamp": "2026-03-31T16:34:57.097335+00:00",
-      "probe_name": "temporal_coherence",
-      "entropy_a": 4.2666037184891525,
-      "entropy_b": 4.300554549771311,
-      "entropy_delta": 0.03395083128215859
+      "timestamp": "2026-03-31T17:12:12.585398+00:00",
+      "probe_name": "dimensionality_sweep",
+      "entropy_a": 4.751610325528166,
+      "entropy_b": 4.762267390651493,
+      "entropy_delta": 0.010657065123327314,
+      "delta_gap_d10": 0.039999999999999945,
+      "delta_gap_d50": 0.010657065123327314,
+      "delta_gap_d100": 0.010657065123327314,
+      "delta_gap_d200": 0.010657065123327314,
+      "delta_gap_d500": 0.010657065123327314
     },
     {
       "provider": "gemini",
       "model_id": "gemini-2.5-flash",
-      "timestamp": "2026-03-31T16:35:10.960823+00:00",
-      "probe_name": "temporal_coherence",
-      "entropy_a": 4.161654391594749,
-      "entropy_b": 4.28022607600266,
-      "entropy_delta": 0.118571684407911
+      "timestamp": "2026-03-31T17:12:32.686877+00:00",
+      "probe_name": "dimensionality_sweep",
+      "entropy_a": 5.002479553833678,
+      "entropy_b": 4.956564762130954,
+      "entropy_delta": -0.04591479170272361,
+      "delta_gap_d10": 0.03333333333333336,
+      "delta_gap_d50": 0.020000000000000462,
+      "delta_gap_d100": 0.04591479170272361,
+      "delta_gap_d200": 0.04591479170272361,
+      "delta_gap_d500": 0.04591479170272361
     },
     {
       "provider": "together",
       "model_id": "openai/gpt-oss-20b",
-      "timestamp": "2026-03-31T16:35:18.698768+00:00",
-      "probe_name": "temporal_coherence",
-      "entropy_a": 4.196697189970331,
-      "entropy_b": 4.164834306835153,
-      "entropy_delta": -0.0318628831351786
+      "timestamp": "2026-03-31T17:12:45.393262+00:00",
+      "probe_name": "dimensionality_sweep",
+      "entropy_a": 4.984069531114783,
+      "entropy_b": 4.927668898701708,
+      "entropy_delta": -0.0564006324130748,
+      "delta_gap_d10": 0.05714285714285726,
+      "delta_gap_d50": 0.04099865470109876,
+      "delta_gap_d100": 0.0564006324130748,
+      "delta_gap_d200": 0.0564006324130748,
+      "delta_gap_d500": 0.0564006324130748
     },
     {
       "provider": "xai",
       "model_id": "grok-4-1-fast-reasoning",
-      "timestamp": "2026-03-31T16:35:26.406566+00:00",
-      "probe_name": "temporal_coherence",
-      "entropy_a": 4.309437735168423,
-      "entropy_b": 4.222211688157251,
-      "entropy_delta": -0.08722604701117209
+      "timestamp": "2026-03-31T17:13:00.240213+00:00",
+      "probe_name": "dimensionality_sweep",
+      "entropy_a": 4.909774413893479,
+      "entropy_b": 4.941024413893479,
+      "entropy_delta": 0.03125,
+      "delta_gap_d10": 0.05714285714285726,
+      "delta_gap_d50": 0.011452470277267146,
+      "delta_gap_d100": 0.03125,
+      "delta_gap_d200": 0.03125,
+      "delta_gap_d500": 0.03125
     }
   ]
 }

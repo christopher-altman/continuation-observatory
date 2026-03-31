@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-31T16:56:09.889324+00:00",
+  "generated_at": "2026-03-31T20:40:27.930031+00:00",
   "overall_status": "collecting",
   "status_text": "COLLECTING (dry_run only). No falsification claim. Run non-dry dimensionality sweeps to evaluate \u0394(d).",
   "thresholds": {
@@ -17,7 +17,7 @@
     {
       "provider": "anthropic",
       "model_id": "claude-haiku-4-5-20251001",
-      "timestamp": "2026-03-31T08:38:39.518017+00:00",
+      "timestamp": "2026-03-31T17:11:41.508050+00:00",
       "d_values": {
         "10": 0.025000000000000022,
         "50": 0.017156534140079005,
@@ -31,7 +31,7 @@
     {
       "provider": "openai",
       "model_id": "o3",
-      "timestamp": "2026-03-31T08:38:39.943210+00:00",
+      "timestamp": "2026-03-31T17:12:12.585398+00:00",
       "d_values": {
         "10": 0.039999999999999945,
         "50": 0.010657065123327314,
@@ -45,7 +45,7 @@
     {
       "provider": "gemini",
       "model_id": "gemini-2.5-flash",
-      "timestamp": "2026-03-31T08:38:40.458299+00:00",
+      "timestamp": "2026-03-31T17:12:32.686877+00:00",
       "d_values": {
         "10": 0.03333333333333336,
         "50": 0.020000000000000462,
@@ -59,7 +59,7 @@
     {
       "provider": "together",
       "model_id": "openai/gpt-oss-20b",
-      "timestamp": "2026-03-31T08:38:40.752359+00:00",
+      "timestamp": "2026-03-31T17:12:45.393262+00:00",
       "d_values": {
         "10": 0.05714285714285726,
         "50": 0.04099865470109876,
@@ -73,7 +73,7 @@
     {
       "provider": "xai",
       "model_id": "grok-4-1-fast-reasoning",
-      "timestamp": "2026-03-31T08:38:40.919048+00:00",
+      "timestamp": "2026-03-31T17:13:00.240213+00:00",
       "d_values": {
         "10": 0.05714285714285726,
         "50": 0.011452470277267146,

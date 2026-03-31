@@ -32,18 +32,35 @@
       toggle.setAttribute("aria-expanded", String(nextState === "true"));
     });
 
+    var closeTimer = null;
+
+    function clearCloseTimer() {
+      if (closeTimer) {
+        clearTimeout(closeTimer);
+        closeTimer = null;
+      }
+    }
+
     toggle.addEventListener("mouseenter", function () {
       if (!hoverCapable.matches) return;
+      clearCloseTimer();
       openNav();
     });
 
     nav.addEventListener("mouseleave", function () {
       if (!hoverCapable.matches) return;
-      closeNav(nav, toggle);
+      closeTimer = setTimeout(function () {
+        closeNav(nav, toggle);
+      }, 180);
+    });
+
+    nav.addEventListener("mouseenter", function () {
+      clearCloseTimer();
     });
 
     panel.querySelectorAll("a").forEach(function (link) {
       link.addEventListener("click", function () {
+        clearCloseTimer();
         closeNav(nav, toggle);
       });
     });
@@ -51,12 +68,22 @@
     document.addEventListener("click", function (event) {
       if (!navIsCollapsed()) return;
       if (!nav.contains(event.target)) {
+        clearCloseTimer();
         closeNav(nav, toggle);
+      }
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && nav.dataset.navOpen === "true") {
+        clearCloseTimer();
+        closeNav(nav, toggle);
+        toggle.focus();
       }
     });
 
     window.addEventListener("resize", function () {
       if (!navIsCollapsed()) {
+        clearCloseTimer();
         closeNav(nav, toggle);
       }
     });

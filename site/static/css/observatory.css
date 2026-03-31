@@ -503,7 +503,7 @@ pre {
 .results-label,
 .method-label,
 .results-mini-kicker {
-  margin: 0 0 0.95rem;
+  margin: 0 0 1rem;
   font-family: var(--font-mono);
   font-size: 0.72rem;
   letter-spacing: 0.22em;
@@ -557,7 +557,7 @@ pre {
   max-width: 40ch;
   font-size: clamp(1.28rem, 2.05vw, 1.8rem);
   line-height: 1.12;
-  font-weight: 200;
+  font-weight: 300;
   letter-spacing: 0.05em;
   color: rgba(244, 242, 239, 0.67);
 }
@@ -581,6 +581,25 @@ pre {
   max-width: 38rem;
   font-size: 1rem;
   color: rgba(220, 225, 233, 0.76);
+}
+
+.hero-tagline {
+  margin: 1.1rem 0 0;
+  max-width: 42rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  color: var(--accent-strong);
+  line-height: 1.55;
+}
+
+.section-tagline {
+  margin: 0.6rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--accent-strong);
+  line-height: 1.55;
 }
 
 .hero-actions {
@@ -626,6 +645,12 @@ pre {
   background: rgba(255, 255, 255, 0.02);
 }
 
+.button-secondary:hover,
+.button-secondary:focus-visible {
+  background: rgba(92, 166, 255, 0.08);
+  border-color: rgba(142, 190, 255, 0.32);
+}
+
 .hero-note,
 .micro-note,
 .mono-muted,
@@ -654,7 +679,12 @@ pre {
 }
 
 .hero-meta-links a {
-  color: var(--accent-soft);
+  color: rgba(140, 195, 255, 0.48);
+  transition: color 200ms var(--ease);
+}
+
+.hero-meta-links span {
+  color: rgba(160, 190, 230, 0.35);
 }
 
 .hero-meta-links a:hover,
@@ -708,7 +738,7 @@ pre {
   font-size: 0.7rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(226, 238, 255, 0.55);
+  color: rgba(226, 238, 255, 0.72);
 }
 
 .story-section,
@@ -808,6 +838,7 @@ pre {
 
 .observables-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1.1rem, 2.2vw, 1.5rem);
   margin-top: 2.25rem;
 }
 
@@ -851,7 +882,7 @@ pre {
 .panel:hover,
 .faq-item:hover {
   transform: translateY(-1px);
-  border-color: rgba(142, 190, 255, 0.24);
+  border-color: rgba(142, 190, 255, 0.32);
 }
 
 .observable-item h3,
@@ -2250,7 +2281,7 @@ textarea {
 .destination-card:hover,
 .destination-card:focus-visible {
   transform: translateY(-1px);
-  border-color: rgba(142, 190, 255, 0.24);
+  border-color: rgba(142, 190, 255, 0.32);
 }
 
 .destination-card h3,
@@ -2986,6 +3017,15 @@ html.theme-transitions *::after {
     box-shadow: var(--shadow-xl);
   }
 
+  .nav-panel::before {
+    content: "";
+    position: absolute;
+    top: -14px;
+    left: 0;
+    right: 0;
+    height: 14px;
+  }
+
   .site-nav[data-nav-open="true"] .nav-panel {
     display: flex;
   }
@@ -3053,6 +3093,15 @@ html.theme-transitions *::after {
     border-radius: 24px;
     background: rgba(5, 9, 18, 0.92);
     box-shadow: var(--shadow-xl);
+  }
+
+  .nav-panel::before {
+    content: "";
+    position: absolute;
+    top: -14px;
+    left: 0;
+    right: 0;
+    height: 14px;
   }
 
   .site-nav[data-nav-open="true"] .nav-panel {
@@ -3123,8 +3172,8 @@ html.theme-transitions *::after {
 
 @media (max-width: 640px) {
   :root {
-    --container: calc(100vw - 20px);
-    --content: calc(100vw - 20px);
+    --container: calc(100vw - 28px);
+    --content: calc(100vw - 28px);
   }
 
   .site-mark-title {
