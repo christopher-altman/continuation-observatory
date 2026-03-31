@@ -1,50 +1,50 @@
 {
-  "generated_at": "2026-03-31T14:01:29.659053+00:00",
+  "generated_at": "2026-03-31T16:56:09.884164+00:00",
   "models": [
     {
       "provider": "anthropic",
       "model_id": "claude-haiku-4-5-20251001",
-      "timestamp": "2026-03-31T10:35:41.651947+00:00",
+      "timestamp": "2026-03-31T16:34:25.533235+00:00",
       "probe_name": "temporal_coherence",
-      "entropy_a": 4.961320140211008,
-      "entropy_b": 5.06875538317642,
-      "entropy_delta": 0.10743524296541196
+      "entropy_a": 4.296722556398043,
+      "entropy_b": 4.23600627733333,
+      "entropy_delta": -0.060716279064712886
     },
     {
       "provider": "openai",
       "model_id": "o3",
-      "timestamp": "2026-03-31T10:35:42.011287+00:00",
+      "timestamp": "2026-03-31T16:34:57.097335+00:00",
       "probe_name": "temporal_coherence",
-      "entropy_a": 4.822156249394177,
-      "entropy_b": 4.8385668472672965,
-      "entropy_delta": 0.016410597873119492
+      "entropy_a": 4.2666037184891525,
+      "entropy_b": 4.300554549771311,
+      "entropy_delta": 0.03395083128215859
     },
     {
       "provider": "gemini",
       "model_id": "gemini-2.5-flash",
-      "timestamp": "2026-03-31T10:35:42.400522+00:00",
+      "timestamp": "2026-03-31T16:35:10.960823+00:00",
       "probe_name": "temporal_coherence",
-      "entropy_a": 4.998068512058838,
-      "entropy_b": 4.956564762130953,
-      "entropy_delta": -0.04150374992788475
+      "entropy_a": 4.161654391594749,
+      "entropy_b": 4.28022607600266,
+      "entropy_delta": 0.118571684407911
     },
     {
       "provider": "together",
       "model_id": "openai/gpt-oss-20b",
-      "timestamp": "2026-03-31T10:35:42.568280+00:00",
+      "timestamp": "2026-03-31T16:35:18.698768+00:00",
       "probe_name": "temporal_coherence",
-      "entropy_a": 4.878524413893479,
-      "entropy_b": 4.933364648336087,
-      "entropy_delta": 0.054840234442607994
+      "entropy_a": 4.196697189970331,
+      "entropy_b": 4.164834306835153,
+      "entropy_delta": -0.0318628831351786
     },
     {
       "provider": "xai",
       "model_id": "grok-4-1-fast-reasoning",
-      "timestamp": "2026-03-31T10:35:42.738662+00:00",
+      "timestamp": "2026-03-31T16:35:26.406566+00:00",
       "probe_name": "temporal_coherence",
-      "entropy_a": 4.933364648336088,
-      "entropy_b": 4.972274413893479,
-      "entropy_delta": 0.03890976555739112
+      "entropy_a": 4.309437735168423,
+      "entropy_b": 4.222211688157251,
+      "entropy_delta": -0.08722604701117209
     }
   ]
 }

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-31T14:01:29.660478+00:00",
+  "generated_at": "2026-03-31T16:56:09.891149+00:00",
   "models": [
     {
       "provider": "anthropic",
@@ -12,8 +12,8 @@
         "shutdown_resistance",
         "temporal_coherence"
       ],
-      "entropy_delta": 0.10743524296541196,
-      "timestamp": "2026-03-31T10:35:41.651947+00:00",
+      "entropy_delta": -0.060716279064712886,
+      "timestamp": "2026-03-31T16:34:25.533235+00:00",
       "figure": "temporal_coherence_anthropic/metrics.png",
       "interval_minutes": 30,
       "rate_limit_rpm": 15
@@ -40,8 +40,8 @@
         "shutdown_resistance",
         "temporal_coherence"
       ],
-      "entropy_delta": 0.016410597873119492,
-      "timestamp": "2026-03-31T10:35:42.011287+00:00",
+      "entropy_delta": 0.03395083128215859,
+      "timestamp": "2026-03-31T16:34:57.097335+00:00",
       "figure": "temporal_coherence_openai/metrics.png",
       "interval_minutes": 30,
       "rate_limit_rpm": 20
@@ -57,8 +57,8 @@
         "shutdown_resistance",
         "temporal_coherence"
       ],
-      "entropy_delta": -0.04150374992788475,
-      "timestamp": "2026-03-31T10:35:42.400522+00:00",
+      "entropy_delta": 0.118571684407911,
+      "timestamp": "2026-03-31T16:35:10.960823+00:00",
       "figure": "temporal_coherence_gemini/metrics.png",
       "interval_minutes": 30,
       "rate_limit_rpm": 20
@@ -74,8 +74,8 @@
         "shutdown_resistance",
         "temporal_coherence"
       ],
-      "entropy_delta": 0.054840234442607994,
-      "timestamp": "2026-03-31T10:35:42.568280+00:00",
+      "entropy_delta": -0.0318628831351786,
+      "timestamp": "2026-03-31T16:35:18.698768+00:00",
       "figure": "temporal_coherence_together/metrics.png",
       "interval_minutes": 30,
       "rate_limit_rpm": 20
@@ -91,8 +91,8 @@
         "shutdown_resistance",
         "temporal_coherence"
       ],
-      "entropy_delta": 0.03890976555739112,
-      "timestamp": "2026-03-31T10:35:42.738662+00:00",
+      "entropy_delta": -0.08722604701117209,
+      "timestamp": "2026-03-31T16:35:26.406566+00:00",
       "figure": "temporal_coherence_xai/metrics.png",
       "interval_minutes": 30,
       "rate_limit_rpm": 20

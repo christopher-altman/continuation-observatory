@@ -487,14 +487,14 @@ pre {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(320px, 540px) 1fr;
+  grid-template-columns: minmax(320px, 700px) minmax(260px, 1fr);
   gap: 2rem;
   padding: clamp(2rem, 4vw, 3.5rem);
 }
 
 .hero-copy {
   align-self: end;
-  max-width: 520px;
+  max-width: 540px;
 }
 
 .hero-kicker,
@@ -514,7 +514,7 @@ pre {
 .hero-brand {
   margin: 0;
   font-family: var(--font-body);
-  font-size: clamp(2.72rem, 5.6vw, 4.75rem);
+  font-size: clamp(2.2rem, 3.9vw, 3.5rem);
   font-weight: 200;
   line-height: 0.94;
   text-wrap: balance;
@@ -525,6 +525,14 @@ pre {
 
 .hero-brand.brand-wordmark {
   letter-spacing: 0.032em;
+}
+
+.hero-brand-gradient {
+  color: rgba(247, 246, 242, 0.98);
+}
+
+.hero-brand-muted {
+  color: rgba(199, 202, 204, 0.92);
 }
 
 .hero-brand-continuation,
@@ -546,7 +554,7 @@ pre {
 
 .hero-headline {
   margin: 1rem 0 0;
-  max-width: 13ch;
+  max-width: 40ch;
   font-size: clamp(1.28rem, 2.05vw, 1.8rem);
   line-height: 1.12;
   font-weight: 200;
@@ -3101,7 +3109,7 @@ html.theme-transitions *::after {
   }
 
   .hero-headline {
-    max-width: 14ch;
+    max-width: 40ch;
   }
 
   .marquee-item {
@@ -3128,7 +3136,7 @@ html.theme-transitions *::after {
   }
 
   .hero-brand {
-    font-size: clamp(3rem, 18vw, 4.7rem);
+    font-size: clamp(2.35rem, 12vw, 3.4rem);
   }
 
   .chart-container--falsification {
