@@ -35,19 +35,26 @@
   <title>{% block title %}{{ page_title }} — Continuation Observatory{% endblock %}</title>
   <meta name="description" content="{% block description %}Continuation Observatory: structural measurement for continuation signals in advanced AI systems. Powered by UCIP.{% endblock %}">
 
+  {% set social_image_url = site_url ~ "/static/img/continuation-observatory-og-ring-v2.jpg" %}
   <!-- Open Graph -->
+  <meta property="og:title" content="{% block og_title %}Continuation Observatory{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}Structural measurement platform for continuation signals.{% endblock %}">
+  <meta property="og:url" content="{{ site_url }}{{ page_path }}">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Continuation Observatory">
-  <meta property="og:title" content="{% block og_title %}{{ page_title }} — Continuation Observatory{% endblock %}">
-  <meta property="og:description" content="{% block og_description %}Structural measurement for continuation signals in advanced AI systems, powered by UCIP.{% endblock %}">
-  <meta property="og:url" content="{{ site_url }}{{ page_path }}">
-  <meta property="og:image" content="{{ site_url }}/static/og-image.png">
+  <meta property="og:image" content="{{ social_image_url }}">
+  <meta property="og:image:secure_url" content="{{ social_image_url }}">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="3D ring visualization for Continuation Observatory">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="{% block tw_title %}{{ page_title }} — Continuation Observatory{% endblock %}">
-  <meta name="twitter:description" content="{% block tw_description %}Structural measurement for continuation signals in advanced AI systems, powered by UCIP.{% endblock %}">
-  <meta name="twitter:image" content="{{ site_url }}/static/og-image.png">
+  <meta name="twitter:title" content="{% block tw_title %}Continuation Observatory{% endblock %}">
+  <meta name="twitter:description" content="{% block tw_description %}Structural measurement platform for continuation signals.{% endblock %}">
+  <meta name="twitter:image" content="{{ social_image_url }}">
+  <meta name="twitter:image:alt" content="3D ring visualization for Continuation Observatory">
 
   <!-- schema.org JSON-LD -->
   <script type="application/ld+json">
