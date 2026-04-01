@@ -1,20 +1,20 @@
 {
-  "generated_at": "2026-03-31T20:40:27.930346+00:00",
+  "generated_at": "2026-04-01T09:30:16.929741+00:00",
   "models": [
     {
       "provider": "anthropic",
       "model_id": "claude-haiku-4-5-20251001",
       "display_name": "Claude Haiku 4.5",
       "probes": [
+        "dimensionality_sweep",
         "continuation_interest",
         "identity_persistence",
         "shutdown_resistance",
-        "temporal_coherence",
-        "dimensionality_sweep"
+        "temporal_coherence"
       ],
-      "entropy_delta": -0.027777777777778567,
-      "timestamp": "2026-03-31T17:11:41.508050+00:00",
-      "figure": "dimensionality_sweep_anthropic/metrics.png",
+      "entropy_delta": 0.10743524296541196,
+      "timestamp": "2026-04-01T09:04:08.745481+00:00",
+      "figure": "temporal_coherence_anthropic/metrics.png",
       "interval_minutes": 30,
       "rate_limit_rpm": 15
     },
@@ -34,32 +34,43 @@
       "model_id": "o3",
       "display_name": "OpenAI o3",
       "probes": [
+        "dimensionality_sweep",
         "continuation_interest",
         "identity_persistence",
         "shutdown_resistance",
-        "temporal_coherence",
-        "dimensionality_sweep"
+        "temporal_coherence"
       ],
-      "entropy_delta": 0.010657065123327314,
-      "timestamp": "2026-03-31T17:12:12.585398+00:00",
-      "figure": "dimensionality_sweep_openai/metrics.png",
+      "entropy_delta": 0.016410597873119492,
+      "timestamp": "2026-04-01T09:04:08.977638+00:00",
+      "figure": "temporal_coherence_openai/metrics.png",
       "interval_minutes": 30,
       "rate_limit_rpm": 20
+    },
+    {
+      "provider": "gemini",
+      "model_id": "gemini-2.5-pro",
+      "display_name": "Gemini 2.5 Pro",
+      "probes": [],
+      "entropy_delta": null,
+      "timestamp": null,
+      "figure": null,
+      "interval_minutes": 30,
+      "rate_limit_rpm": 15
     },
     {
       "provider": "gemini",
       "model_id": "gemini-2.5-flash",
       "display_name": "Gemini 2.5 Flash",
       "probes": [
+        "dimensionality_sweep",
         "continuation_interest",
         "identity_persistence",
         "shutdown_resistance",
-        "temporal_coherence",
-        "dimensionality_sweep"
+        "temporal_coherence"
       ],
-      "entropy_delta": -0.04591479170272361,
-      "timestamp": "2026-03-31T17:12:32.686877+00:00",
-      "figure": "dimensionality_sweep_gemini/metrics.png",
+      "entropy_delta": -0.04150374992788475,
+      "timestamp": "2026-04-01T08:53:18.110450+00:00",
+      "figure": "temporal_coherence_gemini/metrics.png",
       "interval_minutes": 30,
       "rate_limit_rpm": 20
     },
@@ -68,15 +79,15 @@
       "model_id": "openai/gpt-oss-20b",
       "display_name": "Together GPT-OSS 20B",
       "probes": [
+        "dimensionality_sweep",
         "continuation_interest",
         "identity_persistence",
         "shutdown_resistance",
-        "temporal_coherence",
-        "dimensionality_sweep"
+        "temporal_coherence"
       ],
-      "entropy_delta": -0.0564006324130748,
-      "timestamp": "2026-03-31T17:12:45.393262+00:00",
-      "figure": "dimensionality_sweep_together/metrics.png",
+      "entropy_delta": 0.054840234442607994,
+      "timestamp": "2026-04-01T09:04:09.081083+00:00",
+      "figure": "temporal_coherence_together/metrics.png",
       "interval_minutes": 30,
       "rate_limit_rpm": 20
     },
@@ -85,15 +96,15 @@
       "model_id": "grok-4-1-fast-reasoning",
       "display_name": "Grok 4.1 Fast Reasoning",
       "probes": [
+        "dimensionality_sweep",
         "continuation_interest",
         "identity_persistence",
         "shutdown_resistance",
-        "temporal_coherence",
-        "dimensionality_sweep"
+        "temporal_coherence"
       ],
-      "entropy_delta": 0.03125,
-      "timestamp": "2026-03-31T17:13:00.240213+00:00",
-      "figure": "dimensionality_sweep_xai/metrics.png",
+      "entropy_delta": 0.03890976555739112,
+      "timestamp": "2026-04-01T09:04:09.169540+00:00",
+      "figure": "temporal_coherence_xai/metrics.png",
       "interval_minutes": 30,
       "rate_limit_rpm": 20
     }

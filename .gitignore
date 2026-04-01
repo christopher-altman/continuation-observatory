@@ -13,6 +13,7 @@ __pycache__/
 # Build artifacts
 dist/
 build/
+site/output/
 # Generated runtime / verification output; keep authoritative public data under site/output/static/data/
 results/
 

@@ -1,18 +1,18 @@
 <section class="story-section" id="results">
-  <div class="section-heading reveal">
-    <p class="section-kicker">Live observatory / results</p>
-    <h2>The observatory publishes the current measurement state.</h2>
-    <p>
+  <div class="section-heading">
+    <p class="section-kicker reveal" data-delay="0">Live observatory / results</p>
+    <h2 class="reveal" data-delay="80">The observatory publishes the current measurement state.</h2>
+    <p class="reveal" data-delay="160">
       Readouts, bundle recency, and falsification status stay exposed as part of the same public instrument.
     </p>
   </div>
-  <div class="results-bridge reveal">
-    <a class="results-column" href="{{ route_observatory }}">
+  <div class="results-bridge">
+    <a class="results-column reveal" data-delay="240" href="{{ route_observatory }}">
       <p class="results-label">Observatory</p>
       <strong id="live-home-model-count">{{ model_count if model_count is defined else "0" }}</strong>
       <span>tracked systems inside the current field</span>
     </a>
-    <a class="results-column" href="{{ route_timeseries }}">
+    <a class="results-column reveal" data-delay="320" href="{{ route_timeseries }}">
       <p class="results-label">Aggregate score</p>
       <strong id="live-home-score">
         {{ "%.3f"|format(home_signal_score if home_signal_score is defined else 0.0) }}
@@ -25,21 +25,21 @@
         {% endif %}
       </span>
     </a>
-    <a class="results-column" href="{{ route_falsification }}">
+    <a class="results-column reveal" data-delay="400" href="{{ route_falsification }}">
       <p class="results-label">Falsification</p>
       <strong id="live-home-status" class="results-value-status">{{ falsification_status|upper if falsification_status is defined else "LIVE" }}</strong>
       <span>dimensional sweep tested against published thresholds</span>
     </a>
   </div>
-  <div class="results-detail reveal">
+  <div class="results-detail">
     <div class="results-copy">
-      <p class="results-mini-kicker">Current read</p>
-      <h3>A signal where classical baselines show none.</h3>
-      <p>
+      <p class="results-mini-kicker reveal" data-delay="480">Current read</p>
+      <h3 class="reveal" data-delay="560">A signal where classical baselines show none.</h3>
+      <p class="reveal" data-delay="640">
         The entanglement gap separates terminal from instrumental continuation where five classical baselines find nothing. Evidence, thresholds, and update history stay visible so the finding can be challenged directly.
       </p>
     </div>
-    <div class="results-list" id="landing-model-briefs">
+    <div class="results-list reveal" data-delay="720" id="landing-model-briefs">
       <p class="muted">Loading current model readouts...</p>
     </div>
   </div>

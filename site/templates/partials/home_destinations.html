@@ -1,12 +1,12 @@
 <section class="story-section" id="featured-destinations">
-  <div class="section-heading reveal">
-    <p class="section-kicker">Featured destinations</p>
-    <h2>Start with the explainer, then explore the research pages.</h2>
-    <p>
+  <div class="section-heading">
+    <p class="section-kicker reveal" data-delay="0">Featured destinations</p>
+    <h2 class="reveal" data-delay="80">Start with the explainer, then explore the research pages.</h2>
+    <p class="reveal" data-delay="160">
       Explainer, paper, patent status, reproducibility hub, research directions, and the organizations shaping the field.
     </p>
   </div>
-  <div class="reveal">
+  <div class="reveal" data-delay="240">
     {% set current_destination_key = None %}
     {% include "partials/research_destinations_sequence.html" %}
   </div>

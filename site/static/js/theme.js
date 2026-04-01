@@ -100,29 +100,72 @@
       }
     });
 
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (!("IntersectionObserver" in window)) {
       elements.forEach(function (element) {
         element.classList.add("is-visible");
       });
       return;
     }
 
+    function finishReveal(element) {
+      element.classList.add("is-visible");
+      element.style.opacity = "";
+      element.style.filter = "";
+      element.style.transform = "";
+    }
+
+    function revealElement(element) {
+      if (element.dataset.revealed === "true") return;
+      element.dataset.revealed = "true";
+
+      const delay = Number(element.dataset.delay || 0);
+      if (typeof element.animate !== "function") {
+        window.setTimeout(function () {
+          finishReveal(element);
+        }, delay);
+        return;
+      }
+
+      element.style.opacity = "0";
+      element.style.filter = "blur(10px)";
+      element.style.transform = "translateY(10px)";
+      element.getBoundingClientRect();
+
+      const animation = element.animate(
+        [
+          { opacity: 0, filter: "blur(10px)", transform: "translateY(10px)" },
+          { opacity: 1, filter: "blur(0px)", transform: "translateY(0px)" },
+        ],
+        {
+          duration: 500,
+          delay: delay,
+          easing: "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+          fill: "forwards",
+        }
+      );
+
+      animation.onfinish = function () {
+        finishReveal(element);
+      };
+      animation.oncancel = function () {
+        finishReveal(element);
+      };
+    }
+
     const observer = new IntersectionObserver(
       function (entries) {
         entries.forEach(function (entry) {
           if (entry.isIntersecting) {
-            entry.target.classList.add("is-visible");
+            revealElement(entry.target);
             observer.unobserve(entry.target);
           }
         });
       },
-      { threshold: 0.14, rootMargin: "0px 0px -30px 0px" }
+      { threshold: 0.15 }
     );
 
     elements.forEach(function (element) {
-      if (!element.classList.contains("is-visible")) {
-        observer.observe(element);
-      }
+      observer.observe(element);
     });
   }
 

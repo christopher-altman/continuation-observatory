@@ -6,14 +6,14 @@
 {% set row_b = names[3:] + names[:3] %}
 {% set row_c = names[6:] + names[:6] %}
 <section class="story-section marquee-section" id="models">
-  <div class="section-heading reveal">
-    <p class="section-kicker">Tracked models</p>
-    <h2>Frontier models under structural measurement.</h2>
-    <p>
+  <div class="section-heading">
+    <p class="section-kicker reveal" data-delay="0">Tracked models</p>
+    <h2 class="reveal" data-delay="80">Frontier models under structural measurement.</h2>
+    <p class="reveal" data-delay="160">
       Each system is measured under the same structural conditions. Different architectures, same falsifiable standard.
     </p>
   </div>
-  <div class="marquee-stack reveal" data-live-marquee="{{ 'true' if is_live else 'false' }}">
+  <div class="marquee-stack reveal" data-delay="240" data-live-marquee="{{ 'true' if is_live else 'false' }}">
     {% for row in [row_a, row_b, row_c] %}
     <div class="marquee-row {% if loop.index is even %}reverse{% endif %}">
       <div class="marquee-track">

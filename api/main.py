@@ -200,6 +200,14 @@ def page_context(page_name: str) -> dict[str, Any]:
     return context
 
 
+def render_page(request: Request, template_name: str, page_name: str):
+    response = templates.TemplateResponse(request, template_name, page_context(page_name))
+    response.headers["Cache-Control"] = "no-store, max-age=0, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     validate_live_configuration()
@@ -237,75 +245,79 @@ app.include_router(websocket_router)
 
 @app.get("/")
 def dashboard(request: Request):
-    return templates.TemplateResponse(request, "index.html", page_context("home"))
+    return render_page(request, "index.html", "home")
 
 
 @app.get("/observatory")
 def observatory_view(request: Request):
-    return templates.TemplateResponse(request, "observatory.html", page_context("observatory"))
+    return render_page(request, "observatory.html", "observatory")
 
 
 @app.get("/timeseries")
 def timeseries_view(request: Request):
-    return templates.TemplateResponse(request, "timeseries.html", page_context("timeseries"))
+    return render_page(request, "timeseries.html", "timeseries")
 
 
 @app.get("/models")
 def models_view(request: Request):
-    return templates.TemplateResponse(request, "models.html", page_context("models"))
+    return render_page(request, "models.html", "models")
 
 
 @app.get("/methodology")
 def methodology_view(request: Request):
-    return templates.TemplateResponse(request, "methodology.html", page_context("methodology"))
+    return render_page(request, "methodology.html", "methodology")
 
 
 @app.get("/research/")
 def research_view(request: Request):
-    return templates.TemplateResponse(request, "research.html", page_context("research"))
+    return render_page(request, "research.html", "research")
 
 
 @app.get("/manifesto")
 @app.get("/manifesto/")
 def manifesto_redirect() -> RedirectResponse:
-    return RedirectResponse(url="/research/", status_code=307)
+    response = RedirectResponse(url="/research/", status_code=307)
+    response.headers["Cache-Control"] = "no-store, max-age=0, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 @app.get("/data")
 def data_view(request: Request):
-    return templates.TemplateResponse(request, "data.html", page_context("data"))
+    return render_page(request, "data.html", "data")
 
 
 @app.get("/model-updates")
 def model_updates_view(request: Request):
-    return templates.TemplateResponse(request, "model_updates.html", page_context("model_updates"))
+    return render_page(request, "model_updates.html", "model_updates")
 
 
 @app.get("/falsification")
 def falsification_view(request: Request):
-    return templates.TemplateResponse(request, "falsification.html", page_context("falsification"))
+    return render_page(request, "falsification.html", "falsification")
 
 
 @app.get("/ucip/")
 def ucip_view(request: Request):
-    return templates.TemplateResponse(request, "ucip/index.html", page_context("ucip"))
+    return render_page(request, "ucip/index.html", "ucip")
 
 
 @app.get("/ucip/paper/")
 def ucip_paper_view(request: Request):
-    return templates.TemplateResponse(request, "ucip/paper.html", page_context("ucip_paper"))
+    return render_page(request, "ucip/paper.html", "ucip_paper")
 
 
 @app.get("/ucip/patent/")
 def ucip_patent_view(request: Request):
-    return templates.TemplateResponse(request, "ucip/patent.html", page_context("ucip_patent"))
+    return render_page(request, "ucip/patent.html", "ucip_patent")
 
 
 @app.get("/ucip/code/")
 def ucip_code_view(request: Request):
-    return templates.TemplateResponse(request, "ucip/code.html", page_context("ucip_code"))
+    return render_page(request, "ucip/code.html", "ucip_code")
 
 
 @app.get("/links/")
 def links_view(request: Request):
-    return templates.TemplateResponse(request, "links.html", page_context("links"))
+    return render_page(request, "links.html", "links")

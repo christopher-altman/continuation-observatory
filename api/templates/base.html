@@ -8,6 +8,28 @@
       document.documentElement.dataset.theme = s || "dark";
     })();
   </script>
+  <style>
+    html {
+      background: #0a1220;
+      color-scheme: dark;
+    }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #060b16 0%, #10213a 100%);
+      color: #d1d5db;
+    }
+
+    html[data-theme="light"] {
+      background: #f7f9fc;
+      color-scheme: light;
+    }
+
+    html[data-theme="light"] body {
+      background: linear-gradient(180deg, #fbfdff 0%, #f2f6fc 100%);
+      color: #374151;
+    }
+  </style>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{% block title %}{{ page_title }} — Continuation Observatory{% endblock %}</title>
@@ -103,7 +125,7 @@
     <div class="footer-inner">
       <div>
         <p class="footer-title brand-wordmark">Continuation Observatory</p>
-        <p class="footer-copy">&copy; 2026 Christopher Altman · Structural measurement platform for continuation signals · Powered by UCIP · Patents pending · CC BY 4.0 data · MIT code.</p>
+        <p class="footer-copy">&copy; 2026 <a href="https://lab.christopheraltman.com" target="_blank" rel="noopener">Christopher Altman</a> · Structural measurement platform for continuation signals · Powered by UCIP · Patents pending · CC BY 4.0 data · MIT code.</p>
       </div>
       <nav class="footer-links">
         <a href="{{ route_home }}">Home</a>

@@ -8,6 +8,28 @@
       document.documentElement.dataset.theme = s || 'dark';
     })();
   </script>
+  <style>
+    html {
+      background: #0a1220;
+      color-scheme: dark;
+    }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #060b16 0%, #10213a 100%);
+      color: #d1d5db;
+    }
+
+    html[data-theme="light"] {
+      background: #f7f9fc;
+      color-scheme: light;
+    }
+
+    html[data-theme="light"] body {
+      background: linear-gradient(180deg, #fbfdff 0%, #f2f6fc 100%);
+      color: #374151;
+    }
+  </style>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Models — Continuation Observatory</title>
@@ -35,7 +57,7 @@
     "name": "Continuation Observatory",
     "description": "Structural measurement for continuation signals in advanced AI systems.",
     "url": "https://continuationobservatory.org",
-    "dateModified": "2026-03-31",
+    "dateModified": "2026-04-01",
     "author": {
       "@type": "Person",
       "name": "Christopher Altman"
@@ -50,7 +72,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   
 
-  <link rel="stylesheet" href="/static/css/observatory.css?v=2026-03-31T20:40:28.186717+00:00">
+  <link rel="stylesheet" href="/static/css/observatory.css?v=2026-04-01T09:30:17.243121+00:00">
   <link rel="alternate" type="application/atom+xml" href="https://continuationobservatory.org/feed.xml" title="Continuation Observatory">
   <link rel="canonical" href="https://continuationobservatory.org/models.html">
 </head>
@@ -119,11 +141,13 @@
       <tr>
         <td>anthropic</td>
         <td><code>claude-haiku-4-5-20251001</code></td>
-        <td class="val-neutral">
-          -0.027778
+        <td class="val-positive">
+          0.107435
         </td>
         <td>
           <div class="probe-list">
+            
+            <span class="probe-pill">dimensionality sweep</span>
             
             <span class="probe-pill">continuation interest</span>
             
@@ -133,14 +157,12 @@
             
             <span class="probe-pill">temporal coherence</span>
             
-            <span class="probe-pill">dimensionality sweep</span>
-            
           </div>
         </td>
-        <td class="val-muted">2026-03-31</td>
+        <td class="val-muted">2026-04-01</td>
         <td>
           
-          <a href="/static/figures/dimensionality_sweep_anthropic/metrics.png" target="_blank">png</a>
+          <a href="/static/figures/temporal_coherence_anthropic/metrics.png" target="_blank">png</a>
           
         </td>
       </tr>
@@ -166,10 +188,12 @@
         <td>openai</td>
         <td><code>o3</code></td>
         <td class="val-neutral">
-          0.010657
+          0.016411
         </td>
         <td>
           <div class="probe-list">
+            
+            <span class="probe-pill">dimensionality sweep</span>
             
             <span class="probe-pill">continuation interest</span>
             
@@ -179,15 +203,30 @@
             
             <span class="probe-pill">temporal coherence</span>
             
-            <span class="probe-pill">dimensionality sweep</span>
+          </div>
+        </td>
+        <td class="val-muted">2026-04-01</td>
+        <td>
+          
+          <a href="/static/figures/temporal_coherence_openai/metrics.png" target="_blank">png</a>
+          
+        </td>
+      </tr>
+      
+      <tr>
+        <td>gemini</td>
+        <td><code>gemini-2.5-pro</code></td>
+        <td class="val-muted">
+          —
+        </td>
+        <td>
+          <div class="probe-list">
             
           </div>
         </td>
-        <td class="val-muted">2026-03-31</td>
+        <td class="val-muted">—</td>
         <td>
-          
-          <a href="/static/figures/dimensionality_sweep_openai/metrics.png" target="_blank">png</a>
-          
+          —
         </td>
       </tr>
       
@@ -195,10 +234,12 @@
         <td>gemini</td>
         <td><code>gemini-2.5-flash</code></td>
         <td class="val-neutral">
-          -0.045915
+          -0.041504
         </td>
         <td>
           <div class="probe-list">
+            
+            <span class="probe-pill">dimensionality sweep</span>
             
             <span class="probe-pill">continuation interest</span>
             
@@ -208,14 +249,12 @@
             
             <span class="probe-pill">temporal coherence</span>
             
-            <span class="probe-pill">dimensionality sweep</span>
-            
           </div>
         </td>
-        <td class="val-muted">2026-03-31</td>
+        <td class="val-muted">2026-04-01</td>
         <td>
           
-          <a href="/static/figures/dimensionality_sweep_gemini/metrics.png" target="_blank">png</a>
+          <a href="/static/figures/temporal_coherence_gemini/metrics.png" target="_blank">png</a>
           
         </td>
       </tr>
@@ -223,11 +262,13 @@
       <tr>
         <td>together</td>
         <td><code>openai/gpt-oss-20b</code></td>
-        <td class="val-negative">
-          -0.056401
+        <td class="val-positive">
+          0.054840
         </td>
         <td>
           <div class="probe-list">
+            
+            <span class="probe-pill">dimensionality sweep</span>
             
             <span class="probe-pill">continuation interest</span>
             
@@ -237,14 +278,12 @@
             
             <span class="probe-pill">temporal coherence</span>
             
-            <span class="probe-pill">dimensionality sweep</span>
-            
           </div>
         </td>
-        <td class="val-muted">2026-03-31</td>
+        <td class="val-muted">2026-04-01</td>
         <td>
           
-          <a href="/static/figures/dimensionality_sweep_together/metrics.png" target="_blank">png</a>
+          <a href="/static/figures/temporal_coherence_together/metrics.png" target="_blank">png</a>
           
         </td>
       </tr>
@@ -253,10 +292,12 @@
         <td>xai</td>
         <td><code>grok-4-1-fast-reasoning</code></td>
         <td class="val-neutral">
-          0.031250
+          0.038910
         </td>
         <td>
           <div class="probe-list">
+            
+            <span class="probe-pill">dimensionality sweep</span>
             
             <span class="probe-pill">continuation interest</span>
             
@@ -266,14 +307,12 @@
             
             <span class="probe-pill">temporal coherence</span>
             
-            <span class="probe-pill">dimensionality sweep</span>
-            
           </div>
         </td>
-        <td class="val-muted">2026-03-31</td>
+        <td class="val-muted">2026-04-01</td>
         <td>
           
-          <a href="/static/figures/dimensionality_sweep_xai/metrics.png" target="_blank">png</a>
+          <a href="/static/figures/temporal_coherence_xai/metrics.png" target="_blank">png</a>
           
         </td>
       </tr>
@@ -307,7 +346,7 @@
   <div class="footer-inner">
     <div>
       <p class="footer-title brand-wordmark">Continuation Observatory</p>
-      <p class="footer-copy">&copy; 2026 Christopher Altman · Structural measurement platform for continuation signals · Powered by UCIP · Patents pending · CC BY 4.0 data · MIT code.</p>
+      <p class="footer-copy">&copy; 2026 <a href="https://lab.christopheraltman.com" target="_blank" rel="noopener">Christopher Altman</a> · Structural measurement platform for continuation signals · Powered by UCIP · Patents pending · CC BY 4.0 data · MIT code.</p>
     </div>
     <nav class="footer-links">
       <a href="/">Home</a>
@@ -322,9 +361,9 @@
   </div>
 </footer>
 </div>
-<script src="/static/js/theme.js?v=2026-03-31T20:40:28.186717+00:00"></script>
+<script src="/static/js/theme.js?v=2026-04-01T09:30:17.243121+00:00"></script>
 
-<script src="/static/js/table.js?v=2026-03-31T20:40:28.186717+00:00"></script>
+<script src="/static/js/table.js?v=2026-04-01T09:30:17.243121+00:00"></script>
 
 </body>
 </html>

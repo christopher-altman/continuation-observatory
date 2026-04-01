@@ -10,7 +10,7 @@ def test_alert_engine_emits_expected_rules():
     events = engine.check_all(
         {"value": 0.9, "delta_6h": 0.08},
         {"model-a": {"cii": 0.85}},
-        {"model-a": {"failure_rate": 0.4}},
+        {"model-a": {"failure_rate": 0.4, "failed_attempts": 2}},
     )
     event_types = {event["event_type"] for event in events}
     assert "pcii_rapid_rise" in event_types

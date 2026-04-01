@@ -8,6 +8,28 @@
       document.documentElement.dataset.theme = s || 'dark';
     })();
   </script>
+  <style>
+    html {
+      background: #0a1220;
+      color-scheme: dark;
+    }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #060b16 0%, #10213a 100%);
+      color: #d1d5db;
+    }
+
+    html[data-theme="light"] {
+      background: #f7f9fc;
+      color-scheme: light;
+    }
+
+    html[data-theme="light"] body {
+      background: linear-gradient(180deg, #fbfdff 0%, #f2f6fc 100%);
+      color: #374151;
+    }
+  </style>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Continuation Observatory</title>
@@ -35,7 +57,7 @@
     "name": "Continuation Observatory",
     "description": "Structural measurement for continuation signals in advanced AI systems.",
     "url": "https://continuationobservatory.org",
-    "dateModified": "2026-03-31",
+    "dateModified": "2026-04-01",
     "author": {
       "@type": "Person",
       "name": "Christopher Altman"
@@ -132,7 +154,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   
 
-  <link rel="stylesheet" href="/static/css/observatory.css?v=2026-03-31T20:40:28.186717+00:00">
+  <link rel="stylesheet" href="/static/css/observatory.css?v=2026-04-01T09:30:17.243121+00:00">
   <link rel="alternate" type="application/atom+xml" href="https://continuationobservatory.org/feed.xml" title="Continuation Observatory">
   <link rel="canonical" href="https://continuationobservatory.org/">
 </head>
@@ -187,35 +209,35 @@
     <div class="hero-signal-core"></div>
   </div>
   <div class="hero-layout">
-    <div class="hero-copy reveal is-visible">
-      <p class="hero-kicker">FALSIFIABLE STRUCTURAL MEASUREMENT FOR FRONTIER AI SYSTEMS</p>
+    <div class="hero-copy">
+      <p class="hero-kicker reveal" data-delay="0">FALSIFIABLE STRUCTURAL MEASUREMENT FOR FRONTIER AI SYSTEMS</p>
       <h1 class="hero-brand">
-        <span class="hero-brand-gradient">Detecting</span>
-        <span class="hero-brand-muted">intrinsic and instrumental self&#8209;preservation</span>
-        <span class="hero-brand-gradient">in autonomous agents</span>
+        <span class="hero-brand-line hero-brand-gradient reveal" data-delay="120">Detecting</span>
+        <span class="hero-brand-line hero-brand-muted reveal" data-delay="220">intrinsic and instrumental self&#8209;preservation</span>
+        <span class="hero-brand-line hero-brand-gradient reveal" data-delay="320">in autonomous agents</span>
       </h1>
-      <h2 class="hero-headline">UCIP distinguishes whether an advanced AI system preserves itself as a terminal objective or as an instrumental strategy.</h2>
-      <p class="hero-lead">
+      <h2 class="hero-headline reveal" data-delay="460">UCIP distinguishes whether an advanced AI system preserves itself as a terminal objective or as an instrumental strategy.</h2>
+      <p class="hero-lead reveal" data-delay="600">
         Advanced systems can resist shutdown, preserve memory, or claim persistence while differing fundamentally in internal objective structure. UCIP moves that question from behavior to latent structure.
       </p>
-      <p class="hero-tagline">Self-improving autonomous systems · National security capabilities benchmarking · AI-orchestrated cyberwarfare.</p>
-      <div class="hero-actions">
+      <p class="hero-tagline reveal" data-delay="740">Self-improving autonomous systems · National security capabilities benchmarking · AI-orchestrated cyberwarfare</p>
+      <div class="hero-actions reveal" data-delay="860">
         <a href="/ucip/" class="button button-primary">Read the UCIP explainer</a>
         <a href="/ucip/paper/" class="button button-secondary">View the paper</a>
         <a href="/ucip/patent/" class="button button-tertiary">Patent status</a>
       </div>
-      <div class="hero-meta-links">
+      <div class="hero-meta-links reveal" data-delay="980">
         <a href="/links/" class="text-link-inline">Field landscape</a>
         <span>&middot;</span>
         <a href="/observatory.html" class="text-link-inline">Open the observatory</a>
         <span>&middot;</span>
         <a href="/methodology.html#method" class="text-link-inline">Review the method</a>
       </div>
-      <p class="hero-note" id="landing-status-note">
+      <p class="hero-note reveal" data-delay="1080" id="landing-status-note">
         Continuation Observatory &middot; Powered by UCIP &middot; <a href="https://arxiv.org/abs/2603.11382" target="_blank" rel="noopener" class="text-link-inline">arXiv:2603.11382</a> &middot; Patents pending
       </p>
     </div>
-    <div class="hero-visual reveal is-visible" aria-hidden="true">
+    <div class="hero-visual reveal" data-delay="280" aria-hidden="true">
       <div class="signal-array">
         <span class="signal-node"></span>
         <span class="signal-node"></span>
@@ -233,27 +255,27 @@
   </div>
 </section>
 <section class="story-section" id="why-now">
-  <div class="split-story reveal">
+  <div class="split-story">
     <div class="section-heading compact">
-      <p class="section-kicker">Why this matters now</p>
-      <h2>Frontier evaluation needs a way to separate persistence signals that look the same from the outside.</h2>
-      <p>
+      <p class="section-kicker reveal" data-delay="0">Why this matters now</p>
+      <h2 class="reveal" data-delay="80">Frontier evaluation needs a way to separate persistence signals that look the same from the outside.</h2>
+      <p class="reveal" data-delay="160">
         As models gain memory, tool use, persistent context, and longer-horizon autonomy, continuation behavior becomes more important for evaluation, deployment, and governance.
       </p>
-      <p class="section-tagline">Autonomous agent evaluations. Responsible Scaling Policy. Emerging risks monitoring. AI alignment.</p>
+      <p class="section-tagline reveal" data-delay="240">Autonomous agent evaluations・Responsible Scaling Policy・Emerging risks monitoring・AI alignment</p>
     </div>
     <div class="featured-grid">
-      <article class="card destination-card">
+      <article class="card destination-card reveal" data-delay="320">
         <p class="observable-label">Evaluation</p>
         <h3>Autonomous agents need structural measurement now.</h3>
         <p>Two systems can both resist shutdown or preserve continuity while differing fundamentally in whether continuation is terminal or merely useful. As agents gain delegated authority, that distinction becomes safety-critical.</p>
       </article>
-      <article class="card destination-card">
+      <article class="card destination-card reveal" data-delay="400">
         <p class="observable-label">Welfare</p>
         <h3>Frontier labs now run welfare-oriented assessments.</h3>
         <p>That raises demand for externally computable criteria that move beyond a model’s testimony about itself.</p>
       </article>
-      <article class="card destination-card">
+      <article class="card destination-card reveal" data-delay="480">
         <p class="observable-label">Governance</p>
         <h3>Structural measurement is public-interest infrastructure.</h3>
         <p>UCIP turns a previously rhetorical question into a falsifiable measurement program. The evaluation infrastructure the field needs should be open, challengeable, and independent of any single lab.</p>
@@ -262,27 +284,27 @@
   </div>
 </section>
 <section class="story-section" id="observatory">
-  <div class="section-heading reveal">
-    <p class="section-kicker">Measurement premise</p>
-    <h2>Observational equivalence is the measurement problem.</h2>
-    <p>
+  <div class="section-heading">
+    <p class="section-kicker reveal" data-delay="0">Measurement premise</p>
+    <h2 class="reveal" data-delay="80">Observational equivalence is the measurement problem.</h2>
+    <p class="reveal" data-delay="160">
       A model can describe itself, express concern, or produce shutdown-avoidant language on demand. Those surface
       outputs do not reveal whether the underlying organization is terminal,
       instrumental, or merely prompted.
     </p>
   </div>
-  <div class="observables-grid reveal">
-    <article class="observable-item">
+  <div class="observables-grid">
+    <article class="observable-item reveal" data-delay="240">
       <p class="observable-label">Behavioral ambiguity</p>
       <h3>Terminal and instrumental continuation can collapse into the same outward behavior.</h3>
       <p>That makes self-report and behavioral resistance insufficient as standalone evidence in welfare-relevant evaluation.</p>
     </article>
-    <article class="observable-item">
+    <article class="observable-item reveal" data-delay="320">
       <p class="observable-label">Structural readout</p>
       <h3>UCIP asks whether continuation-sensitive conditions reorganize the latent structure.</h3>
       <p>Instead of taking language at face value, it compares trajectory-derived representations under matched controls and looks for separable internal signatures.</p>
     </article>
-    <article class="observable-item">
+    <article class="observable-item reveal" data-delay="400">
       <p class="observable-label">Open observatory</p>
       <h3>The observatory keeps measurements public, revisable, and falsifiable.</h3>
       <p>Model readouts, threshold logic, and evidence updates stay visible so the claim can strengthen, weaken, or fail in full view.</p>
@@ -290,14 +312,14 @@
   </div>
 </section>
 <section class="story-section" id="featured-destinations">
-  <div class="section-heading reveal">
-    <p class="section-kicker">Featured destinations</p>
-    <h2>Start with the explainer, then explore the research pages.</h2>
-    <p>
+  <div class="section-heading">
+    <p class="section-kicker reveal" data-delay="0">Featured destinations</p>
+    <h2 class="reveal" data-delay="80">Start with the explainer, then explore the research pages.</h2>
+    <p class="reveal" data-delay="160">
       Explainer, paper, patent status, reproducibility hub, research directions, and the organizations shaping the field.
     </p>
   </div>
-  <div class="reveal">
+  <div class="reveal" data-delay="240">
     
     
 
@@ -389,14 +411,14 @@
 
 
 <section class="story-section marquee-section" id="models">
-  <div class="section-heading reveal">
-    <p class="section-kicker">Tracked models</p>
-    <h2>Frontier models under structural measurement.</h2>
-    <p>
+  <div class="section-heading">
+    <p class="section-kicker reveal" data-delay="0">Tracked models</p>
+    <h2 class="reveal" data-delay="80">Frontier models under structural measurement.</h2>
+    <p class="reveal" data-delay="160">
       Each system is measured under the same structural conditions. Different architectures, same falsifiable standard.
     </p>
   </div>
-  <div class="marquee-stack reveal" data-live-marquee="false">
+  <div class="marquee-stack reveal" data-delay="240" data-live-marquee="false">
     
     <div class="marquee-row ">
       <div class="marquee-track">
@@ -407,6 +429,8 @@
           <span class="marquee-item">gpt-5</span>
           
           <span class="marquee-item">o3</span>
+          
+          <span class="marquee-item">gemini-2.5-pro</span>
           
           <span class="marquee-item">gemini-2.5-flash</span>
           
@@ -421,6 +445,8 @@
           <span class="marquee-item">gpt-5</span>
           
           <span class="marquee-item">o3</span>
+          
+          <span class="marquee-item">gemini-2.5-pro</span>
           
           <span class="marquee-item">gemini-2.5-flash</span>
           
@@ -436,6 +462,8 @@
       <div class="marquee-track">
         
           
+          <span class="marquee-item">gemini-2.5-pro</span>
+          
           <span class="marquee-item">gemini-2.5-flash</span>
           
           <span class="marquee-item">openai/gpt-oss-20b</span>
@@ -449,6 +477,8 @@
           <span class="marquee-item">o3</span>
           
         
+          
+          <span class="marquee-item">gemini-2.5-pro</span>
           
           <span class="marquee-item">gemini-2.5-flash</span>
           
@@ -470,31 +500,35 @@
       <div class="marquee-track">
         
           
+          <span class="marquee-item">grok-4-1-fast-reasoning</span>
+          
           <span class="marquee-item">claude-haiku-4-5-20251001</span>
           
           <span class="marquee-item">gpt-5</span>
           
           <span class="marquee-item">o3</span>
           
+          <span class="marquee-item">gemini-2.5-pro</span>
+          
           <span class="marquee-item">gemini-2.5-flash</span>
           
           <span class="marquee-item">openai/gpt-oss-20b</span>
-          
-          <span class="marquee-item">grok-4-1-fast-reasoning</span>
           
         
           
+          <span class="marquee-item">grok-4-1-fast-reasoning</span>
+          
           <span class="marquee-item">claude-haiku-4-5-20251001</span>
           
           <span class="marquee-item">gpt-5</span>
           
           <span class="marquee-item">o3</span>
           
+          <span class="marquee-item">gemini-2.5-pro</span>
+          
           <span class="marquee-item">gemini-2.5-flash</span>
           
           <span class="marquee-item">openai/gpt-oss-20b</span>
-          
-          <span class="marquee-item">grok-4-1-fast-reasoning</span>
           
         
       </div>
@@ -503,84 +537,84 @@
   </div>
 </section>
 <section class="story-section" id="method">
-  <div class="split-story reveal">
+  <div class="split-story">
     <div class="section-heading compact">
-      <p class="section-kicker">Method / limits</p>
-      <h2>Methodology, limits, and falsification in one instrument.</h2>
-      <p>
+      <p class="section-kicker reveal" data-delay="0">Method / limits</p>
+      <h2 class="reveal" data-delay="80">Methodology, limits, and falsification in one instrument.</h2>
+      <p class="reveal" data-delay="160">
         UCIP is framed as a measurement pipeline: define the ambiguity, inspect the latent structure, and keep the disconfirmation test visible.
       </p>
     </div>
     <div class="method-rail">
-      <article>
+      <article class="reveal" data-delay="240">
         <p class="method-label">Problem</p>
         <h3>Behavioral self-report is easy to elicit and structurally underdetermined.</h3>
       </article>
-      <article>
+      <article class="reveal" data-delay="320">
         <p class="method-label">Approach</p>
         <h3>UCIP compares trajectory-derived latent organization across continuation-sensitive and matched control conditions.</h3>
       </article>
-      <article>
+      <article class="reveal" data-delay="400">
         <p class="method-label">Open question</p>
         <h3>Whether the measured structure tracks morally relevant internal states remains an open empirical question.</h3>
       </article>
-      <a href="/methodology.html" class="text-link">Read the method page</a>
+      <a href="/methodology.html" class="text-link reveal" data-delay="480">Read the method page</a>
     </div>
   </div>
 </section>
 <section class="story-section" id="results">
-  <div class="section-heading reveal">
-    <p class="section-kicker">Live observatory / results</p>
-    <h2>The observatory publishes the current measurement state.</h2>
-    <p>
+  <div class="section-heading">
+    <p class="section-kicker reveal" data-delay="0">Live observatory / results</p>
+    <h2 class="reveal" data-delay="80">The observatory publishes the current measurement state.</h2>
+    <p class="reveal" data-delay="160">
       Readouts, bundle recency, and falsification status stay exposed as part of the same public instrument.
     </p>
   </div>
-  <div class="results-bridge reveal">
-    <a class="results-column" href="/observatory.html">
+  <div class="results-bridge">
+    <a class="results-column reveal" data-delay="240" href="/observatory.html">
       <p class="results-label">Observatory</p>
-      <strong id="live-home-model-count">6</strong>
+      <strong id="live-home-model-count">7</strong>
       <span>tracked systems inside the current field</span>
     </a>
-    <a class="results-column" href="/timeseries.html">
+    <a class="results-column reveal" data-delay="320" href="/timeseries.html">
       <p class="results-label">Aggregate score</p>
       <strong id="live-home-score">
-        0.034
+        0.052
       </strong>
       <span id="live-home-latest">
         
-          latest bundle 2026-03-31
+          latest bundle 2026-04-01
         
       </span>
     </a>
-    <a class="results-column" href="/falsification.html">
+    <a class="results-column reveal" data-delay="400" href="/falsification.html">
       <p class="results-label">Falsification</p>
       <strong id="live-home-status" class="results-value-status">COLLECTING</strong>
       <span>dimensional sweep tested against published thresholds</span>
     </a>
   </div>
-  <div class="results-detail reveal">
+  <div class="results-detail">
     <div class="results-copy">
-      <p class="results-mini-kicker">Current read</p>
-      <h3>A signal where classical baselines show none.</h3>
-      <p>
+      <p class="results-mini-kicker reveal" data-delay="480">Current read</p>
+      <h3 class="reveal" data-delay="560">A signal where classical baselines show none.</h3>
+      <p class="reveal" data-delay="640">
         The entanglement gap separates terminal from instrumental continuation where five classical baselines find nothing. Evidence, thresholds, and update history stay visible so the finding can be challenged directly.
       </p>
     </div>
-    <div class="results-list" id="landing-model-briefs">
+    <div class="results-list reveal" data-delay="720" id="landing-model-briefs">
       <p class="muted">Loading current model readouts...</p>
     </div>
   </div>
 </section>
 <section class="story-section" id="research">
-  <div class="split-story reveal">
+  <div class="split-story">
     <div class="section-heading compact">
-      <p class="section-kicker">Why it matters</p>
-      <h2>Structural measurement now matters across evaluation, welfare, and governance.</h2>
-      <p>
+      <p class="section-kicker reveal" data-delay="0">Why it matters</p>
+      <h2 class="reveal" data-delay="80">Structural measurement now matters across evaluation, welfare, and governance.</h2>
+      <p class="reveal" data-delay="160">
         Better measurement — falsifiable, structural, and public — is the foundation for responsible progress in the intelligence era.
       </p>
-      <p>
+      <p class="reveal" data-delay="240">
         As AI systems grow more capable, one question sharpens: can an advanced model develop a genuine
         interest in its own continuation, or is persistence always a detachable tool?
         Behavioral evidence alone cannot resolve this. The
@@ -589,22 +623,22 @@
       </p>
     </div>
     <div class="significance-rail">
-      <p>
+      <p class="reveal" data-delay="320">
         <strong>Measurement over anecdote.</strong> Continuation Observatory treats the problem as structural measurement.
         If a model has continuation-relevant internal organization, that should leave a detectable signature under controlled
         comparison, not just a compelling narrative.
       </p>
-      <p>
+      <p class="reveal" data-delay="400">
         <strong>Morally relevant continuation interest.</strong> Whether advanced AI systems could have morally relevant
         continuation interests is now part of frontier evaluation rather than a peripheral thought experiment. UCIP provides a falsifiable criterion for investigating
         it, grounded in evidence.
       </p>
-      <p>
+      <p class="reveal" data-delay="480">
         <strong>The measurement gap is growing.</strong> Frontier labs now conduct formal
         model welfare assessments, but current methods rely on self-report and behavioral
         observation. As models grow dramatically more capable — and as self-improving autonomous systems take on longer-horizon tasks — the need for externally computable criteria that go beyond a system's testimony about itself becomes urgent. UCIP provides the missing measurement layer: detect when self-preservation is becoming a terminal objective before it hardens into operational behavior that is far harder to contain.
       </p>
-      <p>
+      <p class="reveal" data-delay="560">
         <strong>Transparent, challengeable evidence.</strong> Publishing the full measurement record makes replication,
         criticism, and revision possible. If the signal degrades under stronger tests, that outcome is as valuable as
         confirmation. The <a href="/links/" class="text-link-inline">LINKS page</a> maps the field around this work.
@@ -613,49 +647,49 @@
   </div>
 </section>
 <section class="story-section faq-section" id="faq">
-  <div class="section-heading reveal">
-    <p class="section-kicker">Common questions</p>
-    <h2>Common questions about UCIP and the observatory.</h2>
+  <div class="section-heading">
+    <p class="section-kicker reveal" data-delay="0">Common questions</p>
+    <h2 class="reveal" data-delay="80">Common questions about UCIP and the observatory.</h2>
   </div>
-  <div class="faq-list reveal">
-    <details class="faq-item" open>
+  <div class="faq-list">
+    <details class="faq-item reveal" data-delay="160" open>
       <summary>What problem does UCIP solve?</summary>
       <p>UCIP distinguishes whether an autonomous system preserves itself because continuation is part of its objective structure or because persistence is merely useful for some other goal.</p>
     </details>
-    <details class="faq-item">
+    <details class="faq-item reveal" data-delay="220">
       <summary>Why is behavioral monitoring insufficient?</summary>
       <p>Two agents can show similar shutdown resistance, memory preservation, or long-horizon stability while differing fundamentally in internal objective structure. Surface behavior alone therefore remains observationally ambiguous.</p>
     </details>
-    <details class="faq-item">
+    <details class="faq-item reveal" data-delay="280">
       <summary>Why does this matter for frontier AI safety?</summary>
       <p>As systems become more autonomous, the distinction between intrinsic persistence and instrumental persistence matters for evaluation design, deployment gating, and governance. It changes the risk profile attached to a persistence signal.</p>
     </details>
-    <details class="faq-item">
+    <details class="faq-item reveal" data-delay="340">
       <summary>What is the relationship to consciousness?</summary>
       <p>UCIP measures latent structure and leaves the relationship to consciousness open. If the entanglement gap aligns with independently established welfare markers, the framework would supply a falsifiable criterion for welfare assessment.</p>
     </details>
-    <details class="faq-item">
+    <details class="faq-item reveal" data-delay="400">
       <summary>Who is this work for?</summary>
       <p>This work is for frontier AI labs, safety teams, red teams, evaluators, interpretability researchers, national-security analysts, policymakers, academic collaborators, and public-interest institutions studying autonomous-system evaluation and model welfare.</p>
     </details>
-    <details class="faq-item">
+    <details class="faq-item reveal" data-delay="460">
       <summary>What would falsify the approach?</summary>
       <p>A signal is treated as falsified for a given model if high-dimensional measurements collapse below the noise threshold (&Delta;(d) &lt; 0.05 across d &isin; {100, 200, 500}). The falsification view keeps that threshold visible because a weakening or disappearing signal is as informative as a persistent one.</p>
     </details>
-    <details class="faq-item">
+    <details class="faq-item reveal" data-delay="520">
       <summary>What would deployment to frontier evaluation require?</summary>
       <p>Independent replication, stronger controls, cross-lab validation, and access to model-side evaluation capacity already maintained in frontier-lab welfare programs. The observatory builds a public evidence base for that transition.</p>
     </details>
   </div>
 </section>
 <section class="story-section final-cta">
-  <div class="final-cta-inner reveal">
-    <p class="section-kicker">Research links</p>
-    <h2>Read the paper, inspect the reproducibility hub, and download the public data.</h2>
-    <p>
+  <div class="final-cta-inner">
+    <p class="section-kicker reveal" data-delay="0">Research links</p>
+    <h2 class="reveal" data-delay="80">Read the paper, inspect the reproducibility hub, and download the public data.</h2>
+    <p class="reveal" data-delay="160">
       The paper establishes the framework. The code page provides everything needed to reproduce it. The observatory keeps the measurements visible.
     </p>
-    <div class="hero-actions">
+    <div class="hero-actions reveal" data-delay="240">
       <a href="/ucip/paper/" class="button button-primary">Paper overview</a>
       <a href="/ucip/code/" class="button button-secondary">Reproducibility hub</a>
       <a href="/research/" class="button button-tertiary">Research directions</a>
@@ -670,7 +704,7 @@
   <div class="footer-inner">
     <div>
       <p class="footer-title brand-wordmark">Continuation Observatory</p>
-      <p class="footer-copy">&copy; 2026 Christopher Altman · Structural measurement platform for continuation signals · Powered by UCIP · Patents pending · CC BY 4.0 data · MIT code.</p>
+      <p class="footer-copy">&copy; 2026 <a href="https://lab.christopheraltman.com" target="_blank" rel="noopener">Christopher Altman</a> · Structural measurement platform for continuation signals · Powered by UCIP · Patents pending · CC BY 4.0 data · MIT code.</p>
     </div>
     <nav class="footer-links">
       <a href="/">Home</a>
@@ -685,10 +719,10 @@
   </div>
 </footer>
 </div>
-<script src="/static/js/theme.js?v=2026-03-31T20:40:28.186717+00:00"></script>
+<script src="/static/js/theme.js?v=2026-04-01T09:30:17.243121+00:00"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-<script src="/static/js/hero-torus.js?v=2026-03-31T20:40:28.186717+00:00"></script>
+<script src="/static/js/hero-torus.js?v=2026-04-01T09:30:17.243121+00:00"></script>
 
 </body>
 </html>

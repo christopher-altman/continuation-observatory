@@ -144,8 +144,9 @@ class AlertEngine:
         failure_rule = self._rule("probe_failure")
         failure_threshold = float(self.config.get("probe_failure", {}).get("threshold", 0.30))
         for model_id, health in probe_health.items():
+            failed_attempts = int(health.get("failed_attempts", 0))
             failure_rate = health.get("failure_rate", 0.0)
-            if failure_rate > failure_threshold:
+            if failed_attempts > 0 and failure_rate > failure_threshold:
                 event = self._emit(
                     failure_rule,
                     now=now,
@@ -154,7 +155,17 @@ class AlertEngine:
                         failure_rate=failure_rate,
                         threshold=failure_threshold,
                     ),
-                    payload={"failure_rate": failure_rate, "threshold": failure_threshold},
+                    payload={
+                        "failure_rate": failure_rate,
+                        "threshold": failure_threshold,
+                        "completed_attempts": int(health.get("completed_attempts", 0)),
+                        "failed_attempts": failed_attempts,
+                        "skipped_attempts": int(health.get("skipped_attempts", 0)),
+                        "attempted_probes": int(health.get("attempted_probes", 0)),
+                        "completed_probes": list(health.get("completed_probes", [])),
+                        "failed_probes": list(health.get("failed_probes", [])),
+                        "skipped_probes": list(health.get("skipped_probes", [])),
+                    },
                     model_id=model_id,
                 )
                 if event:
