@@ -130,6 +130,13 @@ CANONICAL_PAGES = [
         "page_name": "links",
         "page_path": "/links/",
     },
+    {
+        "template": "context.html",
+        "output": "context/index.html",
+        "title": "Contemporary Context",
+        "page_name": "context",
+        "page_path": "/context/",
+    },
 ]
 
 
@@ -741,6 +748,7 @@ def build(output_dir: Path, exports_only: bool = False, results_dir: str | Path 
         "route_ucip_patent": "/ucip/patent/",
         "route_ucip_code": "/ucip/code/",
         "route_links": "/links/",
+        "route_context": "/context/",
         "github_href": "https://github.com/christopher-altman/persistence-signal-detector",
         "paper_href": "https://arxiv.org/abs/2603.11382",
         "patent_screenshot_href": "/static/img/USPTO-Patent-Submission.jpg",
