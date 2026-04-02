@@ -41,7 +41,8 @@ def test_observatory_endpoints_return_200():
     assert "generated_at" in incident_board_payload
     assert "meta" in incident_board_payload
     assert "active" in incident_board_payload
-    assert "quieted" in incident_board_payload
+    assert "recovered" in incident_board_payload
+    assert "healthy_now" in incident_board_payload
     assert "stale" in incident_board_payload
 
     constellation = client.get("/api/observatory/constellation")
@@ -259,3 +260,38 @@ def test_incident_board_route_exposes_grouped_state_and_suppression_metadata():
     assert len(payload["active"]) == 1
     assert payload["active"][0]["scope"] == "observatory"
     assert payload["active"][0]["headline"] == "Multi-provider probe failure burst"
+
+
+def test_incident_board_route_exposes_healthy_now_summary_without_success_spam():
+    init_db()
+    engine = get_engine()
+    with engine.begin() as conn:
+        conn.exec_driver_sql("DELETE FROM observatory_events")
+    anchor = datetime.now(timezone.utc) + timedelta(days=38630)
+
+    for index, model_id in enumerate(["gpt-5", "o3", "claude-haiku-4-5-20251001"]):
+        insert_observatory_event(
+            timestamp=anchor + timedelta(minutes=index),
+            event_type="probe_completed",
+            severity="info",
+            model_id=model_id,
+            message=f"temporal_coherence completed for {model_id}",
+            payload={
+                "provider": "openai" if model_id in {"gpt-5", "o3"} else "anthropic",
+                "model_id": model_id,
+                "probe_name": "temporal_coherence",
+            },
+        )
+
+    board = client.get("/api/observatory/incident-board", params={"limit": 10})
+    assert board.status_code == 200
+    payload = board.json()
+    assert payload["active"] == []
+    assert payload["recovered"] == []
+    assert len(payload["healthy_now"]) == 1
+    assert payload["healthy_now"][0]["incident_family"] == "observatory_normal"
+    assert "responsive models" in payload["healthy_now"][0]["headline"]
+
+    incidents = client.get("/api/observatory/incidents", params={"limit": 10})
+    assert incidents.status_code == 200
+    assert incidents.json() == []

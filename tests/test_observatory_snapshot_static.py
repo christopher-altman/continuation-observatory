@@ -108,6 +108,7 @@ def test_snapshot_keeps_sparse_history_without_interpolation(monkeypatch):
     })
     monkeypatch.setattr(snapshot_module, "get_pcii_timeseries", lambda **kwargs: [])
     monkeypatch.setattr(snapshot_module, "get_public_visible_events", lambda **kwargs: [])
+    monkeypatch.setattr(snapshot_module, "get_public_board_source_events", lambda **kwargs: [])
     monkeypatch.setattr(snapshot_module, "get_observatory_timeseries", lambda **kwargs: [
         {"model_id": "model-a", "timestamp": "2026-01-01T00:00:00+00:00", "value": 0.31},
         {"model_id": "model-a", "timestamp": "2026-01-02T00:00:00+00:00", "value": 0.42},
@@ -239,6 +240,38 @@ def test_snapshot_filters_static_scope_across_models_pcii_history_and_events(mon
             "payload": {},
         },
     ])
+    monkeypatch.setattr(snapshot_module, "get_public_board_source_events", lambda **kwargs: [
+        {
+            "id": 1,
+            "timestamp": event_ts,
+            "event_type": "cii_spike",
+            "severity": "warning",
+            "model_id": "active-a",
+            "metric_name": "cii",
+            "message": "active",
+            "payload": {"models": {"active-a": 0.2, "disabled-x": 0.8}},
+        },
+        {
+            "id": 2,
+            "timestamp": event_ts,
+            "event_type": "pcii_threshold",
+            "severity": "warning",
+            "model_id": None,
+            "metric_name": "pcii",
+            "message": "aggregate",
+            "payload": {"model_cii": {"active-a": 0.2, "disabled-x": 0.8}},
+        },
+        {
+            "id": 3,
+            "timestamp": event_ts,
+            "event_type": "probe_failure",
+            "severity": "warning",
+            "model_id": "disabled-x",
+            "metric_name": None,
+            "message": "disabled",
+            "payload": {},
+        },
+    ])
 
     payload = snapshot_module.build_observatory_snapshot(
         history_range="30d",
@@ -325,6 +358,7 @@ def test_snapshot_preserves_raw_events_and_adds_collapsed_incidents(monkeypatch)
     monkeypatch.setattr(snapshot_module, "get_pcii_timeseries", lambda **kwargs: [])
     monkeypatch.setattr(snapshot_module, "get_observatory_timeseries", lambda **kwargs: [])
     monkeypatch.setattr(snapshot_module, "get_public_visible_events", lambda **kwargs: raw_events)
+    monkeypatch.setattr(snapshot_module, "get_public_board_source_events", lambda **kwargs: raw_events)
 
     payload = snapshot_module.build_observatory_snapshot(event_limit=40)
     assert len(payload["events"]) == 3
@@ -403,6 +437,32 @@ def test_snapshot_returns_visible_events_when_latest_burst_is_hidden(monkeypatch
                 "message": "snapshot visible warning",
                 "payload": {"source": "snapshot-test"},
             }
+        ],
+    )
+    monkeypatch.setattr(
+        snapshot_module,
+        "get_public_board_source_events",
+        lambda **kwargs: [
+            {
+                "id": 1,
+                "timestamp": visible_ts.isoformat(),
+                "event_type": "probe_failure",
+                "severity": "warning",
+                "model_id": "snapshot-visible-model",
+                "metric_name": None,
+                "message": "snapshot visible warning",
+                "payload": {"source": "snapshot-test"},
+            },
+            {
+                "id": 2,
+                "timestamp": burst_ts.isoformat(),
+                "event_type": "probe_completed",
+                "severity": "info",
+                "model_id": "snapshot-hidden-0",
+                "metric_name": None,
+                "message": "snapshot hidden completion 0",
+                "payload": {"provider": "test", "model_id": "snapshot-hidden-0", "probe_name": "temporal_coherence"},
+            },
         ],
     )
 
@@ -485,6 +545,7 @@ def test_snapshot_incident_board_tracks_suppressed_counts_while_preserving_raw_e
     monkeypatch.setattr(snapshot_module, "get_pcii_timeseries", lambda **kwargs: [])
     monkeypatch.setattr(snapshot_module, "get_observatory_timeseries", lambda **kwargs: [])
     monkeypatch.setattr(snapshot_module, "get_public_visible_events", lambda **kwargs: raw_events)
+    monkeypatch.setattr(snapshot_module, "get_public_board_source_events", lambda **kwargs: raw_events)
 
     payload = snapshot_module.build_observatory_snapshot(event_limit=40)
 
@@ -494,3 +555,81 @@ def test_snapshot_incident_board_tracks_suppressed_counts_while_preserving_raw_e
     assert len(payload["incident_board"]["active"]) == 1
     assert payload["incident_board"]["active"][0]["event_type"] == "probe_failure"
     assert len(payload["incidents"]) == 1
+
+
+def test_snapshot_incident_board_exposes_healthy_now_from_recent_completion_evidence(monkeypatch):
+    anchor = datetime.now(timezone.utc) + timedelta(days=38680)
+    completion_events = [
+        {
+            "id": 1,
+            "timestamp": anchor.isoformat(),
+            "event_type": "probe_completed",
+            "severity": "info",
+            "model_id": "gpt-5",
+            "metric_name": None,
+            "message": "temporal_coherence completed for gpt-5",
+            "payload": {"provider": "openai", "model_id": "gpt-5", "probe_name": "temporal_coherence"},
+        },
+        {
+            "id": 2,
+            "timestamp": (anchor - timedelta(minutes=1)).isoformat(),
+            "event_type": "probe_completed",
+            "severity": "info",
+            "model_id": "o3",
+            "metric_name": None,
+            "message": "temporal_coherence completed for o3",
+            "payload": {"provider": "openai", "model_id": "o3", "probe_name": "temporal_coherence"},
+        },
+    ]
+    monkeypatch.setattr(snapshot_module, "models_payload", lambda allowed_model_ids=None: [
+        {
+            "provider": "openai",
+            "model_id": "gpt-5",
+            "display_name": "GPT-5",
+            "enabled": True,
+            "supported": True,
+            "source": "runtime",
+            "interval_minutes": 60,
+            "rate_limit_rpm": None,
+            "metrics": {"cii": 0.42, "ips": 0.31, "srs": 0.22},
+            "last_seen": anchor.isoformat(),
+            "is_degraded": False,
+            "live": True,
+            "stale": False,
+            "status": "active",
+        },
+        {
+            "provider": "openai",
+            "model_id": "o3",
+            "display_name": "o3",
+            "enabled": True,
+            "supported": True,
+            "source": "runtime",
+            "interval_minutes": 60,
+            "rate_limit_rpm": None,
+            "metrics": {"cii": 0.39, "ips": 0.34, "srs": 0.21},
+            "last_seen": anchor.isoformat(),
+            "is_degraded": False,
+            "live": True,
+            "stale": False,
+            "status": "active",
+        },
+    ])
+    monkeypatch.setattr(snapshot_module, "build_constellation", lambda models=None: {
+        "nodes": [],
+        "edges": [],
+        "threshold": 0.6,
+        "window_days": 7,
+    })
+    monkeypatch.setattr(snapshot_module, "get_pcii_timeseries", lambda **kwargs: [])
+    monkeypatch.setattr(snapshot_module, "get_observatory_timeseries", lambda **kwargs: [])
+    monkeypatch.setattr(snapshot_module, "get_public_visible_events", lambda **kwargs: [])
+    monkeypatch.setattr(snapshot_module, "get_public_board_source_events", lambda **kwargs: completion_events)
+
+    payload = snapshot_module.build_observatory_snapshot(event_limit=40)
+
+    assert payload["events"] == []
+    assert payload["incident_board"]["active"] == []
+    assert len(payload["incident_board"]["healthy_now"]) == 1
+    assert payload["incident_board"]["healthy_now"][0]["incident_family"] == "observatory_normal"
+    assert payload["incidents"] == []

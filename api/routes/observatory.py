@@ -9,6 +9,7 @@ from observatory.config import load_alerts_config, load_observatory_config
 from observatory.incident_feed import (
     build_public_incident_board,
     build_public_incidents,
+    get_public_board_source_events,
     get_public_feed_config,
     get_public_visible_events,
 )
@@ -94,7 +95,10 @@ def incidents(
     since_dt = datetime.fromisoformat(since) if since else None
     observatory_config = load_observatory_config()
     feed_config = get_public_feed_config(observatory_config)
-    source_events = get_public_visible_events(
+    current_models = models_payload()
+    latest_pcii_series = get_pcii_timeseries(limit=1)
+    latest_pcii_value = latest_pcii_series[-1]["value"] if latest_pcii_series else None
+    source_events = get_public_board_source_events(
         since=since_dt,
         severity=severity,
         model_id=model_id,
@@ -106,6 +110,8 @@ def incidents(
         observatory_config=observatory_config,
         max_items=limit,
         fallback_max_items=min(feed_config["fallback_max_items"], limit),
+        models=current_models,
+        latest_pcii_value=latest_pcii_value,
     )
 
 
@@ -120,7 +126,10 @@ def incident_board(
     since_dt = datetime.fromisoformat(since) if since else None
     observatory_config = load_observatory_config()
     feed_config = get_public_feed_config(observatory_config)
-    source_events = get_public_visible_events(
+    current_models = models_payload()
+    latest_pcii_series = get_pcii_timeseries(limit=1)
+    latest_pcii_value = latest_pcii_series[-1]["value"] if latest_pcii_series else None
+    source_events = get_public_board_source_events(
         since=since_dt,
         severity=severity,
         model_id=model_id,
@@ -131,6 +140,8 @@ def incident_board(
         source_events,
         observatory_config=observatory_config,
         max_items=limit,
+        models=current_models,
+        latest_pcii_value=latest_pcii_value,
     )
 
 

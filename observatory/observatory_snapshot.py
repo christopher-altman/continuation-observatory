@@ -13,6 +13,7 @@ from observatory.config import (
 from observatory.incident_feed import (
     build_public_incident_board,
     build_public_incidents,
+    get_public_board_source_events,
     get_public_feed_config,
     get_public_visible_events,
 )
@@ -396,7 +397,7 @@ def build_observatory_snapshot(
     observatory_config = load_observatory_config()
     feed_config = get_public_feed_config(observatory_config)
     visible_events = get_public_visible_events(limit=event_limit)
-    incident_source_events = get_public_visible_events(limit=feed_config["recent_raw_limit"])
+    incident_source_events = get_public_board_source_events(limit=feed_config["recent_raw_limit"])
     if allowed_model_ids is not None:
         visible_events = _filter_events(visible_events, visible_model_ids, known_model_ids)
         incident_source_events = _filter_events(
@@ -408,11 +409,15 @@ def build_observatory_snapshot(
         incident_source_events,
         observatory_config=observatory_config,
         max_items=feed_config["max_items"],
+        models=models,
+        latest_pcii_value=latest_pcii["value"] if latest_pcii else None,
     )
     incidents = build_public_incidents(
         incident_source_events,
         observatory_config=observatory_config,
         max_items=feed_config["max_items"],
+        models=models,
+        latest_pcii_value=latest_pcii["value"] if latest_pcii else None,
     )
     summary = {
         "history_range": history_range,

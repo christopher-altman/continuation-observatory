@@ -459,7 +459,8 @@
         }, 0),
       },
       active: items,
-      quieted: [],
+      recovered: [],
+      healthy_now: [],
       stale: [],
     };
   }
@@ -477,7 +478,8 @@
         rollup_count: 0,
       },
       active: (board.active || []).map(function (item) { return normalizeIncidentItem(item, "active"); }).filter(Boolean),
-      quieted: (board.quieted || []).map(function (item) { return normalizeIncidentItem(item, "quieted"); }).filter(Boolean),
+      recovered: (board.recovered || []).map(function (item) { return normalizeIncidentItem(item, "recovered"); }).filter(Boolean),
+      healthy_now: (board.healthy_now || []).map(function (item) { return normalizeIncidentItem(item, "healthy_now"); }).filter(Boolean),
       stale: (board.stale || []).map(function (item) { return normalizeIncidentItem(item, "stale"); }).filter(Boolean),
     };
   }
@@ -1250,108 +1252,99 @@
   function renderEvents() {
     const target = qs("#events-root");
     if (!target || !observatoryState.view) return;
-    const board = observatoryState.view.incidentBoard || { active: [], quieted: [], stale: [], meta: {} };
+    const board = observatoryState.view.incidentBoard || { active: [], recovered: [], healthy_now: [], stale: [], meta: {} };
     const sections = [
       {
         key: "active",
         title: "Active incidents",
-        empty: "No active public incidents in the current board window.",
         items: board.active || [],
       },
       {
-        key: "quieted",
-        title: "Quieted",
-        empty: "No quieted incidents in the current board window.",
-        items: board.quieted || [],
+        key: "recovered",
+        title: "Recovered",
+        items: board.recovered || [],
+      },
+      {
+        key: "healthy_now",
+        title: "Healthy now",
+        items: board.healthy_now || [],
       },
       {
         key: "stale",
         title: "Older / stale",
-        empty: "No stale public incidents retained in the current board window.",
         items: board.stale || [],
       },
-    ];
-    const suppressedReasons = (board.meta && board.meta.suppressed_reasons) || [];
-    const summaryBits = [];
-    if (board.meta && typeof board.meta.visible_event_count === "number") {
-      summaryBits.push(`${board.meta.visible_event_count} visible source events`);
-    }
-    if (board.meta && typeof board.meta.rollup_count === "number") {
-      summaryBits.push(`${board.meta.rollup_count} rollups`);
-    }
-    if (board.meta && board.meta.suppressed_count) {
-      summaryBits.push(`${board.meta.suppressed_count} suppressed`);
-    }
+    ].filter(function (section) {
+      return Array.isArray(section.items) && section.items.length > 0;
+    });
     target.innerHTML = `
       <div class="incident-board">
-        <div class="incident-board-meta">
-          <div class="incident-board-summary">${summaryBits.join(" · ")}</div>
-          ${suppressedReasons.length ? `
-            <div class="incident-board-suppressed">
-              Suppressed publicly: ${suppressedReasons.map(function (entry) {
-                return `${entry.reason} (${entry.count})`;
-              }).join(" · ")}
-            </div>
-          ` : ""}
-        </div>
-        ${sections.map(function (section) {
+        ${sections.length ? sections.map(function (section) {
           return `
             <section class="incident-section incident-section-${section.key}">
               <div class="incident-section-head">
                 <div class="summary-label">${section.title}</div>
-                <span class="mono-muted">${section.items.length}</span>
               </div>
-              ${section.items.length ? `
-                <div class="incident-list">
-                  ${section.items.map(function (item) {
-                    const level = item.severity === "critical" ? "red" : item.severity === "alert" || item.severity === "warning" ? "amber" : "green";
-                    const details = [];
-                    if (item.latest_timestamp) details.push(`latest ${formatCompactDate(item.latest_timestamp)}`);
-                    if (item.repeat_count > 1) details.push(`${item.repeat_count} observations`);
-                    if (item.first_seen && item.first_seen !== item.latest_timestamp) details.push(`since ${formatCompactDate(item.first_seen)}`);
-                    if (item.affected_providers && item.affected_providers.length) details.push(`${item.affected_providers.length} provider${item.affected_providers.length === 1 ? "" : "s"}`);
-                    if (item.affected_models && item.affected_models.length) details.push(`${item.affected_models.length} model${item.affected_models.length === 1 ? "" : "s"}`);
-                    const detailBlocks = [];
-                    if (item.affected_providers && item.affected_providers.length > 1) {
-                      detailBlocks.push(`
-                        <details class="incident-details">
-                          <summary>Affected providers</summary>
-                          <div class="incident-token-list">${item.affected_providers.map(function (provider) {
-                            return `<span class="incident-token">${provider}</span>`;
-                          }).join("")}</div>
-                        </details>
-                      `);
-                    }
-                    if (item.affected_models && item.affected_models.length > 1) {
-                      detailBlocks.push(`
-                        <details class="incident-details">
-                          <summary>Affected models</summary>
-                          <div class="incident-token-list">${item.affected_models.map(function (modelId) {
-                            return `<span class="incident-token">${modelId}</span>`;
-                          }).join("")}</div>
-                        </details>
-                      `);
-                    }
-                    return `
-                      <article class="incident-row severity-${item.severity || "info"} status-${item.status || "active"}">
-                        <div class="incident-row-top">
-                          <div class="incident-row-headline">
-                            <span class="status-chip ${level}">${String(item.severity || "info").toUpperCase()}</span>
-                            <span class="incident-status">${String(item.status || "active").toUpperCase()}</span>
-                            <h3>${item.headline}</h3>
-                          </div>
+              <div class="incident-list">
+                ${section.items.map(function (item) {
+                  const positiveState = item.status === "healthy_now" || item.status === "recovered";
+                  const level = positiveState
+                    ? "green"
+                    : item.severity === "critical" ? "red" : item.severity === "alert" || item.severity === "warning" ? "amber" : "green";
+                  const chipLabel = item.status === "healthy_now"
+                    ? "HEALTHY"
+                    : item.status === "recovered"
+                      ? "RECOVERED"
+                      : String(item.severity || "info").toUpperCase();
+                  const statusLabel = positiveState
+                    ? ""
+                    : String(item.status || "active").replace(/_/g, " ").toUpperCase();
+                  const details = [];
+                  if (item.latest_timestamp) details.push(`latest ${formatCompactDate(item.latest_timestamp)}`);
+                  if (item.repeat_count > 1 && item.status !== "healthy_now") details.push(`${item.repeat_count} observations`);
+                  if (item.first_seen && item.first_seen !== item.latest_timestamp && item.status !== "healthy_now") details.push(`since ${formatCompactDate(item.first_seen)}`);
+                  if (item.affected_providers && item.affected_providers.length) details.push(`${item.affected_providers.length} provider${item.affected_providers.length === 1 ? "" : "s"}`);
+                  if (item.affected_models && item.affected_models.length) details.push(`${item.affected_models.length} model${item.affected_models.length === 1 ? "" : "s"}`);
+                  const detailBlocks = [];
+                  if (item.affected_providers && item.affected_providers.length > 1) {
+                    detailBlocks.push(`
+                      <details class="incident-details">
+                        <summary>Affected providers</summary>
+                        <div class="incident-token-list">${item.affected_providers.map(function (provider) {
+                          return `<span class="incident-token">${provider}</span>`;
+                        }).join("")}</div>
+                      </details>
+                    `);
+                  }
+                  if (item.affected_models && item.affected_models.length > 1) {
+                    detailBlocks.push(`
+                      <details class="incident-details">
+                        <summary>Affected models</summary>
+                        <div class="incident-token-list">${item.affected_models.map(function (modelId) {
+                          return `<span class="incident-token">${modelId}</span>`;
+                        }).join("")}</div>
+                      </details>
+                    `);
+                  }
+                  return `
+                    <article class="incident-row severity-${item.severity || "info"} status-${item.status || "active"}">
+                      <div class="incident-row-top">
+                        <div class="incident-row-headline">
+                          <span class="status-chip ${level}">${chipLabel}</span>
+                          ${statusLabel ? `<span class="incident-status">${statusLabel}</span>` : ""}
+                          <h3>${item.headline}</h3>
                         </div>
-                        <p class="incident-summary">${item.summary}</p>
-                        <div class="incident-meta">${details.join(" · ")}</div>
-                        ${detailBlocks.join("")}
-                      </article>
-                    `;
-                  }).join("")}
-                </div>
-              ` : `<p class="muted incident-empty">${section.empty}</p>`}
+                      </div>
+                      <p class="incident-summary">${item.summary}</p>
+                      <div class="incident-meta">${details.join(" · ")}</div>
+                      ${detailBlocks.join("")}
+                    </article>
+                  `;
+                }).join("")}
+              </div>
             </section>
           `;
-        }).join("")}
+        }).join("") : `<p class="muted incident-empty">No recent public board items are visible in the current window.</p>`}
       </div>
     `;
   }

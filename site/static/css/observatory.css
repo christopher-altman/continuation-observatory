@@ -2181,6 +2181,17 @@ textarea {
   background: rgba(116, 212, 161, 0.72);
 }
 
+.incident-row.status-recovered,
+.incident-row.status-healthy_now {
+  border-color: rgba(116, 212, 161, 0.12);
+  background: linear-gradient(180deg, rgba(9, 19, 18, 0.92), rgba(8, 16, 18, 0.72));
+}
+
+.incident-row.status-recovered::before,
+.incident-row.status-healthy_now::before {
+  background: rgba(116, 212, 161, 0.88);
+}
+
 .incident-row-headline {
   display: flex;
   flex-wrap: wrap;
@@ -2202,6 +2213,11 @@ textarea {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(203, 225, 255, 0.6);
+}
+
+.incident-row.status-recovered .incident-status,
+.incident-row.status-healthy_now .incident-status {
+  color: rgba(171, 232, 198, 0.76);
 }
 
 .incident-summary {

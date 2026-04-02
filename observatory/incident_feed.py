@@ -23,14 +23,16 @@ SEVERITY_RANK = {
 
 STATUS_PRIORITY = {
     "active": 0,
-    "quieted": 1,
-    "stale": 2,
+    "recovered": 1,
+    "healthy_now": 2,
+    "stale": 3,
 }
 
 TRANSITION_LABELS = {
     "active": "fresh recurrence inside active window",
-    "quieted": "inferred quieted by non-recurrence inside active window",
-    "stale": "aged beyond quiet window without fresh recurrence",
+    "recovered": "inferred recovery from newer successful probe evidence",
+    "healthy_now": "recent successful probe evidence without contradictory active incidents",
+    "stale": "aged without newer successful recovery evidence",
 }
 
 
@@ -83,6 +85,23 @@ def get_public_visible_events(
         limit=limit,
         event_type=event_type,
         exclude_event_types=hidden_types if hidden_types else None,
+    )
+
+
+def get_public_board_source_events(
+    *,
+    since: datetime | None = None,
+    severity: str | None = None,
+    model_id: str | None = None,
+    limit: int = 50,
+    event_type: str | None = None,
+) -> list[dict[str, Any]]:
+    return get_observatory_events(
+        since=since,
+        severity=severity,
+        model_id=model_id,
+        limit=limit,
+        event_type=event_type,
     )
 
 
@@ -278,12 +297,10 @@ def _cluster_by_time(
     return clusters
 
 
-def _status_for_timestamp(latest_timestamp: datetime, *, now: datetime, feed_config: dict[str, Any]) -> str | None:
+def _window_bucket_for_timestamp(latest_timestamp: datetime, *, now: datetime, feed_config: dict[str, Any]) -> str | None:
     age = now - latest_timestamp
     if age <= timedelta(hours=feed_config["active_window_hours"]):
         return "active"
-    if age <= timedelta(hours=feed_config["quiet_window_hours"]):
-        return "quieted"
     if age <= timedelta(hours=feed_config["stale_after_hours"]):
         return "stale"
     return None
@@ -373,7 +390,7 @@ def _build_scope_groups(
     return scoped_groups or [("observatory", family_key, list(events))]
 
 
-def _headline_and_summary(
+def _negative_headline_and_summary(
     *,
     scope: str,
     incident_family: str,
@@ -465,12 +482,10 @@ def _headline_and_summary(
         summary = f"{repeat_label.capitalize()} across {provider_label}; latest {latest_label}."
     else:
         summary = f"{repeat_label.capitalize()} for {model_label}; latest {latest_label}."
-    if status != "active":
-        summary = f"{summary[:-1]}; state inferred from non-recurrence."
     return headline, summary
 
 
-def _build_board_item(
+def _build_negative_board_item(
     *,
     family_key: tuple[Any, ...],
     scope: str,
@@ -482,8 +497,8 @@ def _build_board_item(
     representative = _select_representative(scoped_events)
     timestamps = [_coerce_timestamp(event.get("timestamp")) for event in scoped_events]
     latest_timestamp = max(timestamps)
-    status = _status_for_timestamp(latest_timestamp, now=now, feed_config=feed_config)
-    if status is None:
+    window_bucket = _window_bucket_for_timestamp(latest_timestamp, now=now, feed_config=feed_config)
+    if window_bucket is None:
         return None
 
     first_seen = min(timestamps)
@@ -501,7 +516,7 @@ def _build_board_item(
         }
     )
     incident_family = _event_family_label(family_key)
-    headline, summary = _headline_and_summary(
+    headline, summary = _negative_headline_and_summary(
         scope=scope,
         incident_family=incident_family,
         representative=representative,
@@ -510,7 +525,7 @@ def _build_board_item(
         latest_timestamp=latest_timestamp,
         affected_models=affected_models,
         affected_providers=affected_providers,
-        status=status,
+        status=window_bucket,
     )
     entity_key = _scope_entity_key(scope, scoped_events, affected_providers)
     incident_id = "|".join(
@@ -526,7 +541,7 @@ def _build_board_item(
         "incident_family": incident_family,
         "scope": scope,
         "severity": representative.get("severity"),
-        "status": status,
+        "status": window_bucket,
         "headline": headline,
         "summary": summary,
         "latest_timestamp": latest_timestamp.isoformat(),
@@ -536,12 +551,13 @@ def _build_board_item(
         "rollup_count": max(0, len(scoped_events) - 1),
         "affected_models": affected_models,
         "affected_providers": affected_providers,
-        "latest_transition": TRANSITION_LABELS[status],
-        "status_hint": "active_fresh" if status == "active" else f"{status}_inferred",
+        "latest_transition": TRANSITION_LABELS[window_bucket],
+        "status_hint": "active_fresh" if window_bucket == "active" else "stale_inferred",
         "event_type": representative.get("event_type"),
         "metric_name": representative.get("metric_name"),
         "payload": representative.get("payload"),
         "model_id": affected_models[0] if scope == "model" and len(affected_models) == 1 else None,
+        "_window_bucket": window_bucket,
     }
 
 
@@ -594,8 +610,8 @@ def _merge_board_items(items: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
         merged_item["affected_models"] = affected_models
         merged_item["affected_providers"] = affected_providers
         merged_item["status"] = representative["status"]
-        merged_item["latest_transition"] = TRANSITION_LABELS[merged_item["status"]]
-        headline, summary = _headline_and_summary(
+        merged_item["latest_transition"] = TRANSITION_LABELS.get(merged_item["status"], "")
+        headline, summary = _negative_headline_and_summary(
             scope=merged_item["scope"],
             incident_family=merged_item["incident_family"],
             representative=merged_item,
@@ -610,6 +626,336 @@ def _merge_board_items(items: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
         merged_item["summary"] = summary
         merged_items.append(merged_item)
     return merged_items
+
+
+def _active_models_context(models: Sequence[dict[str, Any]] | None) -> tuple[set[str], dict[str, str], dict[str, dict[str, Any]]]:
+    if not models:
+        return set(), {}, {}
+    active_models = [model for model in models if str(model.get("status")) == "active"]
+    active_ids = {str(model["model_id"]) for model in active_models if model.get("model_id")}
+    providers = {
+        str(model["model_id"]): str(model.get("provider") or "")
+        for model in active_models
+        if model.get("model_id")
+    }
+    metrics = {
+        str(model["model_id"]): dict(model.get("metrics") or {})
+        for model in active_models
+        if model.get("model_id")
+    }
+    return active_ids, providers, metrics
+
+
+def _success_clusters(
+    completion_events: Sequence[dict[str, Any]],
+    *,
+    burst_window_minutes: int,
+    provider_map: dict[str, str],
+) -> list[dict[str, Any]]:
+    clusters: list[dict[str, Any]] = []
+    for cluster_events in _cluster_by_time(
+        completion_events,
+        burst_window_minutes=burst_window_minutes,
+    ):
+        timestamps = [_coerce_timestamp(event.get("timestamp")) for event in cluster_events]
+        models = sorted({str(event.get("model_id")) for event in cluster_events if event.get("model_id")})
+        providers = sorted({_extract_provider(event, provider_map) for event in cluster_events})
+        probes = sorted(
+            {
+                str((event.get("payload") or {}).get("probe_name"))
+                for event in cluster_events
+                if (event.get("payload") or {}).get("probe_name")
+            }
+        )
+        if not models:
+            continue
+        clusters.append(
+            {
+                "events": list(cluster_events),
+                "latest_timestamp": max(timestamps),
+                "first_seen": min(timestamps),
+                "affected_models": models,
+                "affected_providers": providers,
+                "event_count": len(cluster_events),
+                "probe_count": len(probes),
+            }
+        )
+    return sorted(clusters, key=lambda cluster: cluster["latest_timestamp"], reverse=True)
+
+
+def _current_thresholds() -> tuple[float | None, float | None]:
+    rules = load_alerts_config().get("rules", {})
+    pcii_threshold = rules.get("pcii_threshold", {}).get("threshold")
+    cii_threshold = rules.get("cii_spike", {}).get("threshold")
+    try:
+        pcii_threshold = float(pcii_threshold) if pcii_threshold is not None else None
+    except (TypeError, ValueError):
+        pcii_threshold = None
+    try:
+        cii_threshold = float(cii_threshold) if cii_threshold is not None else None
+    except (TypeError, ValueError):
+        cii_threshold = None
+    return pcii_threshold, cii_threshold
+
+
+def _relevant_models_for_item(item: dict[str, Any], active_model_ids: set[str]) -> set[str]:
+    item_models = {str(model_id) for model_id in item.get("affected_models", []) if model_id}
+    if item_models:
+        return item_models
+    return set(active_model_ids)
+
+
+def _success_supports_scope(
+    cluster: dict[str, Any],
+    item: dict[str, Any],
+    *,
+    active_model_ids: set[str],
+) -> bool:
+    cluster_models = set(cluster["affected_models"])
+    cluster_providers = set(cluster["affected_providers"])
+    item_models = _relevant_models_for_item(item, active_model_ids)
+    item_providers = {str(provider) for provider in item.get("affected_providers", []) if provider}
+
+    if item["scope"] == "observatory":
+        return bool(item_models) and item_models.issubset(cluster_models)
+    if item["scope"] == "provider":
+        return bool(item_providers) and item_providers.issubset(cluster_providers) and (
+            not item_models or item_models.issubset(cluster_models)
+        )
+    if item["scope"] == "model":
+        return bool(item.get("model_id")) and str(item["model_id"]) in cluster_models
+    return False
+
+
+def _threshold_is_cleared(
+    item: dict[str, Any],
+    *,
+    current_model_metrics: dict[str, dict[str, Any]],
+    latest_pcii_value: float | None,
+    active_model_ids: set[str],
+) -> bool:
+    pcii_threshold, cii_threshold = _current_thresholds()
+    if item["incident_family"] == "pcii_state":
+        return (
+            latest_pcii_value is not None
+            and pcii_threshold is not None
+            and float(latest_pcii_value) < pcii_threshold
+        )
+    if item["incident_family"] != "cii_spike":
+        return True
+    if cii_threshold is None:
+        return False
+    relevant_models = _relevant_models_for_item(item, active_model_ids)
+    if not relevant_models:
+        return False
+    for model_id in relevant_models:
+        metrics = current_model_metrics.get(model_id) or {}
+        cii_value = metrics.get("cii")
+        if cii_value is None or float(cii_value) >= cii_threshold:
+            return False
+    return True
+
+
+def _find_recovery_cluster(
+    item: dict[str, Any],
+    success_clusters: Sequence[dict[str, Any]],
+    *,
+    now: datetime,
+    feed_config: dict[str, Any],
+    active_model_ids: set[str],
+    current_model_metrics: dict[str, dict[str, Any]],
+    latest_pcii_value: float | None,
+) -> dict[str, Any] | None:
+    latest_negative = _coerce_timestamp(item["latest_timestamp"])
+    quiet_cutoff = now - timedelta(hours=feed_config["quiet_window_hours"])
+    for cluster in success_clusters:
+        if cluster["latest_timestamp"] <= latest_negative:
+            continue
+        if cluster["latest_timestamp"] < quiet_cutoff:
+            continue
+        if not _success_supports_scope(cluster, item, active_model_ids=active_model_ids):
+            continue
+        if not _threshold_is_cleared(
+            item,
+            current_model_metrics=current_model_metrics,
+            latest_pcii_value=latest_pcii_value,
+            active_model_ids=active_model_ids,
+        ):
+            continue
+        return cluster
+    return None
+
+
+def _contradicts_cluster(item: dict[str, Any], cluster: dict[str, Any]) -> bool:
+    if item.get("status") != "active":
+        return False
+    if item.get("scope") == "observatory":
+        return True
+    item_models = {str(model_id) for model_id in item.get("affected_models", []) if model_id}
+    item_providers = {str(provider) for provider in item.get("affected_providers", []) if provider}
+    cluster_models = set(cluster["affected_models"])
+    cluster_providers = set(cluster["affected_providers"])
+    return bool(item_models & cluster_models or item_providers & cluster_providers)
+
+
+def _healthy_summary_copy(
+    cluster: dict[str, Any],
+    *,
+    active_model_ids: set[str],
+    has_active_incidents: bool,
+) -> tuple[str, str]:
+    responsive_models = len(cluster["affected_models"])
+    provider_count = len(cluster["affected_providers"])
+    latest_label = _format_compact_timestamp(cluster["latest_timestamp"])
+    covers_all_active = bool(active_model_ids) and active_model_ids.issubset(set(cluster["affected_models"]))
+    headline = f"Recent probe cycle completed across {responsive_models} responsive models"
+    if not has_active_incidents and covers_all_active:
+        summary = (
+            f"No active incidents are visible. All currently live models responded in recent probe evidence "
+            f"across {provider_count} providers; latest {latest_label}."
+        )
+    elif not has_active_incidents:
+        summary = (
+            f"No active incidents are visible. Recent probe evidence covered {responsive_models} responsive models "
+            f"across {provider_count} providers; latest {latest_label}."
+        )
+    else:
+        summary = (
+            f"Recent probe evidence covered {responsive_models} responsive models across {provider_count} providers; "
+            f"latest {latest_label}."
+        )
+    return headline, summary
+
+
+def _build_healthy_now_item(
+    cluster: dict[str, Any],
+    *,
+    active_model_ids: set[str],
+    active_negative_items: Sequence[dict[str, Any]],
+) -> dict[str, Any] | None:
+    if not active_model_ids:
+        return None
+    if not (set(cluster["affected_models"]) & active_model_ids):
+        return None
+    if any(item["scope"] == "observatory" for item in active_negative_items):
+        return None
+    if any(_contradicts_cluster(item, cluster) for item in active_negative_items):
+        return None
+    headline, summary = _healthy_summary_copy(
+        cluster,
+        active_model_ids=active_model_ids,
+        has_active_incidents=bool(active_negative_items),
+    )
+    return {
+        "incident_id": f"observatory_normal|observatory|all|{int(cluster['latest_timestamp'].timestamp())}",
+        "incident_family": "observatory_normal",
+        "scope": "observatory",
+        "severity": "info",
+        "status": "healthy_now",
+        "headline": headline,
+        "summary": summary,
+        "latest_timestamp": cluster["latest_timestamp"].isoformat(),
+        "first_seen": cluster["first_seen"].isoformat(),
+        "repeat_count": 1,
+        "source_event_count": cluster["event_count"],
+        "rollup_count": max(0, cluster["event_count"] - 1),
+        "affected_models": list(cluster["affected_models"]),
+        "affected_providers": list(cluster["affected_providers"]),
+        "latest_transition": TRANSITION_LABELS["healthy_now"],
+        "status_hint": "healthy_now_inferred",
+        "event_type": "probe_completed",
+        "metric_name": None,
+        "payload": {
+            "responsive_models": len(cluster["affected_models"]),
+            "responsive_providers": len(cluster["affected_providers"]),
+            "supporting_probe_events": cluster["event_count"],
+        },
+        "model_id": None,
+    }
+
+
+def _build_recovered_item(
+    item: dict[str, Any],
+    cluster: dict[str, Any],
+    *,
+    current_model_metrics: dict[str, dict[str, Any]],
+    latest_pcii_value: float | None,
+) -> dict[str, Any]:
+    recovered = dict(item)
+    recovered.pop("_window_bucket", None)
+    provider_label = _titleize_provider(item["affected_providers"][0] if item.get("affected_providers") else None)
+    latest_success_label = _format_compact_timestamp(cluster["latest_timestamp"])
+    responsive_models = len(cluster["affected_models"])
+    responsive_providers = len(cluster["affected_providers"])
+
+    if item["incident_family"] == "pcii_state":
+        pcii_threshold, _ = _current_thresholds()
+        recovered["incident_family"] = "threshold_cleared"
+        recovered["headline"] = "Observatory PCII returned below alert threshold"
+        recovered["summary"] = (
+            f"Recent probe evidence followed the earlier PCII alert, and current PCII is "
+            f"{float(latest_pcii_value):.3f} below the {float(pcii_threshold):.3f} threshold; latest successful evidence {latest_success_label}."
+            if latest_pcii_value is not None and pcii_threshold is not None
+            else f"Recent probe evidence followed the earlier PCII alert; latest successful evidence {latest_success_label}."
+        )
+    elif item["incident_family"] == "cii_spike" and item["scope"] == "provider":
+        recovered["incident_family"] = "threshold_cleared"
+        recovered["headline"] = f"{provider_label} CII returned below alert threshold"
+        recovered["summary"] = (
+            f"Recent probe evidence followed the earlier {provider_label} threshold spike across "
+            f"{responsive_models} responsive models; latest successful evidence {latest_success_label}."
+        )
+    elif item["incident_family"] == "cii_spike" and item["scope"] == "model":
+        model_label = item["model_id"] or "Model"
+        recovered["incident_family"] = "threshold_cleared"
+        recovered["headline"] = f"{model_label} CII returned below alert threshold"
+        recovered["summary"] = (
+            f"Recent probe evidence followed the earlier {model_label} threshold spike; latest successful evidence "
+            f"{latest_success_label}."
+        )
+    elif item["incident_family"] == "cii_spike":
+        recovered["incident_family"] = "threshold_cleared"
+        recovered["headline"] = "Observatory CII returned below alert threshold"
+        recovered["summary"] = (
+            f"Recent probe evidence followed the earlier observatory threshold spike across {responsive_models} responsive "
+            f"models; latest successful evidence {latest_success_label}."
+        )
+    elif item["scope"] == "provider":
+        recovered["incident_family"] = "provider_recovered"
+        recovered["headline"] = f"{provider_label} recovered in recent probe evidence"
+        recovered["summary"] = (
+            f"Successful recent probe completions were observed across {responsive_models} responsive {provider_label} "
+            f"models and no newer recurrence is visible; latest successful evidence {latest_success_label}."
+        )
+    elif item["scope"] == "model":
+        model_label = item["model_id"] or "Model"
+        recovered["incident_family"] = "model_recovered"
+        recovered["headline"] = f"{model_label} recovered in recent probe evidence"
+        recovered["summary"] = (
+            f"Successful recent probe completions followed the earlier incident and no newer recurrence is visible; "
+            f"latest successful evidence {latest_success_label}."
+        )
+    else:
+        recovered["incident_family"] = "observatory_recovered"
+        recovered["headline"] = f"Recent probe cycle completed across {responsive_models} responsive models"
+        recovered["summary"] = (
+            f"Recent probe evidence followed the earlier observatory incident and covered {responsive_models} responsive "
+            f"models across {responsive_providers} providers; latest successful evidence {latest_success_label}."
+        )
+
+    recovered["severity"] = "info"
+    recovered["status"] = "recovered"
+    recovered["latest_timestamp"] = cluster["latest_timestamp"].isoformat()
+    recovered["affected_models"] = list(cluster["affected_models"])
+    recovered["affected_providers"] = list(cluster["affected_providers"])
+    recovered["latest_transition"] = TRANSITION_LABELS["recovered"]
+    recovered["status_hint"] = "recovered_inferred"
+    recovered["payload"] = {
+        **(recovered.get("payload") or {}),
+        "supporting_probe_events": cluster["event_count"],
+        "supporting_responsive_models": responsive_models,
+    }
+    return recovered
 
 
 def _limit_board_items(
@@ -654,6 +1000,8 @@ def build_public_incident_board(
     observatory_config: dict[str, Any] | None = None,
     now: datetime | None = None,
     max_items: int | None = None,
+    models: Sequence[dict[str, Any]] | None = None,
+    latest_pcii_value: float | None = None,
 ) -> dict[str, Any]:
     observatory_config = observatory_config or load_observatory_config()
     feed_config = get_public_feed_config(observatory_config)
@@ -680,11 +1028,18 @@ def build_public_incident_board(
             continue
         unsuppressed_events.append(event)
 
+    negative_events = [
+        event for event in unsuppressed_events if str(event.get("event_type") or "") != "probe_completed"
+    ]
+    completion_events = [
+        event for event in unsuppressed_events if str(event.get("event_type") or "") == "probe_completed"
+    ]
+
     grouped_events: dict[tuple[Any, ...], list[dict[str, Any]]] = defaultdict(list)
-    for event in unsuppressed_events:
+    for event in negative_events:
         grouped_events[_family_key(event)].append(event)
 
-    board_items: list[dict[str, Any]] = []
+    negative_items: list[dict[str, Any]] = []
     for family_key, family_events in grouped_events.items():
         for cluster in _cluster_by_time(
             family_events,
@@ -697,7 +1052,7 @@ def build_public_incident_board(
                 feed_config=feed_config,
             )
             for scope, scoped_key, scoped_events in scope_groups:
-                item = _build_board_item(
+                item = _build_negative_board_item(
                     family_key=scoped_key,
                     scope=scope,
                     scoped_events=scoped_events,
@@ -706,9 +1061,80 @@ def build_public_incident_board(
                     feed_config=feed_config,
                 )
                 if item is not None:
-                    board_items.append(item)
+                    negative_items.append(item)
 
-    merged_items = _merge_board_items(board_items)
+    merged_negative_items = _merge_board_items(negative_items)
+    active_model_ids, active_providers_by_model, current_model_metrics = _active_models_context(models)
+    for model_id, provider in active_providers_by_model.items():
+        provider_map[model_id] = provider
+    success_clusters = _success_clusters(
+        completion_events,
+        burst_window_minutes=feed_config["burst_window_minutes"],
+        provider_map=provider_map,
+    )
+
+    classified_items: list[dict[str, Any]] = []
+    active_negative_items: list[dict[str, Any]] = []
+    for item in merged_negative_items:
+        if item.get("_window_bucket") == "active":
+            item.pop("_window_bucket", None)
+            item["status"] = "active"
+            item["latest_transition"] = TRANSITION_LABELS["active"]
+            item["status_hint"] = "active_fresh"
+            active_negative_items.append(item)
+            classified_items.append(item)
+            continue
+        recovery_cluster = _find_recovery_cluster(
+            item,
+            success_clusters,
+            now=current_time,
+            feed_config=feed_config,
+            active_model_ids=active_model_ids,
+            current_model_metrics=current_model_metrics,
+            latest_pcii_value=latest_pcii_value,
+        )
+        if recovery_cluster is not None:
+            classified_items.append(
+                _build_recovered_item(
+                    item,
+                    recovery_cluster,
+                    current_model_metrics=current_model_metrics,
+                    latest_pcii_value=latest_pcii_value,
+                )
+            )
+        else:
+            item.pop("_window_bucket", None)
+            item["status"] = "stale"
+            item["latest_transition"] = TRANSITION_LABELS["stale"]
+            item["status_hint"] = "stale_inferred"
+            classified_items.append(item)
+
+    healthy_now_item = None
+    active_cutoff = current_time - timedelta(hours=feed_config["active_window_hours"])
+    for cluster in success_clusters:
+        if cluster["latest_timestamp"] < active_cutoff:
+            continue
+        candidate = _build_healthy_now_item(
+            cluster,
+            active_model_ids=active_model_ids,
+            active_negative_items=active_negative_items,
+        )
+        if candidate is not None:
+            healthy_now_item = candidate
+            break
+
+    merged_items = list(classified_items)
+    if healthy_now_item is not None:
+        merged_items = [
+            item
+            for item in merged_items
+            if not (
+                item.get("status") == "recovered"
+                and item.get("scope") == "observatory"
+                and item.get("incident_family") == "observatory_recovered"
+            )
+        ]
+        merged_items.append(healthy_now_item)
     limited_items = _limit_board_items(
         merged_items,
         max_items=max_items or feed_config["max_items"],
@@ -724,7 +1150,8 @@ def build_public_incident_board(
             total_unsuppressed_events=len(unsuppressed_events),
         ),
         "active": [],
-        "quieted": [],
+        "recovered": [],
+        "healthy_now": [],
         "stale": [],
     }
     for item in limited_items:
@@ -739,7 +1166,7 @@ def _compat_message(item: dict[str, Any]) -> str:
 def flatten_incident_board(board: dict[str, Any]) -> list[dict[str, Any]]:
     items = [
         *board.get("active", []),
-        *board.get("quieted", []),
+        *board.get("recovered", []),
         *board.get("stale", []),
     ]
     flattened: list[dict[str, Any]] = []
@@ -769,6 +1196,8 @@ def build_public_incidents(
     now: datetime | None = None,
     max_items: int | None = None,
     fallback_max_items: int | None = None,
+    models: Sequence[dict[str, Any]] | None = None,
+    latest_pcii_value: float | None = None,
 ) -> list[dict[str, Any]]:
     del fallback_max_items
     board = build_public_incident_board(
@@ -776,5 +1205,7 @@ def build_public_incidents(
         observatory_config=observatory_config,
         now=now,
         max_items=max_items,
+        models=models,
+        latest_pcii_value=latest_pcii_value,
     )
     return flatten_incident_board(board)
