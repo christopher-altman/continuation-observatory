@@ -58,6 +58,7 @@ LIVE_PAGE_PATHS = {
     "models": "/models",
     "methodology": "/methodology",
     "research": "/research/",
+    "context": "/context/",
     "data": "/data",
     "falsification": "/falsification",
     "model_updates": "/model-updates",
@@ -75,6 +76,7 @@ LIVE_PAGE_TITLES = {
     "models": "Models",
     "methodology": "Methodology",
     "research": "Research",
+    "context": "Contemporary Context",
     "data": "Data",
     "falsification": "Falsification Analysis",
     "model_updates": "Model Updates",
@@ -174,6 +176,7 @@ def page_context(page_name: str) -> dict[str, Any]:
         "route_models": "/models",
         "route_methodology": "/methodology",
         "route_research": "/research/",
+        "route_context": "/context/",
         "route_data": "/data",
         "route_ucip": "/ucip/",
         "route_ucip_paper": "/ucip/paper/",
@@ -271,6 +274,11 @@ def methodology_view(request: Request):
 @app.get("/research/")
 def research_view(request: Request):
     return render_page(request, "research.html", "research")
+
+
+@app.get("/context/")
+def context_view(request: Request):
+    return render_page(request, "context.html", "context")
 
 
 @app.get("/manifesto")
