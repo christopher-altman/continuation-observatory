@@ -609,6 +609,7 @@ def _safe_observatory_snapshot(active_model_ids: set[str]) -> dict:
             },
             "models": [],
             "events": [],
+            "incidents": [],
             "constellation": {"nodes": [], "edges": [], "threshold": 0.60, "window_days": 7},
             "pcii_series": [],
             "cii_history": {},

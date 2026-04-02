@@ -5,17 +5,21 @@ from math import sqrt
 from typing import Any
 
 from observatory.config import (
-    load_alerts_config,
     load_models_config,
     load_observatory_config,
     resolve_runtime_model_spec,
     load_weights_config,
 )
+from observatory.incident_feed import (
+    build_public_incident_board,
+    build_public_incidents,
+    get_public_feed_config,
+    get_public_visible_events,
+)
 from observatory.metrics.pcii import compute_pcii
 from observatory.providers.runtime import build_runtime_providers
 from observatory.storage.sqlite_backend import (
     get_latest_observatory_metrics,
-    get_observatory_events,
     get_observatory_timeseries,
     get_pcii_timeseries,
 )
@@ -389,11 +393,27 @@ def build_observatory_snapshot(
     for series in cii_history.values():
         series.sort(key=lambda item: item["timestamp"])
 
-    events = get_observatory_events(limit=event_limit)
-    event_hidden_types = set(load_alerts_config().get("ui", {}).get("default_hide_event_types", []))
-    visible_events = [row for row in events if row["event_type"] not in event_hidden_types]
+    observatory_config = load_observatory_config()
+    feed_config = get_public_feed_config(observatory_config)
+    visible_events = get_public_visible_events(limit=event_limit)
+    incident_source_events = get_public_visible_events(limit=feed_config["recent_raw_limit"])
     if allowed_model_ids is not None:
         visible_events = _filter_events(visible_events, visible_model_ids, known_model_ids)
+        incident_source_events = _filter_events(
+            incident_source_events,
+            visible_model_ids,
+            known_model_ids,
+        )
+    incident_board = build_public_incident_board(
+        incident_source_events,
+        observatory_config=observatory_config,
+        max_items=feed_config["max_items"],
+    )
+    incidents = build_public_incidents(
+        incident_source_events,
+        observatory_config=observatory_config,
+        max_items=feed_config["max_items"],
+    )
     summary = {
         "history_range": history_range,
         "tracked_models": len(models),
@@ -411,6 +431,8 @@ def build_observatory_snapshot(
         "summary": summary,
         "models": models,
         "events": visible_events,
+        "incident_board": incident_board,
+        "incidents": incidents,
         "constellation": constellation,
         "pcii_series": pcii_series,
         "cii_history": cii_history,

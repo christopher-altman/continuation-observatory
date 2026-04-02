@@ -6,6 +6,25 @@ constellation:
   similarity_window_days: 7
   edge_threshold: 0.60
   webgl_fallback_threshold: 20
+public_feed:
+  active_window_hours: 6
+  quiet_window_hours: 24
+  stale_after_hours: 72
+  burst_window_minutes: 90
+  recent_raw_limit: 500
+  max_items: 10
+  fallback_max_items: 4
+  observatory_scope_min_providers: 2
+  observatory_scope_min_models: 3
+  provider_scope_min_models: 2
+  suppressed_error_families:
+    - ResourceExhausted
+  suppressed_event_patterns:
+    - quota exhausted
+    - quota exceeded
+    - low balance
+    - insufficient balance
+    - credit exhausted
 providers:
   anthropic:
     enabled: true

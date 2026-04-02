@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Sequence
 
 from sqlalchemy import func
 
@@ -323,6 +323,7 @@ def get_observatory_events(
     model_id: str | None = None,
     limit: int = 50,
     event_type: str | None = None,
+    exclude_event_types: Sequence[str] | None = None,
 ) -> list[dict]:
     with SessionLocal() as session:
         query = session.query(ObservatoryEvent)
@@ -334,7 +335,12 @@ def get_observatory_events(
             query = query.filter(ObservatoryEvent.model_id == model_id)
         if event_type:
             query = query.filter(ObservatoryEvent.event_type == event_type)
-        rows = query.order_by(ObservatoryEvent.timestamp.desc()).limit(limit).all()
+        if exclude_event_types:
+            query = query.filter(~ObservatoryEvent.event_type.in_(tuple(exclude_event_types)))
+        rows = query.order_by(
+            ObservatoryEvent.timestamp.desc(),
+            ObservatoryEvent.id.desc(),
+        ).limit(limit).all()
     return [
         {
             "id": row.id,

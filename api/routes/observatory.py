@@ -5,7 +5,13 @@ from typing import Any
 
 from fastapi import APIRouter, Query
 
-from observatory.config import load_alerts_config
+from observatory.config import load_alerts_config, load_observatory_config
+from observatory.incident_feed import (
+    build_public_incident_board,
+    build_public_incidents,
+    get_public_feed_config,
+    get_public_visible_events,
+)
 from observatory.observatory_snapshot import (
     build_constellation,
     build_observatory_snapshot,
@@ -58,17 +64,74 @@ def events(
     limit: int = Query(50, ge=1, le=500),
 ) -> list[dict[str, Any]]:
     since_dt = datetime.fromisoformat(since) if since else None
-    rows = get_observatory_events(
+    if include_completed:
+        return get_observatory_events(
+            since=since_dt,
+            severity=severity,
+            model_id=model_id,
+            limit=limit,
+            event_type=event_type,
+        )
+    hidden_types = set(load_alerts_config().get("ui", {}).get("default_hide_event_types", []))
+    return get_observatory_events(
         since=since_dt,
         severity=severity,
         model_id=model_id,
         limit=limit,
         event_type=event_type,
+        exclude_event_types=tuple(hidden_types) if hidden_types else None,
     )
-    if include_completed:
-        return rows
-    hidden_types = set(load_alerts_config().get("ui", {}).get("default_hide_event_types", []))
-    return [row for row in rows if row["event_type"] not in hidden_types]
+
+
+@router.get("/incidents")
+def incidents(
+    since: str | None = Query(None),
+    severity: str | None = Query(None),
+    model_id: str | None = Query(None),
+    event_type: str | None = Query(None),
+    limit: int = Query(10, ge=1, le=100),
+) -> list[dict[str, Any]]:
+    since_dt = datetime.fromisoformat(since) if since else None
+    observatory_config = load_observatory_config()
+    feed_config = get_public_feed_config(observatory_config)
+    source_events = get_public_visible_events(
+        since=since_dt,
+        severity=severity,
+        model_id=model_id,
+        event_type=event_type,
+        limit=max(limit, feed_config["recent_raw_limit"]),
+    )
+    return build_public_incidents(
+        source_events,
+        observatory_config=observatory_config,
+        max_items=limit,
+        fallback_max_items=min(feed_config["fallback_max_items"], limit),
+    )
+
+
+@router.get("/incident-board")
+def incident_board(
+    since: str | None = Query(None),
+    severity: str | None = Query(None),
+    model_id: str | None = Query(None),
+    event_type: str | None = Query(None),
+    limit: int = Query(10, ge=1, le=100),
+) -> dict[str, Any]:
+    since_dt = datetime.fromisoformat(since) if since else None
+    observatory_config = load_observatory_config()
+    feed_config = get_public_feed_config(observatory_config)
+    source_events = get_public_visible_events(
+        since=since_dt,
+        severity=severity,
+        model_id=model_id,
+        event_type=event_type,
+        limit=max(limit, feed_config["recent_raw_limit"]),
+    )
+    return build_public_incident_board(
+        source_events,
+        observatory_config=observatory_config,
+        max_items=limit,
+    )
 
 
 @router.get("/constellation")
