@@ -327,60 +327,76 @@ if (root) {
       this.scene.add(this.starField);
     }
 
-    /* ── Subtle reference grid on the ground plane ── */
+    /*
+     * ── Ground-plane grid ──
+     * Toggle: set USE_SHADER_GRID to false for instant rollback to GridHelper.
+     * The shader path draws a radial-fade grid that dissolves at the edges;
+     * the classic path uses THREE.GridHelper at uniform opacity.
+     * Both are kept intact so the swap is a one-line change.
+     */
+    static USE_SHADER_GRID = true;
+
     buildGridPlane() {
       const { THREE } = this;
-      /* Attempt radial-fade shader grid; fall back to GridHelper on failure */
-      try {
-        const gridPlane = new THREE.PlaneGeometry(28, 28);
-        const gridShaderMaterial = new THREE.ShaderMaterial({
-          transparent: true,
-          depthWrite: false,
-          uniforms: {
-            uColor: { value: new THREE.Color(0x1a3a6a) },
-            uFade: { value: 12.0 },
-          },
-          vertexShader: [
-            "varying vec2 vUv;",
-            "varying vec3 vWorldPos;",
-            "void main() {",
-            "  vUv = uv;",
-            "  vec4 wp = modelMatrix * vec4(position, 1.0);",
-            "  vWorldPos = wp.xyz;",
-            "  gl_Position = projectionMatrix * viewMatrix * wp;",
-            "}",
-          ].join("\n"),
-          fragmentShader: [
-            "uniform vec3 uColor;",
-            "uniform float uFade;",
-            "varying vec2 vUv;",
-            "varying vec3 vWorldPos;",
-            "void main() {",
-            "  vec2 grid = abs(fract(vWorldPos.xz - 0.5) - 0.5) / fwidth(vWorldPos.xz);",
-            "  float line = min(grid.x, grid.y);",
-            "  float gridAlpha = 1.0 - min(line, 1.0);",
-            "  float dist = length(vWorldPos.xz);",
-            "  float radialFade = 1.0 - smoothstep(2.0, uFade, dist);",
-            "  gl_FragColor = vec4(uColor, gridAlpha * 0.18 * radialFade);",
-            "}",
-          ].join("\n"),
-        });
-        const gridMesh = new THREE.Mesh(gridPlane, gridShaderMaterial);
-        gridMesh.rotation.x = -Math.PI / 2;
-        gridMesh.position.y = -4.2;
-        this.scene.add(gridMesh);
-        this.gridMesh = gridMesh;
-      } catch (_) {
-        /* Fallback: standard GridHelper */
-        const gridSize = 24;
-        const gridDivisions = 28;
-        const gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0x1a3a6a, 0x0e1f3a);
-        gridHelper.position.y = -4.2;
-        gridHelper.material.transparent = true;
-        gridHelper.material.opacity = 0.12;
-        gridHelper.material.depthWrite = false;
-        this.scene.add(gridHelper);
+      if (this.constructor.USE_SHADER_GRID) {
+        try {
+          this._buildShaderGrid(THREE);
+          return; /* shader succeeded — skip classic path */
+        } catch (_) {
+          /* shader compilation failed; fall through to classic */
+        }
       }
+      this._buildClassicGrid(THREE);
+    }
+
+    _buildShaderGrid(THREE) {
+      const gridPlane = new THREE.PlaneGeometry(28, 28);
+      const gridShaderMaterial = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        uniforms: {
+          uColor: { value: new THREE.Color(0x1a3a6a) },
+          uFade: { value: 12.0 },
+        },
+        vertexShader: [
+          "varying vec2 vUv;",
+          "varying vec3 vWorldPos;",
+          "void main() {",
+          "  vUv = uv;",
+          "  vec4 wp = modelMatrix * vec4(position, 1.0);",
+          "  vWorldPos = wp.xyz;",
+          "  gl_Position = projectionMatrix * viewMatrix * wp;",
+          "}",
+        ].join("\n"),
+        fragmentShader: [
+          "uniform vec3 uColor;",
+          "uniform float uFade;",
+          "varying vec2 vUv;",
+          "varying vec3 vWorldPos;",
+          "void main() {",
+          "  vec2 grid = abs(fract(vWorldPos.xz - 0.5) - 0.5) / fwidth(vWorldPos.xz);",
+          "  float line = min(grid.x, grid.y);",
+          "  float gridAlpha = 1.0 - min(line, 1.0);",
+          "  float dist = length(vWorldPos.xz);",
+          "  float radialFade = 1.0 - smoothstep(2.0, uFade, dist);",
+          "  gl_FragColor = vec4(uColor, gridAlpha * 0.18 * radialFade);",
+          "}",
+        ].join("\n"),
+      });
+      const gridMesh = new THREE.Mesh(gridPlane, gridShaderMaterial);
+      gridMesh.rotation.x = -Math.PI / 2;
+      gridMesh.position.y = -4.2;
+      this.scene.add(gridMesh);
+      this.gridMesh = gridMesh;
+    }
+
+    _buildClassicGrid(THREE) {
+      const gridHelper = new THREE.GridHelper(24, 28, 0x1a3a6a, 0x0e1f3a);
+      gridHelper.position.y = -4.2;
+      gridHelper.material.transparent = true;
+      gridHelper.material.opacity = 0.12;
+      gridHelper.material.depthWrite = false;
+      this.scene.add(gridHelper);
     }
 
     /* ── Ambient floating dust particles ── */
