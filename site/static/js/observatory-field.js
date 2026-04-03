@@ -264,12 +264,6 @@ if (root) {
       aqua.position.set(2.5, -1.4, 4.8);
       this.scene.add(ambient, rim, fill, depthLight, prism, aqua);
 
-      const guideMaterial = new THREE.LineBasicMaterial({
-        color: 0x4d7dd9,
-        transparent: true,
-        opacity: 0.16,
-      });
-
       [2.0, 3.85, 5.35].forEach((radius, index) => {
         const points = [];
         for (let step = 0; step <= 96; step += 1) {
@@ -277,7 +271,16 @@ if (root) {
           points.push(new THREE.Vector3(Math.cos(angle) * radius, Math.sin(angle) * radius * 0.22, Math.sin(angle * 0.5) * 0.5));
         }
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        const line = new THREE.LineLoop(geometry, guideMaterial.clone());
+        const ringMaterial = new THREE.LineDashedMaterial({
+          color: 0x4d7dd9,
+          transparent: true,
+          opacity: 0.22 - index * 0.03,
+          dashSize: 0.3,
+          gapSize: 0.15,
+          depthWrite: false,
+        });
+        const line = new THREE.LineLoop(geometry, ringMaterial);
+        line.computeLineDistances();
         line.rotation.x = 1.12 + index * 0.08;
         line.rotation.z = index === 1 ? 0.38 : -0.22 * (index + 1);
         this.scene.add(line);
@@ -327,37 +330,87 @@ if (root) {
     /* ── Subtle reference grid on the ground plane ── */
     buildGridPlane() {
       const { THREE } = this;
-      const gridSize = 24;
-      const gridDivisions = 28;
-      const gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0x1a3a6a, 0x0e1f3a);
-      gridHelper.position.y = -4.2;
-      gridHelper.material.transparent = true;
-      gridHelper.material.opacity = 0.12;
-      gridHelper.material.depthWrite = false;
-      this.scene.add(gridHelper);
+      /* Attempt radial-fade shader grid; fall back to GridHelper on failure */
+      try {
+        const gridPlane = new THREE.PlaneGeometry(28, 28);
+        const gridShaderMaterial = new THREE.ShaderMaterial({
+          transparent: true,
+          depthWrite: false,
+          uniforms: {
+            uColor: { value: new THREE.Color(0x1a3a6a) },
+            uFade: { value: 12.0 },
+          },
+          vertexShader: [
+            "varying vec2 vUv;",
+            "varying vec3 vWorldPos;",
+            "void main() {",
+            "  vUv = uv;",
+            "  vec4 wp = modelMatrix * vec4(position, 1.0);",
+            "  vWorldPos = wp.xyz;",
+            "  gl_Position = projectionMatrix * viewMatrix * wp;",
+            "}",
+          ].join("\n"),
+          fragmentShader: [
+            "uniform vec3 uColor;",
+            "uniform float uFade;",
+            "varying vec2 vUv;",
+            "varying vec3 vWorldPos;",
+            "void main() {",
+            "  vec2 grid = abs(fract(vWorldPos.xz - 0.5) - 0.5) / fwidth(vWorldPos.xz);",
+            "  float line = min(grid.x, grid.y);",
+            "  float gridAlpha = 1.0 - min(line, 1.0);",
+            "  float dist = length(vWorldPos.xz);",
+            "  float radialFade = 1.0 - smoothstep(2.0, uFade, dist);",
+            "  gl_FragColor = vec4(uColor, gridAlpha * 0.18 * radialFade);",
+            "}",
+          ].join("\n"),
+        });
+        const gridMesh = new THREE.Mesh(gridPlane, gridShaderMaterial);
+        gridMesh.rotation.x = -Math.PI / 2;
+        gridMesh.position.y = -4.2;
+        this.scene.add(gridMesh);
+        this.gridMesh = gridMesh;
+      } catch (_) {
+        /* Fallback: standard GridHelper */
+        const gridSize = 24;
+        const gridDivisions = 28;
+        const gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0x1a3a6a, 0x0e1f3a);
+        gridHelper.position.y = -4.2;
+        gridHelper.material.transparent = true;
+        gridHelper.material.opacity = 0.12;
+        gridHelper.material.depthWrite = false;
+        this.scene.add(gridHelper);
+      }
     }
 
     /* ── Ambient floating dust particles ── */
     buildDustParticles() {
       const { THREE } = this;
-      const dustCount = 280;
+      const dustCount = 400;
       const dustPositions = new Float32Array(dustCount * 3);
       const dustPhases = new Float32Array(dustCount);
+      const dustColors = new Float32Array(dustCount * 3);
 
       for (let i = 0; i < dustCount; i++) {
-        dustPositions[i * 3] = (Math.random() - 0.5) * 18;
-        dustPositions[i * 3 + 1] = (Math.random() - 0.5) * 10;
-        dustPositions[i * 3 + 2] = (Math.random() - 0.5) * 18;
+        dustPositions[i * 3] = (Math.random() - 0.5) * 20;
+        dustPositions[i * 3 + 1] = (Math.random() - 0.5) * 12;
+        dustPositions[i * 3 + 2] = (Math.random() - 0.5) * 20;
         dustPhases[i] = Math.random() * Math.PI * 2;
+        /* Vary between cool blue (0x6da8ff) and pale cyan (0xa8d4ff) */
+        var blend = Math.random();
+        dustColors[i * 3] = 0.427 + blend * 0.231;
+        dustColors[i * 3 + 1] = 0.659 + blend * 0.173;
+        dustColors[i * 3 + 2] = 1.0;
       }
 
       const dustGeometry = new THREE.BufferGeometry();
       dustGeometry.setAttribute("position", new THREE.BufferAttribute(dustPositions, 3));
+      dustGeometry.setAttribute("color", new THREE.BufferAttribute(dustColors, 3));
       const dustMaterial = new THREE.PointsMaterial({
-        size: 0.03,
+        size: 0.055,
         transparent: true,
-        opacity: 0.22,
-        color: 0x6da8ff,
+        opacity: 0.34,
+        vertexColors: true,
         sizeAttenuation: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
@@ -699,8 +752,8 @@ if (root) {
       this.rebuildTrails();
       this.shell.classList.toggle("is-compare-mode", Boolean(this.modes.compare));
       this.shell.classList.toggle("is-threshold-muted", !this.modes.threshold);
-      this.measurementRings.forEach((ring) => {
-        ring.material.opacity = this.modes.threshold ? 0.16 : 0.05;
+      this.measurementRings.forEach((ring, index) => {
+        ring.material.opacity = this.modes.threshold ? (0.22 - index * 0.03) : 0.05;
       });
       this.renderLabels();
     }
@@ -1005,13 +1058,22 @@ if (root) {
       });
     }
 
-    /* ── Star field twinkling ── */
+    /* ── Star field twinkling (multi-harmonic) ── */
     updateStars(time) {
       const sizes = this.starField.geometry.attributes.size;
       if (!sizes) return;
       const t = time * 0.001;
       for (let i = 0; i < this.starPhases.length; i++) {
-        const twinkle = 0.7 + 0.3 * Math.sin(t * this.starSpeeds[i] + this.starPhases[i]);
+        const s = this.starSpeeds[i];
+        const p = this.starPhases[i];
+        /* Compound wave for organic, irregular flicker */
+        var twinkle = 0.55 + 0.25 * Math.sin(t * s + p)
+          + 0.12 * Math.sin(t * s * 2.7 + p * 1.4)
+          + 0.08 * Math.cos(t * s * 0.3 + p * 0.7);
+        /* Rare bright flash stars (~3% of field) */
+        if (p < 0.19) {
+          twinkle *= 1 + 0.4 * Math.pow(Math.sin(t * 0.4 + p), 8);
+        }
         sizes.array[i] = this.starBaseSizes[i] * twinkle;
       }
       sizes.needsUpdate = true;
@@ -1025,11 +1087,22 @@ if (root) {
       for (let i = 0; i < this.dustPhases.length; i++) {
         const phase = this.dustPhases[i];
         const base = i * 3;
-        positions.array[base] += Math.sin(t + phase) * 0.001;
-        positions.array[base + 1] += Math.cos(t * 0.7 + phase) * 0.0008;
-        positions.array[base + 2] += Math.sin(t * 0.5 + phase * 1.3) * 0.001;
+        positions.array[base] += Math.sin(t + phase) * 0.0016;
+        positions.array[base + 1] += Math.cos(t * 0.7 + phase) * 0.0012;
+        positions.array[base + 2] += Math.sin(t * 0.5 + phase * 1.3) * 0.0014;
       }
       positions.needsUpdate = true;
+    }
+
+    /* ── Measurement ring animation (flowing dashes + gentle rotation) ── */
+    updateMeasurementRings(time) {
+      const t = time * 0.001;
+      this.measurementRings.forEach((ring, index) => {
+        if (ring.material.dashSize) {
+          ring.material.dashOffset -= 0.002;
+        }
+        ring.rotation.y += 0.0006 * (index + 1);
+      });
     }
 
     updateGuides(time) {
@@ -1194,6 +1267,7 @@ if (root) {
       this.updateTrails();
       this.updateCamera(time);
       this.updateTooltipPosition();
+      this.updateMeasurementRings(time);
 
       /* Throttle label rendering: every 3rd frame */
       this.labelFrameSkip = (this.labelFrameSkip + 1) % 3;

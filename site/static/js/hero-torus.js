@@ -59,9 +59,9 @@
   var ringDefinitions = [
     {
       wireColor: 0x6f9fff,
-      wireOpacity: 0.24,
+      wireOpacity: 0.30,
       shellColor: 0x5e92f5,
-      shellOpacity: 0.042,
+      shellOpacity: 0.06,
       ghostColor: 0x6aa8ff,
       ghostOpacity: 0.018,
       ghostScale: 1.014,
@@ -77,8 +77,8 @@
       shellColor: 0xd9d3f4,
       shellOpacity: 0.052,
       ghostColor: 0xbdd3ff,
-      ghostOpacity: 0.02,
-      ghostScale: 1.012,
+      ghostOpacity: 0.035,
+      ghostScale: 1.025,
       baseRotation: [quarterTurn, 0, 0],
       machinePhase: 0,
       machineSpeed: -0.032,
@@ -87,12 +87,12 @@
     },
     {
       wireColor: 0x6487e8,
-      wireOpacity: 0.145,
+      wireOpacity: 0.10,
       shellColor: 0x5779d4,
       shellOpacity: 0.028,
       ghostColor: 0x6b9fff,
-      ghostOpacity: 0.012,
-      ghostScale: 1.01,
+      ghostOpacity: 0.02,
+      ghostScale: 1.02,
       baseRotation: [0, quarterTurn, 0],
       machinePhase: 0,
       machineSpeed: 0.028,
@@ -174,9 +174,20 @@
   });
 
   var centerAnchor = new THREE.Group();
+  var centerOuterAura = new THREE.Mesh(
+    new THREE.SphereGeometry(0.38, 20, 20),
+    new THREE.MeshBasicMaterial({
+      color: 0x9ec8ff,
+      opacity: 0.015,
+      transparent: true,
+      depthWrite: false,
+      depthTest: true,
+      blending: THREE.AdditiveBlending
+    })
+  );
   var centerAura = new THREE.Mesh(centerAuraGeometry, new THREE.MeshBasicMaterial({
-    color: 0x6bbcff,
-    opacity: 0.026,
+    color: 0x7dd4ff,
+    opacity: 0.045,
     transparent: true,
     depthWrite: false,
     depthTest: true,
@@ -184,7 +195,7 @@
   }));
   var centerShell = new THREE.Mesh(centerShellGeometry, new THREE.MeshBasicMaterial({
     color: 0x84daff,
-    opacity: 0.058,
+    opacity: 0.08,
     transparent: true,
     depthWrite: false,
     depthTest: true,
@@ -199,9 +210,11 @@
     blending: THREE.AdditiveBlending
   }));
 
+  centerOuterAura.renderOrder = 0;
   centerAura.renderOrder = 1;
   centerShell.renderOrder = 2;
   centerNode.renderOrder = 4;
+  centerAnchor.add(centerOuterAura);
   centerAnchor.add(centerAura);
   centerAnchor.add(centerShell);
   centerAnchor.add(centerNode);
@@ -322,6 +335,7 @@
     });
     centerAura.scale.setScalar(1);
     centerShell.scale.setScalar(1);
+    centerOuterAura.scale.setScalar(1);
   }
 
   function applyMachineMotion(time) {
@@ -338,8 +352,9 @@
       ring.spin.rotation.z = getSpinAngle(ring, 'machine', time);
     });
 
-    centerAura.scale.setScalar(1 + Math.sin(time * 0.42) * 0.035);
-    centerShell.scale.setScalar(1 + Math.sin(time * 0.52 + 0.4) * 0.02);
+    centerAura.scale.setScalar(1 + Math.sin(time * 0.42) * 0.052);
+    centerShell.scale.setScalar(1 + Math.sin(time * 0.52 + 0.4) * 0.03);
+    centerOuterAura.scale.setScalar(1 + Math.sin(time * 0.28) * 0.04);
   }
 
   function applyLegacyMotion(time) {
@@ -356,8 +371,9 @@
       ring.spin.rotation.z = getSpinAngle(ring, 'legacy', time);
     });
 
-    centerAura.scale.setScalar(1 + Math.sin(time * 0.66) * 0.055);
-    centerShell.scale.setScalar(1 + Math.sin(time * 0.82 + 0.5) * 0.035);
+    centerAura.scale.setScalar(1 + Math.sin(time * 0.66) * 0.082);
+    centerShell.scale.setScalar(1 + Math.sin(time * 0.82 + 0.5) * 0.052);
+    centerOuterAura.scale.setScalar(1 + Math.sin(time * 0.38) * 0.06);
   }
 
   function syncTorusToHero() {
