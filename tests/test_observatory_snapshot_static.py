@@ -55,6 +55,9 @@ def test_build_writes_observatory_snapshot_and_page(tmp_path, monkeypatch):
     assert "Aggregate Signal Timeline" in observatory_html
     assert "Comparative Metric Overlay" in observatory_html
     assert "Incident Board" in observatory_html
+    assert "observatory-lab-breakout" in observatory_html
+    assert "observatory-analysis-row" in observatory_html
+    assert "observatory-focus-lock-chip" in observatory_html
     assert "observatory-history-root" in observatory_html
     assert "timeline-root" in observatory_html
     assert "observatory-timeline-shell" in observatory_html

@@ -18,14 +18,14 @@
   };
 
   const HISTORY_SERIES_PALETTE = [
-    "#7ec7ff",
-    "#8fe7ff",
-    "#7287ff",
-    "#9679ff",
-    "#cb72ff",
-    "#ff89c5",
-    "#ffbe73",
-    "#72d7bf",
+    "#c8dcff",
+    "#9fbfff",
+    "#7ca7ff",
+    "#6d8fe2",
+    "#87b4d9",
+    "#5f7dc2",
+    "#dce8ff",
+    "#90a9d2",
   ];
 
   const landingState = {
@@ -75,6 +75,34 @@
 
   function fmt(value, digits = 3) {
     return typeof value === "number" && Number.isFinite(value) ? value.toFixed(digits) : "--";
+  }
+
+  function normalizeMetric(value) {
+    return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
+  }
+
+  function thresholdRelativeMetric(rangeCii, threshold) {
+    if (!Number.isFinite(rangeCii)) return 0;
+    if (!Number.isFinite(threshold)) return normalizeMetric(rangeCii);
+    return Math.max(0, Math.min(1, 0.5 + (rangeCii - threshold)));
+  }
+
+  function buildFocusRingLegend(model) {
+    const metrics = model && model.metrics ? model.metrics : {};
+    const threshold = observatoryState && observatoryState.view && observatoryState.view.summary
+      ? observatoryState.view.summary.constellation_threshold
+      : null;
+    const terminalValue = Number.isFinite(metrics.tci)
+      ? metrics.tci
+      : Number.isFinite(metrics.mpg)
+      ? metrics.mpg
+      : thresholdRelativeMetric(model ? model.rangeCii : null, threshold);
+    return [
+      { key: "cii", label: "CII", value: normalizeMetric(metrics.cii != null ? metrics.cii : model.rangeCii) },
+      { key: "ips", label: "IPS", value: normalizeMetric(metrics.ips) },
+      { key: "srs", label: "SRS", value: normalizeMetric(metrics.srs) },
+      { key: "tci", label: Number.isFinite(metrics.tci) ? "TCI" : Number.isFinite(metrics.mpg) ? "MPG" : "THR", value: normalizeMetric(terminalValue) },
+    ];
   }
 
   function formatCompactDate(iso) {
@@ -574,13 +602,13 @@
       const topModels = observatoryState.view.models.slice(0, 3);
       target.innerHTML = `
         <div class="observatory-inspector-content is-entering">
-        <div class="panel-title">Inspector Rail</div>
+        <div class="panel-title">Target Dossier</div>
         <div class="observatory-inspector-state">
           <div class="observatory-inspector-block">
-            <span class="summary-label">Surface Summary</span>
+            <span class="summary-label">No target lock</span>
             <div class="observatory-inspector-value">${fmt(latestPcii && latestPcii.value)}</div>
             <p class="observatory-inspector-copy">
-              ${latestPcii ? `${observatoryState.view.models.length} tracked models · ${liveCount} currently live · latest aggregate sample ${ageLabel(latestPcii.timestamp)}` : "Awaiting aggregate signal telemetry."}
+              ${latestPcii ? `${observatoryState.view.models.length} tracked models · ${liveCount} currently live · latest aggregate sample ${ageLabel(latestPcii.timestamp)}.` : "Awaiting aggregate signal telemetry."}
             </p>
           </div>
           <div class="observatory-inspector-grid">
@@ -634,12 +662,21 @@
         </div>
       `;
     }).join("");
+    const focusRingLegend = buildFocusRingLegend(focused).map(function (metric) {
+      return `
+        <div class="observatory-focus-ring-item observatory-focus-ring-item--${metric.key}">
+          <span class="observatory-focus-ring-swatch"></span>
+          <span class="observatory-focus-ring-label">${metric.label}</span>
+          <span class="observatory-focus-ring-value">${fmt(metric.value, 2)}</span>
+        </div>
+      `;
+    }).join("");
 
     const neighbors = focused.neighbors || [];
     const evidence = Array.isArray(focused.evidence_links) ? focused.evidence_links : [];
     target.innerHTML = `
       <div class="observatory-inspector-content is-entering">
-      <div class="panel-title">Model Dossier</div>
+      <div class="panel-title">Target Dossier</div>
       <div class="observatory-dossier">
         <div class="observatory-dossier-head">
           <div>
@@ -647,7 +684,7 @@
             <h2>${focused.display_name}</h2>
             <p class="mono-muted">${focused.provider} · rank ${focused.relativeStanding}</p>
           </div>
-          <button type="button" class="console-btn observatory-clear-focus" data-clear-focus="true">Release Focus</button>
+          <button type="button" class="console-btn observatory-clear-focus" data-clear-focus="true">Release Lock</button>
         </div>
         <div class="observatory-inspector-grid">
           <div>
@@ -670,6 +707,10 @@
         <div class="observatory-inspector-block">
           <span class="summary-label">Component Metrics</span>
           <div class="observatory-metric-list">${metricMarkup}</div>
+        </div>
+        <div class="observatory-inspector-block">
+          <span class="summary-label">Focus Rings</span>
+          <div class="observatory-focus-ring-list">${focusRingLegend}</div>
         </div>
         <div class="observatory-inspector-block">
           <span class="summary-label">Relative Standing</span>
@@ -718,6 +759,7 @@
     const modeNote = qs("#observatory-history-mode-note");
     const historyShell = target ? target.closest(".observatory-history-shell") : null;
     if (!target || !observatoryState || !observatoryState.view) return;
+    if (panel) panel.classList.toggle("has-focus", Boolean(observatoryState.focusModelId));
 
     bindHistoryPanelResize();
     historyPanelState.hoverModelId = null;
@@ -1366,7 +1408,11 @@
     const modelCount = qs("#observatory-model-count");
     const livePill = qs("#observatory-live-pill");
     const calibrationNote = qs("#observatory-calibration-note");
+    const thresholdValue = qs("#observatory-threshold-value");
     const fieldStatus = qs("#observatory-field-status");
+    const lockChip = qs("#observatory-focus-lock-chip");
+    const lockState = qs("#observatory-focus-lock-state");
+    const lockMeta = qs("#observatory-focus-lock-meta");
     if (modelCount && observatoryState.view) {
       modelCount.textContent = `${observatoryState.view.models.length} MODELS`;
     }
@@ -1375,18 +1421,39 @@
     }
     if (calibrationNote && observatoryState.view) {
       const threshold = observatoryState.view.summary.constellation_threshold;
-      calibrationNote.textContent = `Centrality follows current CII strength. Provider bands bias vertical placement only. Similarity threshold ${fmt(threshold, 2)}.`;
+      calibrationNote.textContent = `Provider-banded field calibration · threshold ${fmt(threshold, 2)}`;
+    }
+    if (thresholdValue && observatoryState.view) {
+      thresholdValue.textContent = fmt(observatoryState.view.summary.constellation_threshold, 2);
     }
     if (fieldStatus) {
       const focused = observatoryState.view && observatoryState.view.models.find(function (model) {
         return model.model_id === observatoryState.focusModelId;
       });
       if (focused) {
-        fieldStatus.textContent = `${focused.display_name} in measured focus · ${focused.historyDepth >= 3 && observatoryState.toggles.history ? "historical trace active" : "trace gated by depth"}`;
+        fieldStatus.textContent = `${focused.display_name} acquisition locked · ${focused.historyDepth >= 3 && observatoryState.toggles.history ? "temporal trace active" : "trace gated by depth"}`;
       } else {
         fieldStatus.textContent = observatoryState.toggles.compare
           ? "Comparative overlay active"
-          : "Range-stable constellation";
+          : "Field calibrated · awaiting target lock";
+      }
+    }
+    if (lockChip && lockState && lockMeta && observatoryState.view) {
+      const focused = observatoryState.view.models.find(function (model) {
+        return model.model_id === observatoryState.focusModelId;
+      });
+      if (!focused) {
+        lockChip.classList.remove("is-locked");
+        lockState.textContent = "No target lock";
+        lockMeta.textContent = "Acquisition idle · awaiting selection";
+      } else {
+        const fieldTier = focused.rank <= 3 ? "flagship field" : focused.rank <= 7 ? "secondary field" : "outer field";
+        const trendText = focused.historyDepth > 1
+          ? `${focused.rangeTrend >= 0 ? "+" : "-"}${fmt(Math.abs(focused.rangeTrend))} trend`
+          : "insufficient history";
+        lockChip.classList.add("is-locked");
+        lockState.textContent = focused.display_name;
+        lockMeta.textContent = `${focused.provider} · ${fieldTier} · rank ${focused.relativeStanding} · ${trendText}`;
       }
     }
   }

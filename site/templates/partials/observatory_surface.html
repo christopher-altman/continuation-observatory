@@ -14,23 +14,27 @@
       </h1>
       <p class="subtitle observatory-stage-subtitle">
         {% if observatory_mode == "live" %}
-        Live tracking for continuation signals in advanced AI systems. One normalized instrument, rendered as a field view.
+        Live tracking for continuation signals in advanced AI systems. One normalized instrument, now rendered as a full laboratory surface.
         {% else %}
         Bundled observatory snapshot rendered with the same field grammar, control model, and dossier view as the live instrument.
         {% endif %}
       </p>
     </div>
-    <div class="observatory-stage-meta">
-      <span class="status-label green" id="observatory-live-pill">{{ "CURRENT" if observatory_mode == "live" else "SNAPSHOT" }}</span>
-      <span class="mono-muted" id="observatory-model-count">{{ model_count if model_count is defined else 0 }} MODELS</span>
-      <span class="mono-muted" id="observatory-range-readout">24H WINDOW</span>
-    </div>
   </header>
 
-  <section class="observatory-instrument">
-    <div class="observatory-field-column">
-      <div class="observatory-console" aria-label="Observatory instrument console">
-        <div class="observatory-console-group">
+  <section class="observatory-lab-breakout">
+    <div class="observatory-lab-shell">
+      <div class="observatory-console observatory-console--top" aria-label="Observatory instrument strip">
+        <div class="observatory-console-group observatory-console-group--state">
+          <span class="observatory-console-label">Instrument State</span>
+          <div class="observatory-console-readout observatory-console-readout--chips">
+            <span class="status-label green" id="observatory-live-pill">{{ "CURRENT" if observatory_mode == "live" else "SNAPSHOT" }}</span>
+            <span class="mono-muted" id="observatory-model-count">{{ model_count if model_count is defined else 0 }} MODELS</span>
+            <span class="mono-muted" id="observatory-range-readout">24H WINDOW</span>
+          </div>
+        </div>
+
+        <div class="observatory-console-group observatory-console-group--range">
           <span class="observatory-console-label">Tracking Window</span>
           <div class="observatory-console-row">
             <button type="button" class="range-btn" data-range="1h">1h</button>
@@ -39,7 +43,16 @@
             <button type="button" class="range-btn" data-range="30d">30d</button>
           </div>
         </div>
-        <div class="observatory-console-group">
+
+        <div class="observatory-console-group observatory-console-group--threshold">
+          <span class="observatory-console-label">Similarity Gate</span>
+          <div class="observatory-console-stat">
+            <span class="observatory-console-value" id="observatory-threshold-value">0.60</span>
+            <span class="mono-muted" id="observatory-calibration-note">Similarity threshold stable.</span>
+          </div>
+        </div>
+
+        <div class="observatory-console-group observatory-console-group--modes">
           <span class="observatory-console-label">Instrument Modes</span>
           <div class="observatory-console-row">
             <button type="button" class="console-btn is-active" data-console-toggle="history">History Mode</button>
@@ -47,11 +60,15 @@
             <button type="button" class="console-btn is-active" data-console-toggle="threshold">Threshold Mode</button>
           </div>
         </div>
-        <div class="observatory-console-status">
-          <span class="summary-label">Calibration</span>
-          <span class="mono-muted" id="observatory-calibration-note">
-            Centrality follows current CII strength. Provider bands bias vertical placement only.
-          </span>
+
+        <div class="observatory-console-group observatory-console-group--lock">
+          <span class="observatory-console-label">Target Lock</span>
+          <div class="observatory-lock-chip" id="observatory-focus-lock-chip" aria-live="polite">
+            <span class="observatory-lock-chip-state" id="observatory-focus-lock-state">No target lock</span>
+            <span class="observatory-lock-chip-meta" id="observatory-focus-lock-meta">
+              Acquisition idle · awaiting selection
+            </span>
+          </div>
         </div>
       </div>
 
@@ -61,11 +78,16 @@
           <div class="observatory-field-copy">
             <span class="summary-label">Measurement Field</span>
             <p class="observatory-field-note">
-              Focused models pull forward; neighboring links and historical traces appear only when data depth supports them.
+              Structured acquisition surface for live continuation telemetry, comparative drift, and focused model analysis.
             </p>
           </div>
-          <div class="observatory-field-status" id="observatory-field-status">
-            Range-stable constellation
+          <div class="observatory-field-status-cluster">
+            <div class="observatory-field-status" id="observatory-field-status">
+              Range-stable constellation
+            </div>
+            <div class="observatory-field-depth">
+              Edge-to-edge lab surface
+            </div>
           </div>
         </div>
 
@@ -75,7 +97,7 @@
           <div class="observatory-calibration-copy">
             <span class="summary-label">Field Calibration</span>
             <p class="observatory-calibration-note">
-              Flagship nodes carry the strongest current signal. Secondary and outer tiers recede in glow, orbit activity, and label priority.
+              Flagship nodes hold the strongest current signal. Lock overlays, arc ladders, and telemetry bands intensify when a target enters measured focus.
             </p>
           </div>
           <div class="observatory-calibration-legend">
@@ -102,69 +124,73 @@
         </div>
       </div>
 
-      <section class="observatory-history-panel" aria-label="Historical temporal readout">
-        <div class="observatory-history-head">
-          <div class="observatory-history-copy">
-            <span class="summary-label">Temporal Readout</span>
-            <p class="observatory-band-note">
-              The field shows structure in space. This lower instrument resolves how each model's continuation signal shifts across the active tracking window.
-            </p>
-            <p class="observatory-history-mode-note" id="observatory-history-mode-note" hidden>
-              Live instrument active. This panel uses a provisional bridge view until the current range accumulates sufficient live model history.
-            </p>
+      <div class="observatory-analysis-row">
+        <aside class="observatory-inspector" id="observatory-inspector" aria-live="polite">
+          <div class="panel-title">Target Dossier</div>
+          <p class="muted">Loading observatory dossier...</p>
+        </aside>
+
+        <section class="observatory-history-panel" aria-label="Historical temporal readout">
+          <div class="observatory-history-head">
+            <div class="observatory-history-copy">
+              <span class="summary-label">Temporal Readout</span>
+              <p class="observatory-band-note">
+                The field resolves spatial structure first. This instrument traces how the selected model's continuation signal shifts across the active tracking window.
+              </p>
+              <p class="observatory-history-mode-note" id="observatory-history-mode-note" hidden>
+                Live instrument active. This panel uses a provisional bridge view until the current range accumulates sufficient live model history.
+              </p>
+            </div>
+            <div class="observatory-history-readout" aria-live="polite">
+              <span class="observatory-history-readout-chip" id="observatory-history-window">24H WINDOW</span>
+              <span class="observatory-history-readout-chip" id="observatory-history-focus">All tracked models</span>
+            </div>
           </div>
-          <div class="observatory-history-readout" aria-live="polite">
-            <span class="observatory-history-readout-chip" id="observatory-history-window">24H WINDOW</span>
-            <span class="observatory-history-readout-chip" id="observatory-history-focus">All tracked models</span>
+          <div class="observatory-history-shell">
+            <div id="observatory-history-root" class="observatory-history-root"></div>
+            <div id="observatory-history-empty" class="observatory-history-empty" hidden>
+              <span class="summary-label">Temporal Readout Unavailable</span>
+              <p class="muted">The current live window is still too short to resolve temporal change.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="observatory-data-band">
+        <div class="observatory-timeline-shell">
+          <div class="timeline-header">
+            <div>
+              <div class="panel-title">Aggregate Signal Timeline</div>
+              <p class="observatory-band-note">
+                The field resolves first. Aggregate signal, comparative heat, and incident telemetry remain subordinate readouts.
+              </p>
+              <p class="observatory-history-mode-note" id="observatory-timeline-mode-note" hidden>
+                Live instrument active. This panel uses a provisional bridge view until the current range accumulates sufficient aggregate signal history.
+              </p>
+            </div>
+          </div>
+          <div class="observatory-timeline-shell-inner">
+            <div id="timeline-root" class="timeline-root"></div>
+            <div id="observatory-timeline-empty" class="observatory-history-empty" hidden>
+              <span class="summary-label">Aggregate Signal Timeline Unavailable</span>
+              <p class="muted">The current live window has not yet accumulated sufficient aggregate signal history.</p>
+            </div>
           </div>
         </div>
-        <div class="observatory-history-shell">
-          <div id="observatory-history-root" class="observatory-history-root"></div>
-          <div id="observatory-history-empty" class="observatory-history-empty" hidden>
-            <span class="summary-label">Temporal Readout Unavailable</span>
-            <p class="muted">The current live window is still too short to resolve temporal change.</p>
+
+        <div class="observatory-lower">
+          <div class="panel observatory-panel-muted">
+            <div class="panel-title">Comparative Metric Overlay</div>
+            <div id="heatmap-root" class="heatmap-root"></div>
+          </div>
+          <div class="panel observatory-panel-muted events-panel">
+            <div class="events-header">
+              <div class="panel-title">Incident Board</div>
+            </div>
+            <div id="events-root" class="events-root"></div>
           </div>
         </div>
       </section>
-    </div>
-
-    <aside class="observatory-inspector" id="observatory-inspector" aria-live="polite">
-      <div class="panel-title">Inspector Rail</div>
-      <p class="muted">Loading observatory dossier...</p>
-    </aside>
-  </section>
-
-  <section class="observatory-data-band">
-    <div class="observatory-timeline-shell">
-      <div class="timeline-header">
-        <div>
-          <div class="panel-title">Aggregate Signal Timeline</div>
-          <p class="observatory-band-note">The field resolves first. Aggregate signal, comparative heat, and events remain subordinate readouts.</p>
-          <p class="observatory-history-mode-note" id="observatory-timeline-mode-note" hidden>
-            Live instrument active. This panel uses a provisional bridge view until the current range accumulates sufficient aggregate signal history.
-          </p>
-        </div>
-      </div>
-      <div class="observatory-timeline-shell-inner">
-        <div id="timeline-root" class="timeline-root"></div>
-        <div id="observatory-timeline-empty" class="observatory-history-empty" hidden>
-          <span class="summary-label">Aggregate Signal Timeline Unavailable</span>
-          <p class="muted">The current live window has not yet accumulated sufficient aggregate signal history.</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="observatory-lower">
-      <div class="panel observatory-panel-muted">
-        <div class="panel-title">Comparative Metric Overlay</div>
-        <div id="heatmap-root" class="heatmap-root"></div>
-      </div>
-      <div class="panel observatory-panel-muted events-panel">
-        <div class="events-header">
-          <div class="panel-title">Incident Board</div>
-        </div>
-        <div id="events-root" class="events-root"></div>
-      </div>
     </div>
   </section>
 </section>

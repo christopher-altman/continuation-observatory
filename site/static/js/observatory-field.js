@@ -39,6 +39,63 @@ if (root) {
     }
   }
 
+  const FOCUS_RING_ORDER = ["cii", "ips", "srs", "tci"];
+  const FOCUS_RING_START_ANGLE = 216;
+  const FOCUS_RING_MAX_SWEEP = 324;
+
+  function isFiniteNumber(value) {
+    return typeof value === "number" && Number.isFinite(value);
+  }
+
+  function normalizeMetric(value) {
+    return clamp(isFiniteNumber(value) ? value : 0, 0, 1);
+  }
+
+  function thresholdRelativeMetric(rangeCii, threshold) {
+    if (!isFiniteNumber(rangeCii)) return 0;
+    if (!isFiniteNumber(threshold)) return normalizeMetric(rangeCii);
+    return clamp(0.5 + (rangeCii - threshold), 0, 1);
+  }
+
+  function resolveFocusRingMetrics(modelMetrics, rangeCii, threshold) {
+    const metrics = modelMetrics || {};
+    const tciValue = isFiniteNumber(metrics.tci)
+      ? metrics.tci
+      : isFiniteNumber(metrics.mpg)
+      ? metrics.mpg
+      : thresholdRelativeMetric(rangeCii, threshold);
+
+    return [
+      { key: "cii", label: "CII", value: normalizeMetric(metrics.cii != null ? metrics.cii : rangeCii) },
+      { key: "ips", label: "IPS", value: normalizeMetric(metrics.ips) },
+      { key: "srs", label: "SRS", value: normalizeMetric(metrics.srs) },
+      { key: "tci", label: isFiniteNumber(metrics.tci) ? "TCI" : isFiniteNumber(metrics.mpg) ? "MPG" : "THR", value: normalizeMetric(tciValue) },
+    ];
+  }
+
+  function buildFallbackRingMarkup(node) {
+    if (!node || !Array.isArray(node.ringMetrics) || !node.ringMetrics.length) return "";
+    const guideMarkup = node.ringMetrics.map(function (metric, index) {
+      const radius = 27 + index * 6.4;
+      const sweep = Math.max(6, metric.value * FOCUS_RING_MAX_SWEEP);
+      const trackPath = describeArc(50, 50, radius, radius, FOCUS_RING_START_ANGLE, FOCUS_RING_START_ANGLE + FOCUS_RING_MAX_SWEEP);
+      const activePath = describeArc(50, 50, radius, radius, FOCUS_RING_START_ANGLE, FOCUS_RING_START_ANGLE + sweep);
+      return `
+        <path class="observatory-fallback-ring-track observatory-fallback-ring-track--${metric.key}" d="${trackPath}"></path>
+        <path class="observatory-fallback-ring observatory-fallback-ring--${metric.key}" d="${activePath}"></path>
+      `;
+    }).join("");
+    const labelMarkup = node.ringMetrics.map(function (metric) {
+      return `<span class="observatory-fallback-ring-label observatory-fallback-ring-label--${metric.key}">${metric.label}</span>`;
+    }).join("");
+    return `
+      <span class="observatory-fallback-rings" aria-hidden="true">
+        <svg viewBox="0 0 100 100" class="observatory-fallback-rings-svg">${guideMarkup}</svg>
+        <span class="observatory-fallback-ring-legend">${labelMarkup}</span>
+      </span>
+    `;
+  }
+
   function buildFieldNodes(payload) {
     const modelsById = new Map((payload.models || []).map(function (model) {
       return [model.model_id, model];
@@ -46,19 +103,27 @@ if (root) {
     const sorted = (payload.constellation.nodes || [])
       .map(function (node) {
         const model = modelsById.get(node.id) || {};
+        const metrics = model.metrics || {};
+        const rangeCii = typeof model.rangeCii === "number"
+          ? model.rangeCii
+          : (typeof node.cii === "number" ? node.cii : metrics.cii) || 0;
         return {
           id: node.id,
           label: node.label,
           provider: node.provider || model.provider || "unknown",
-          cii: typeof node.cii === "number" ? node.cii : (model.metrics && model.metrics.cii) || 0,
-          rangeCii: typeof model.rangeCii === "number" ? model.rangeCii : (typeof node.cii === "number" ? node.cii : (model.metrics && model.metrics.cii) || 0),
+          rank: typeof model.rank === "number" ? model.rank : null,
+          relativeStanding: model.relativeStanding || null,
+          metrics: metrics,
+          cii: typeof node.cii === "number" ? node.cii : metrics.cii || 0,
+          rangeCii: rangeCii,
           rangeTrend: typeof model.rangeTrend === "number" ? model.rangeTrend : 0,
           historyDepth: typeof model.historyDepth === "number" ? model.historyDepth : ((payload.ciiHistory && payload.ciiHistory[node.id]) || []).length,
-          ips: typeof node.ips === "number" ? node.ips : (model.metrics && model.metrics.ips) || 0,
-          srs: typeof node.srs === "number" ? node.srs : (model.metrics && model.metrics.srs) || 0,
+          ips: typeof node.ips === "number" ? node.ips : metrics.ips || 0,
+          srs: typeof node.srs === "number" ? node.srs : metrics.srs || 0,
           stale: Boolean(model.stale),
           live: Boolean(model.live),
           lastSeen: node.last_seen || model.last_seen || null,
+          ringMetrics: resolveFocusRingMetrics(metrics, rangeCii, payload.constellation && payload.constellation.threshold),
         };
       })
       .sort(function (left, right) {
@@ -152,6 +217,416 @@ if (root) {
     `;
   }
 
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  function createSvgElement(name, attributes) {
+    const element = document.createElementNS(SVG_NS, name);
+    Object.entries(attributes || {}).forEach(function ([key, value]) {
+      element.setAttribute(key, String(value));
+    });
+    return element;
+  }
+
+  function polarPoint(cx, cy, radiusX, radiusY, angle) {
+    const radians = (angle - 90) * (Math.PI / 180);
+    return {
+      x: cx + (radiusX * Math.cos(radians)),
+      y: cy + (radiusY * Math.sin(radians)),
+    };
+  }
+
+  function describeArc(cx, cy, radiusX, radiusY, startAngle, endAngle) {
+    const start = polarPoint(cx, cy, radiusX, radiusY, endAngle);
+    const end = polarPoint(cx, cy, radiusX, radiusY, startAngle);
+    const largeArcFlag = Math.abs(endAngle - startAngle) <= 180 ? "0" : "1";
+    return `M ${start.x} ${start.y} A ${radiusX} ${radiusY} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`;
+  }
+
+  class ObservatoryScreenOverlay {
+    constructor(shell, reducedMotion) {
+      this.shell = shell;
+      this.reducedMotion = reducedMotion;
+      this.width = 0;
+      this.height = 0;
+      this.focusId = null;
+      this.focusChangedAt = 0;
+
+      this.svg = createSvgElement("svg", {
+        class: "observatory-screen-overlay",
+        "aria-hidden": "true",
+      });
+      this.staticGroup = createSvgElement("g", { class: "observatory-screen-overlay__static" });
+      this.focusGroup = createSvgElement("g", { class: "observatory-screen-overlay__focus" });
+      this.focusTrace = createSvgElement("path", {
+        class: "observatory-screen-overlay__focus-trace",
+        "stroke-width": "1.15",
+      });
+      this.focusEcho = createSvgElement("ellipse", {
+        class: "observatory-screen-overlay__focus-echo",
+        "stroke-width": "1.2",
+        "stroke-dasharray": "14 10",
+      });
+      this.focusRing = createSvgElement("ellipse", {
+        class: "observatory-screen-overlay__focus-ring",
+        "stroke-width": "1.65",
+      });
+      this.counterRingA = createSvgElement("ellipse", {
+        class: "observatory-screen-overlay__focus-ring",
+        "stroke-width": "1.1",
+        "stroke-dasharray": "18 8",
+      });
+      this.counterRingB = createSvgElement("ellipse", {
+        class: "observatory-screen-overlay__focus-echo",
+        "stroke-width": "1",
+        "stroke-dasharray": "9 7",
+      });
+      this.focusSweep = createSvgElement("path", {
+        class: "observatory-screen-overlay__focus-sweep",
+        "stroke-width": "2.1",
+      });
+      this.bracketNorthWest = createSvgElement("path", {
+        class: "observatory-screen-overlay__focus-bracket",
+        "stroke-width": "1.8",
+      });
+      this.bracketNorthEast = createSvgElement("path", {
+        class: "observatory-screen-overlay__focus-bracket",
+        "stroke-width": "1.8",
+      });
+      this.bracketSouthWest = createSvgElement("path", {
+        class: "observatory-screen-overlay__focus-bracket",
+        "stroke-width": "1.8",
+      });
+      this.bracketSouthEast = createSvgElement("path", {
+        class: "observatory-screen-overlay__focus-bracket",
+        "stroke-width": "1.8",
+      });
+      this.scanLine = createSvgElement("line", {
+        class: "observatory-screen-overlay__scan-line",
+      });
+      this.annotationRect = createSvgElement("rect", {
+        class: "observatory-screen-overlay__annotation",
+        rx: "12",
+        ry: "12",
+        width: "232",
+        height: "52",
+      });
+      this.annotationText = createSvgElement("text", {
+        class: "observatory-screen-overlay__annotation-text",
+        "font-size": "9",
+      });
+      this.annotationMeta = createSvgElement("text", {
+        class: "observatory-screen-overlay__annotation-meta",
+        "font-size": "7",
+      });
+
+      this.focusGroup.append(
+        this.focusTrace,
+        this.focusEcho,
+        this.focusRing,
+        this.counterRingA,
+        this.counterRingB,
+        this.focusSweep,
+        this.bracketNorthWest,
+        this.bracketNorthEast,
+        this.bracketSouthWest,
+        this.bracketSouthEast,
+        this.scanLine,
+        this.annotationRect,
+        this.annotationText,
+        this.annotationMeta,
+      );
+      this.svg.append(this.staticGroup, this.focusGroup);
+      this.shell.appendChild(this.svg);
+    }
+
+    setFocus(modelId, time) {
+      if (modelId !== this.focusId) {
+        this.focusId = modelId;
+        this.focusChangedAt = time || performance.now();
+      }
+      this.svg.classList.toggle("is-locked", Boolean(modelId));
+    }
+
+    resize(width, height) {
+      this.width = width;
+      this.height = height;
+      this.svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      this.renderStatic();
+    }
+
+    renderStatic() {
+      this.staticGroup.replaceChildren();
+      if (!this.width || !this.height) return;
+
+      const cx = this.width * 0.52;
+      const cy = this.height * 0.54;
+      const outerRadiusX = Math.min(this.width * 0.32, this.height * 0.44);
+      const outerRadiusY = outerRadiusX * 0.72;
+      const midRadiusX = outerRadiusX * 0.74;
+      const midRadiusY = outerRadiusY * 0.74;
+      const innerRadiusX = outerRadiusX * 0.42;
+      const innerRadiusY = outerRadiusY * 0.42;
+      const coreWash = createSvgElement("ellipse", {
+        cx,
+        cy,
+        rx: outerRadiusX * 1.22,
+        ry: outerRadiusY * 1.18,
+        fill: "rgba(78, 120, 198, 0.035)",
+        stroke: "none",
+      });
+
+      const sectorLeft = createSvgElement("path", {
+        d: [
+          `M ${cx} ${cy}`,
+          describeArc(cx, cy, outerRadiusX * 0.94, outerRadiusY * 0.94, 212, 302),
+          "Z",
+        ].join(" "),
+        fill: "rgba(112, 173, 234, 0.05)",
+        stroke: "none",
+      });
+      const sectorRight = createSvgElement("path", {
+        d: [
+          `M ${cx} ${cy}`,
+          describeArc(cx, cy, outerRadiusX * 0.82, outerRadiusY * 0.82, 34, 108),
+          "Z",
+        ].join(" "),
+        fill: "rgba(160, 198, 244, 0.035)",
+        stroke: "none",
+      });
+      const outerEllipse = createSvgElement("ellipse", {
+        cx,
+        cy,
+        rx: outerRadiusX,
+        ry: outerRadiusY,
+        "stroke-width": "1.2",
+        fill: "none",
+      });
+      const midEllipse = createSvgElement("ellipse", {
+        cx,
+        cy,
+        rx: midRadiusX,
+        ry: midRadiusY,
+        "stroke-width": "1",
+        fill: "none",
+        opacity: "0.75",
+      });
+      const innerEllipse = createSvgElement("ellipse", {
+        cx,
+        cy,
+        rx: innerRadiusX,
+        ry: innerRadiusY,
+        "stroke-width": "0.9",
+        fill: "none",
+        opacity: "0.62",
+      });
+      const upperArc = createSvgElement("path", {
+        d: describeArc(cx, cy, outerRadiusX * 1.08, outerRadiusY * 1.02, 198, 344),
+        "stroke-width": "1.1",
+        fill: "none",
+        opacity: "0.84",
+      });
+      const lowerArc = createSvgElement("path", {
+        d: describeArc(cx, cy, outerRadiusX * 0.92, outerRadiusY * 0.88, 28, 158),
+        "stroke-width": "0.95",
+        fill: "none",
+        opacity: "0.64",
+      });
+      const horizon = createSvgElement("line", {
+        x1: this.width * 0.1,
+        y1: cy,
+        x2: this.width * 0.9,
+        y2: cy,
+        "stroke-width": "0.9",
+        opacity: "0.54",
+      });
+      const meridian = createSvgElement("line", {
+        x1: cx,
+        y1: this.height * 0.14,
+        x2: cx,
+        y2: this.height * 0.86,
+        "stroke-width": "0.7",
+        opacity: "0.4",
+      });
+
+      this.staticGroup.append(
+        coreWash,
+        sectorLeft,
+        sectorRight,
+        outerEllipse,
+        midEllipse,
+        innerEllipse,
+        upperArc,
+        lowerArc,
+        horizon,
+        meridian,
+      );
+
+      [
+        { rx: outerRadiusX * 1.18, ry: outerRadiusY * 1.12, start: 192, end: 346, width: "0.82", opacity: "0.44" },
+        { rx: outerRadiusX * 1.26, ry: outerRadiusY * 1.2, start: 206, end: 332, width: "0.78", opacity: "0.32" },
+        { rx: outerRadiusX * 0.72, ry: outerRadiusY * 0.72, start: 26, end: 156, width: "0.76", opacity: "0.28" },
+      ].forEach((band) => {
+        this.staticGroup.append(createSvgElement("path", {
+          d: describeArc(cx, cy, band.rx, band.ry, band.start, band.end),
+          "stroke-width": band.width,
+          fill: "none",
+          opacity: band.opacity,
+        }));
+      });
+
+      [-62, -38, -18, 18, 38, 62].forEach((angle) => {
+        const start = polarPoint(cx, cy, midRadiusX * 0.96, midRadiusY * 0.96, angle);
+        const end = polarPoint(cx, cy, outerRadiusX * 1.06, outerRadiusY * 1.06, angle);
+        this.staticGroup.append(createSvgElement("line", {
+          x1: start.x,
+          y1: start.y,
+          x2: end.x,
+          y2: end.y,
+          "stroke-width": "0.8",
+          opacity: angle === -18 || angle === 18 ? "0.82" : "0.54",
+        }));
+      });
+
+      for (let index = 0; index < 16; index += 1) {
+        const angle = 196 + (index * 10);
+        const start = polarPoint(cx, cy, outerRadiusX * 1.03, outerRadiusY * 1.03, angle);
+        const end = polarPoint(cx, cy, outerRadiusX * (index % 4 === 0 ? 1.13 : 1.08), outerRadiusY * (index % 4 === 0 ? 1.13 : 1.08), angle);
+        this.staticGroup.append(createSvgElement("line", {
+          x1: start.x,
+          y1: start.y,
+          x2: end.x,
+          y2: end.y,
+          "stroke-width": index % 4 === 0 ? "1.2" : "0.72",
+          opacity: index % 4 === 0 ? "0.74" : "0.46",
+        }));
+      }
+
+      [0.22, 0.33, 0.44, 0.55, 0.66, 0.77].forEach((ratio) => {
+        const y = this.height * ratio;
+        this.staticGroup.append(createSvgElement("line", {
+          x1: this.width * 0.08,
+          y1: y,
+          x2: this.width * 0.16,
+          y2: y,
+          "stroke-width": "0.7",
+          opacity: "0.36",
+        }));
+        this.staticGroup.append(createSvgElement("line", {
+          x1: this.width * 0.84,
+          y1: y,
+          x2: this.width * 0.92,
+          y2: y,
+          "stroke-width": "0.7",
+          opacity: "0.36",
+        }));
+      });
+
+      [0.68, 0.74, 0.8, 0.86].forEach((ratio) => {
+        this.staticGroup.append(createSvgElement("line", {
+          x1: this.width * 0.12,
+          y1: this.height * ratio,
+          x2: this.width * 0.88,
+          y2: this.height * ratio,
+          "stroke-width": "0.6",
+          opacity: ratio === 0.8 ? "0.42" : "0.22",
+        }));
+      });
+
+      [
+        { text: "AZIMUTH 000", x: cx, y: cy - outerRadiusY - 28, anchor: "middle" },
+        { text: "ELEV +045", x: this.width * 0.19, y: cy - outerRadiusY * 0.22, anchor: "start" },
+        { text: "SIGNAL PLANE", x: this.width * 0.81, y: cy - outerRadiusY * 0.18, anchor: "end" },
+        { text: "TRACK GRID", x: this.width * 0.17, y: cy + outerRadiusY * 0.88, anchor: "start" },
+        { text: "LOCK WINDOW", x: this.width * 0.83, y: cy + outerRadiusY * 0.88, anchor: "end" },
+      ].forEach((label) => {
+        this.staticGroup.append(createSvgElement("text", {
+          class: "observatory-screen-overlay__static-text",
+          x: label.x,
+          y: label.y,
+          "text-anchor": label.anchor,
+        }));
+        this.staticGroup.lastChild.textContent = label.text;
+      });
+    }
+
+    update(time, target, meta) {
+      this.setFocus(meta ? meta.id : null, time);
+      if (!target || !target.visible) {
+        this.focusGroup.setAttribute("opacity", "0");
+        return;
+      }
+
+      const progress = this.reducedMotion
+        ? 1
+        : clamp((time - this.focusChangedAt) / 760, 0, 1);
+      const settleRadius = target.radius || 72;
+      const radiusX = settleRadius * (1.08 + (1 - progress) * 0.32);
+      const radiusY = settleRadius * (0.82 + (1 - progress) * 0.22);
+      const rotation = this.reducedMotion ? 26 : (progress * 28) + ((time * 0.018) % 360);
+      const counterRotation = this.reducedMotion ? -18 : (-progress * 36) - ((time * 0.022) % 360);
+      const bracketOffset = settleRadius + (1 - progress) * 28;
+      const bracketLength = 12 + progress * 18;
+      const scanProgress = this.reducedMotion ? 0.88 : Math.min(1, progress * 1.45);
+      const scanCenter = target.x - radiusX - 30 + ((radiusX * 2) + 60) * scanProgress;
+      const annotationWidth = clamp(196 + (meta.label.length * 4.6), 224, 316);
+      const annotationX = Math.min(this.width - annotationWidth - 18, target.x + radiusX + 30);
+      const annotationY = Math.max(52, target.y - radiusY - 54);
+
+      this.focusGroup.setAttribute("opacity", "1");
+
+      this.focusTrace.setAttribute("d", `M ${annotationX} ${annotationY + 44} C ${annotationX - 28} ${annotationY + 58}, ${target.x + 22} ${target.y + 16}, ${target.x} ${target.y}`);
+
+      this.focusEcho.setAttribute("cx", target.x);
+      this.focusEcho.setAttribute("cy", target.y);
+      this.focusEcho.setAttribute("rx", radiusX * 1.16);
+      this.focusEcho.setAttribute("ry", radiusY * 1.16);
+
+      this.focusRing.setAttribute("cx", target.x);
+      this.focusRing.setAttribute("cy", target.y);
+      this.focusRing.setAttribute("rx", radiusX);
+      this.focusRing.setAttribute("ry", radiusY);
+
+      this.counterRingA.setAttribute("cx", target.x);
+      this.counterRingA.setAttribute("cy", target.y);
+      this.counterRingA.setAttribute("rx", radiusX * 0.84);
+      this.counterRingA.setAttribute("ry", radiusY * 0.84);
+      this.counterRingA.setAttribute("transform", `rotate(${rotation} ${target.x} ${target.y})`);
+
+      this.counterRingB.setAttribute("cx", target.x);
+      this.counterRingB.setAttribute("cy", target.y);
+      this.counterRingB.setAttribute("rx", radiusX * 1.28);
+      this.counterRingB.setAttribute("ry", radiusY * 1.28);
+      this.counterRingB.setAttribute("transform", `rotate(${counterRotation} ${target.x} ${target.y})`);
+
+      this.focusSweep.setAttribute(
+        "d",
+        describeArc(target.x, target.y, radiusX * 1.42, radiusY * 1.42, 18, 18 + (progress * 292)),
+      );
+      this.focusSweep.setAttribute("opacity", `${0.62 + (progress * 0.3)}`);
+
+      this.bracketNorthWest.setAttribute("d", `M ${target.x - bracketOffset} ${target.y - bracketOffset * 0.84} h ${bracketLength} M ${target.x - bracketOffset} ${target.y - bracketOffset * 0.84} v ${bracketLength}`);
+      this.bracketNorthEast.setAttribute("d", `M ${target.x + bracketOffset} ${target.y - bracketOffset * 0.84} h -${bracketLength} M ${target.x + bracketOffset} ${target.y - bracketOffset * 0.84} v ${bracketLength}`);
+      this.bracketSouthWest.setAttribute("d", `M ${target.x - bracketOffset} ${target.y + bracketOffset * 0.84} h ${bracketLength} M ${target.x - bracketOffset} ${target.y + bracketOffset * 0.84} v -${bracketLength}`);
+      this.bracketSouthEast.setAttribute("d", `M ${target.x + bracketOffset} ${target.y + bracketOffset * 0.84} h -${bracketLength} M ${target.x + bracketOffset} ${target.y + bracketOffset * 0.84} v -${bracketLength}`);
+
+      this.scanLine.setAttribute("x1", scanCenter - 26);
+      this.scanLine.setAttribute("y1", target.y);
+      this.scanLine.setAttribute("x2", scanCenter + 26);
+      this.scanLine.setAttribute("y2", target.y);
+      this.scanLine.setAttribute("opacity", `${this.reducedMotion ? 0.6 : Math.max(0.16, 1 - Math.abs((scanProgress * 2) - 1))}`);
+
+      this.annotationRect.setAttribute("width", annotationWidth);
+      this.annotationRect.setAttribute("x", annotationX);
+      this.annotationRect.setAttribute("y", annotationY);
+      this.annotationText.setAttribute("x", annotationX + 16);
+      this.annotationText.setAttribute("y", annotationY + 19);
+      this.annotationText.textContent = meta.label.toUpperCase();
+      this.annotationMeta.setAttribute("x", annotationX + 16);
+      this.annotationMeta.setAttribute("y", annotationY + 37);
+      this.annotationMeta.textContent = `${meta.provider.toUpperCase()} · RANK ${meta.rank} · Δ ${meta.trend}`;
+    }
+  }
+
   class PremiumObservatoryField {
     constructor(target, THREE, addons) {
       this.target = target;
@@ -179,7 +654,8 @@ if (root) {
       this.resizeObserver = null;
       this.labelFrameSkip = 0;
       this.bloomImpulse = 0;
-      this.bloomBase = 0.68;
+      this.bloomBase = 0.52;
+      this.focusChangedAt = performance.now();
       this.modes = latestPayload.toggles || { history: true, compare: false, threshold: true };
 
       this.target.innerHTML = `
@@ -192,6 +668,7 @@ if (root) {
       this.shell = this.target.firstElementChild;
       this.hud = this.shell.querySelector(".observatory-field-hud");
       this.labelLayer = this.shell.querySelector(".observatory-label-layer");
+      this.overlay = new ObservatoryScreenOverlay(this.shell, motionQuery.matches);
 
       /* Tooltip element */
       this.tooltip = createTooltipElement();
@@ -205,7 +682,7 @@ if (root) {
       this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
       this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      this.renderer.toneMappingExposure = 1.18;
+      this.renderer.toneMappingExposure = 1.06;
       this.renderer.domElement.className = "observatory-field-canvas";
       this.shell.prepend(this.renderer.domElement);
 
@@ -257,22 +734,22 @@ if (root) {
     buildBackdrop() {
       const { THREE } = this;
 
-      const ambient = new THREE.AmbientLight(0x92c4ff, 0.58);
-      const rim = new THREE.PointLight(0x7ec7ff, 3.1, 28, 2.2);
+      const ambient = new THREE.AmbientLight(0xc6ddff, 0.56);
+      const rim = new THREE.PointLight(0x8ebfff, 2.8, 28, 2.2);
       rim.position.set(4.2, 5.1, 9.4);
-      const fill = new THREE.PointLight(0x3768d8, 2.1, 34, 2.1);
+      const fill = new THREE.PointLight(0x4f78c8, 1.9, 34, 2.1);
       fill.position.set(-6.4, -3.8, 7.4);
-      const depthLight = new THREE.PointLight(0x8fe7ff, 1.2, 22, 1.8);
+      const depthLight = new THREE.PointLight(0xd8ecff, 0.94, 22, 1.8);
       depthLight.position.set(0, 0.6, -7.5);
-      const prism = new THREE.PointLight(0xff56c8, 1.15, 20, 1.9);
+      const prism = new THREE.PointLight(0x7aa4ff, 0.88, 20, 1.9);
       prism.position.set(-2.8, 2.1, 5.6);
-      const aqua = new THREE.PointLight(0x4fffd4, 1.05, 18, 1.8);
+      const aqua = new THREE.PointLight(0xb5d6ff, 0.76, 18, 1.8);
       aqua.position.set(2.5, -1.4, 4.8);
       this.scene.add(ambient, rim, fill, depthLight, prism, aqua);
       this.ambientLight = ambient;
       this.ambientBaseIntensity = 0.58;
 
-      [2.0, 3.85, 5.35].forEach((radius, index) => {
+      [1.55, 2.35, 3.85, 5.35].forEach((radius, index) => {
         const points = [];
         for (let step = 0; step <= 96; step += 1) {
           const angle = (step / 96) * Math.PI * 2;
@@ -280,17 +757,17 @@ if (root) {
         }
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
         const ringMaterial = new THREE.LineDashedMaterial({
-          color: 0x4d7dd9,
+          color: index === 0 ? 0xd6ebff : 0x79abff,
           transparent: true,
-          opacity: 0.22 - index * 0.03,
-          dashSize: 0.3,
-          gapSize: 0.15,
+          opacity: index === 0 ? 0.28 : 0.2 - ((index - 1) * 0.02),
+          dashSize: index === 0 ? 0.12 : 0.28,
+          gapSize: index === 0 ? 0.08 : 0.16,
           depthWrite: false,
         });
         const line = new THREE.LineLoop(geometry, ringMaterial);
         line.computeLineDistances();
-        line.rotation.x = 1.12 + index * 0.08;
-        line.rotation.z = index === 1 ? 0.38 : -0.22 * (index + 1);
+        line.rotation.x = 1.02 + index * 0.09;
+        line.rotation.z = index === 1 ? 0.36 : -0.18 * (index + 1);
         this.scene.add(line);
         this.measurementRings.push(line);
       });
@@ -523,7 +1000,7 @@ if (root) {
       canvas.height = 256;
       const context = canvas.getContext("2d");
       const gradient = context.createRadialGradient(128, 128, 0, 128, 128, 128);
-      /* Layered halo: bright nucleus → cyan band → blue falloff → violet whisper → transparent */
+      /* Layered halo: bright nucleus → ice band → blue falloff → silver whisper → transparent */
       gradient.addColorStop(0,    "rgba(255,255,255,1)");
       gradient.addColorStop(0.06, "rgba(232,250,255,0.97)");
       gradient.addColorStop(0.14, "rgba(200,238,255,0.88)");
@@ -574,24 +1051,90 @@ if (root) {
       return new this.THREE.CanvasTexture(canvas);
     }
 
+    createLivingCoreTexture() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 192;
+      canvas.height = 192;
+      const context = canvas.getContext("2d");
+      const primary = context.createRadialGradient(78, 82, 10, 96, 96, 82);
+      primary.addColorStop(0, "rgba(255,255,255,0.96)");
+      primary.addColorStop(0.18, "rgba(233,242,255,0.82)");
+      primary.addColorStop(0.42, "rgba(184,213,255,0.34)");
+      primary.addColorStop(0.72, "rgba(126,162,225,0.08)");
+      primary.addColorStop(1, "rgba(0,0,0,0)");
+      context.fillStyle = primary;
+      context.beginPath();
+      context.ellipse(92, 96, 74, 58, -0.28, 0, Math.PI * 2);
+      context.fill();
+
+      const secondary = context.createRadialGradient(118, 106, 8, 96, 96, 76);
+      secondary.addColorStop(0, "rgba(255,255,255,0.76)");
+      secondary.addColorStop(0.24, "rgba(210,228,255,0.36)");
+      secondary.addColorStop(0.66, "rgba(153,184,232,0.06)");
+      secondary.addColorStop(1, "rgba(0,0,0,0)");
+      context.fillStyle = secondary;
+      context.beginPath();
+      context.ellipse(104, 96, 58, 44, 0.36, 0, Math.PI * 2);
+      context.fill();
+
+      return new this.THREE.CanvasTexture(canvas);
+    }
+
+    createMetricBand(radius, colorHex, opacity) {
+      const track = new this.THREE.Line(
+        new this.THREE.BufferGeometry(),
+        new this.THREE.LineBasicMaterial({
+          color: colorHex,
+          transparent: true,
+          opacity: opacity,
+          depthWrite: false,
+        }),
+      );
+      const active = new this.THREE.Line(
+        new this.THREE.BufferGeometry(),
+        new this.THREE.LineBasicMaterial({
+          color: colorHex,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+        }),
+      );
+      this.setMetricArcGeometry(track, radius, FOCUS_RING_MAX_SWEEP);
+      this.setMetricArcGeometry(active, radius, 6);
+      return { radius, track, active, value: 0, reveal: 0 };
+    }
+
+    setMetricArcGeometry(line, radius, sweepAngle) {
+      const segments = 52;
+      const points = [];
+      const limitedSweep = clamp(sweepAngle, 2, FOCUS_RING_MAX_SWEEP);
+      for (let step = 0; step <= segments; step += 1) {
+        const progress = step / segments;
+        const angle = FOCUS_RING_START_ANGLE + (limitedSweep * progress);
+        const radians = (angle - 90) * (Math.PI / 180);
+        points.push(new this.THREE.Vector3(
+          Math.cos(radians) * radius,
+          Math.sin(radians) * radius,
+          0,
+        ));
+      }
+      line.geometry.dispose();
+      line.geometry = new this.THREE.BufferGeometry().setFromPoints(points);
+    }
+
     buildOrbPalette(node) {
       const { THREE } = this;
       const seed = hashString(`orb:${node.provider}:${node.id}`);
-      const families = [
-        { coreHue: 0.53, emissiveHue: 0.5, haloHue: 0.54, auraHue: 0.71, shellHue: 0.56, nucleusHue: 0.54, lobes: [0.49, 0.77, 0.73, 0.44] },
-        { coreHue: 0.61, emissiveHue: 0.59, haloHue: 0.63, auraHue: 0.76, shellHue: 0.66, nucleusHue: 0.62, lobes: [0.56, 0.72, 0.79, 0.48] },
-        { coreHue: 0.68, emissiveHue: 0.66, haloHue: 0.7, auraHue: 0.8, shellHue: 0.73, nucleusHue: 0.69, lobes: [0.52, 0.8, 0.75, 0.58] },
-        { coreHue: 0.57, emissiveHue: 0.55, haloHue: 0.59, auraHue: 0.74, shellHue: 0.62, nucleusHue: 0.58, lobes: [0.47, 0.69, 0.82, 0.53] },
-      ];
-      const family = families[Math.floor(seed * families.length) % families.length];
-      const hueDrift = ((seed * 2) - 1) * 0.03;
-      const core = new THREE.Color().setHSL(family.coreHue + hueDrift, 0.56, node.tier === "flagship" ? 0.86 : node.tier === "secondary" ? 0.77 : 0.71);
-      const emissive = new THREE.Color().setHSL(family.emissiveHue + hueDrift, 0.78, node.tier === "flagship" ? 0.5 : node.tier === "secondary" ? 0.44 : 0.38);
-      const halo = new THREE.Color().setHSL(family.haloHue + hueDrift * 0.8, 0.52, 0.55);
-      const aura = new THREE.Color().setHSL(family.auraHue + hueDrift * 0.45, 0.5, 0.52);
-      const shell = new THREE.Color().setHSL(family.shellHue + hueDrift * 0.9, 0.46, 0.6);
-      const ring = new THREE.Color().setHSL(family.haloHue + hueDrift * 0.7, 0.74, 0.68);
-      const nucleus = new THREE.Color().setHSL(family.nucleusHue + hueDrift * 0.65, 0.28, 0.94);
+      const hueDrift = ((seed * 2) - 1) * 0.022;
+      const tierBoost = node.tier === "flagship" ? 1 : node.tier === "secondary" ? 0.78 : 0.56;
+      const familyShift = (Math.floor(seed * 4) - 1.5) * 0.012;
+      const core = new THREE.Color().setHSL(0.61 + familyShift + hueDrift * 0.3, 0.84, node.tier === "flagship" ? 0.56 : node.tier === "secondary" ? 0.51 : 0.47);
+      const emissive = new THREE.Color().setHSL(0.59 + familyShift + hueDrift * 0.3, 0.94, 0.58 + tierBoost * 0.04);
+      const halo = new THREE.Color().setHSL(0.64 + familyShift + hueDrift * 0.26, 0.7, 0.54);
+      const aura = new THREE.Color().setHSL(0.62 + familyShift + hueDrift * 0.22, 0.62, 0.5);
+      const shell = new THREE.Color().setHSL(0.63 + familyShift + hueDrift * 0.24, 0.62, 0.54);
+      const ring = new THREE.Color().setHSL(0.58 + familyShift + hueDrift * 0.2, 0.86, 0.68);
+      const nucleus = new THREE.Color().setHSL(0.6 + familyShift + hueDrift * 0.18, 0.18, 0.78);
       return {
         core,
         emissive,
@@ -601,10 +1144,10 @@ if (root) {
         ring,
         nucleus,
         lobes: [
-          new THREE.Color().setHSL(family.lobes[0] + hueDrift * 0.4, 0.9, 0.68),
-          new THREE.Color().setHSL(family.lobes[1] + hueDrift * 0.35, 0.84, 0.66),
-          new THREE.Color().setHSL(family.lobes[2] + hueDrift * 0.35, 0.76, 0.7),
-          new THREE.Color().setHSL(family.lobes[3] + hueDrift * 0.3, 0.82, 0.63),
+          new THREE.Color().setHSL(0.56 + familyShift + hueDrift * 0.12, 0.9, 0.63),
+          new THREE.Color().setHSL(0.61 + familyShift + hueDrift * 0.14, 0.82, 0.65),
+          new THREE.Color().setHSL(0.66 + familyShift + hueDrift * 0.14, 0.74, 0.66),
+          new THREE.Color().setHSL(0.63 + familyShift + hueDrift * 0.1, 0.58, 0.72),
         ],
       };
     }
@@ -617,7 +1160,7 @@ if (root) {
       const palette = this.buildOrbPalette(node);
 
       /* ── Core sphere — luminous instrument orb ── */
-      const emissiveBase = node.tier === "flagship" ? 1.45 : node.tier === "secondary" ? 0.92 : 0.66;
+      const emissiveBase = node.tier === "flagship" ? 1.18 : node.tier === "secondary" ? 0.9 : 0.68;
 
       const core = new THREE.Mesh(
         new THREE.SphereGeometry(node.size, 32, 32),
@@ -625,21 +1168,57 @@ if (root) {
           color: palette.core,
           emissive: palette.emissive,
           emissiveIntensity: emissiveBase,
-          roughness: 0.12,
-          metalness: 0.08,
+          roughness: 0.16,
+          metalness: 0.1,
           transparent: true,
-          opacity: node.tier === "flagship" ? 0.52 : node.tier === "secondary" ? 0.42 : 0.34,
+          opacity: node.tier === "flagship" ? 0.56 : node.tier === "secondary" ? 0.48 : 0.4,
         }),
       );
       core.userData.modelId = node.id;
       group.add(core);
+
+      const livingCoreGroup = new THREE.Group();
+      livingCoreGroup.position.z = node.size * 0.12;
+      const livingCoreTexture = this.livingCoreTexture || (this.livingCoreTexture = this.createLivingCoreTexture());
+      const livingCoreConfigs = [
+        { scaleX: 1.62, scaleY: 1.18, opacity: 0.28, offsetX: -0.08, offsetY: 0.03, speed: 0.34 },
+        { scaleX: 1.34, scaleY: 1.48, opacity: 0.24, offsetX: 0.06, offsetY: -0.05, speed: 0.28 },
+        { scaleX: 0.92, scaleY: 0.92, opacity: 0.18, offsetX: 0.02, offsetY: 0.06, speed: 0.22 },
+      ];
+      const livingCoreLayers = livingCoreConfigs.map((config, index) => {
+        const sprite = new THREE.Sprite(
+          new THREE.SpriteMaterial({
+            map: livingCoreTexture,
+            color: index === 0 ? palette.emissive : index === 1 ? palette.ring : palette.shell,
+            transparent: true,
+            opacity: config.opacity,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+          }),
+        );
+        sprite.scale.set(node.size * config.scaleX, node.size * config.scaleY, 1);
+        sprite.position.set(node.size * config.offsetX, node.size * config.offsetY, 0);
+        sprite.material.rotation = index * 0.6;
+        livingCoreGroup.add(sprite);
+        return {
+          sprite,
+          baseOpacity: config.opacity,
+          baseScaleX: node.size * config.scaleX,
+          baseScaleY: node.size * config.scaleY,
+          baseOffsetX: node.size * config.offsetX,
+          baseOffsetY: node.size * config.offsetY,
+          speed: config.speed,
+          phase: node.orbitPhase + index * 1.1,
+        };
+      });
+      group.add(livingCoreGroup);
 
       const shell = new THREE.Mesh(
         new THREE.SphereGeometry(node.size * (node.tier === "flagship" ? 2.55 : node.tier === "secondary" ? 2.1 : 1.72), 28, 28),
         new THREE.MeshBasicMaterial({
           color: palette.shell,
           transparent: true,
-          opacity: node.tier === "flagship" ? 0.1 : node.tier === "secondary" ? 0.07 : 0.045,
+          opacity: node.tier === "flagship" ? 0.16 : node.tier === "secondary" ? 0.12 : 0.08,
           blending: THREE.NormalBlending,
           depthWrite: false,
           side: THREE.BackSide,
@@ -653,12 +1232,12 @@ if (root) {
           map: this.nucleusTexture || (this.nucleusTexture = this.createNucleusTexture()),
           color: palette.nucleus,
           transparent: true,
-          opacity: node.tier === "flagship" ? 0.24 : node.tier === "secondary" ? 0.18 : 0.14,
+          opacity: node.tier === "flagship" ? 0.1 : node.tier === "secondary" ? 0.08 : 0.06,
           depthWrite: false,
           blending: THREE.AdditiveBlending,
         }),
       );
-      nucleus.scale.setScalar(node.size * 2.2);
+      nucleus.scale.setScalar(node.size * 1.64);
       nucleus.userData.modelId = node.id;
       group.add(nucleus);
 
@@ -675,9 +1254,9 @@ if (root) {
             map: lobeTexture,
             color: palette.lobes[index],
             transparent: true,
-            opacity: node.tier === "flagship" ? 0.56 : node.tier === "secondary" ? 0.4 : 0.24,
+            opacity: node.tier === "flagship" ? 0.36 : node.tier === "secondary" ? 0.28 : 0.18,
             depthWrite: false,
-            blending: THREE.NormalBlending,
+            blending: THREE.AdditiveBlending,
           }),
         );
         sprite.scale.set(node.size * config.width * node.haloScale, node.size * config.height * node.haloScale, 1);
@@ -705,12 +1284,12 @@ if (root) {
           map: this.glowTexture || (this.glowTexture = this.createGlowTexture()),
           color: palette.halo,
           transparent: true,
-          opacity: node.tier === "flagship" ? 0.44 : node.tier === "secondary" ? 0.3 : 0.2,
+          opacity: node.tier === "flagship" ? 0.18 : node.tier === "secondary" ? 0.12 : 0.08,
           depthWrite: false,
           blending: THREE.AdditiveBlending,
         }),
       );
-      halo.scale.setScalar(node.size * node.haloScale * 4.7);
+      halo.scale.setScalar(node.size * node.haloScale * 3.5);
       halo.userData.modelId = node.id;
       group.add(halo);
 
@@ -720,14 +1299,27 @@ if (root) {
           map: this.glowTexture,
           color: palette.aura,
           transparent: true,
-          opacity: node.tier === "flagship" ? 0.1 : node.tier === "secondary" ? 0.06 : 0.03,
+          opacity: node.tier === "flagship" ? 0.028 : node.tier === "secondary" ? 0.02 : 0.012,
           depthWrite: false,
           blending: THREE.AdditiveBlending,
         }),
       );
-      aura.scale.setScalar(node.size * node.haloScale * 8.5);
+      aura.scale.setScalar(node.size * node.haloScale * 5.6);
       aura.userData.modelId = node.id;
       group.add(aura);
+
+      const guideRing = new THREE.Mesh(
+        new THREE.TorusGeometry(node.size * (node.tier === "flagship" ? 1.92 : node.tier === "secondary" ? 1.64 : 1.42), node.size * 0.022, 6, 56),
+        new THREE.MeshBasicMaterial({
+          color: palette.ring,
+          transparent: true,
+          opacity: node.tier === "flagship" ? 0.18 : node.tier === "secondary" ? 0.14 : 0.1,
+          depthWrite: false,
+        }),
+      );
+      guideRing.rotation.x = 1.22;
+      guideRing.rotation.z = -0.18;
+      group.add(guideRing);
 
       /* ── Accent ring — inner instrument orbit ── */
       const accentRing = new THREE.Mesh(
@@ -735,11 +1327,11 @@ if (root) {
         new THREE.MeshStandardMaterial({
           color: 0x000000,
           emissive: palette.ring,
-          emissiveIntensity: node.tier === "flagship" ? 0.8 : node.tier === "secondary" ? 0.5 : 0.3,
+          emissiveIntensity: node.tier === "flagship" ? 0.62 : node.tier === "secondary" ? 0.42 : 0.24,
           roughness: 0.4,
           metalness: 0.0,
           transparent: true,
-          opacity: node.tier === "flagship" ? 0.32 : node.tier === "secondary" ? 0.18 : 0.09,
+          opacity: node.tier === "flagship" ? 0.38 : node.tier === "secondary" ? 0.24 : 0.14,
         }),
       );
       accentRing.rotation.x = 1.0;
@@ -754,7 +1346,7 @@ if (root) {
           new THREE.MeshBasicMaterial({
             color: palette.lobes[node.tier === "flagship" ? 1 : 2],
             transparent: true,
-            opacity: node.tier === "flagship" ? 0.18 : 0.08,
+            opacity: node.tier === "flagship" ? 0.18 : 0.1,
           }),
         );
         orbitRing.rotation.x = 1.38;
@@ -779,6 +1371,29 @@ if (root) {
         group.add(focusRing);
       }
 
+      const metricBandGroup = new THREE.Group();
+      metricBandGroup.position.z = node.size * 0.18;
+      metricBandGroup.visible = false;
+      const metricBandColors = [
+        palette.ring.clone(),
+        palette.shell.clone().lerp(palette.ring, 0.24),
+        palette.emissive.clone().lerp(palette.shell, 0.22),
+        palette.halo.clone().lerp(palette.ring, 0.36),
+      ];
+      const metricBands = (node.ringMetrics || []).map((metric, index) => {
+        const band = this.createMetricBand(
+          node.size * (3.58 + index * 0.42),
+          metricBandColors[index % metricBandColors.length].getHex(),
+          0.08 - index * 0.01,
+        );
+        band.metric = metric;
+        band.track.rotation.z = 0.02 * index;
+        band.active.rotation.z = 0.02 * index;
+        metricBandGroup.add(band.track, band.active);
+        return band;
+      });
+      group.add(metricBandGroup);
+
       const label = createLabelElement(node);
       this.labelLayer.appendChild(label);
 
@@ -787,14 +1402,19 @@ if (root) {
         node,
         group,
         core,
+        livingCoreGroup,
+        livingCoreLayers,
         shell,
         nucleus,
         lobes,
         halo,
         aura,
+        guideRing,
         accentRing,
         orbitRing,
         focusRing,
+        metricBandGroup,
+        metricBands,
         label,
         baseEmissiveIntensity: emissiveBase,
         baseCoreOpacity: core.material.opacity,
@@ -818,10 +1438,14 @@ if (root) {
       const prevFocus = this.focusId;
       this.payload = payload;
       this.focusId = payload.focusModelId || null;
+      if (this.focusId !== prevFocus) {
+        this.focusChangedAt = performance.now();
+      }
       /* Bloom impulse on new focus acquisition */
       if (this.focusId && this.focusId !== prevFocus) {
         this.bloomImpulse = 1.0;
       }
+      this.overlay.setFocus(this.focusId, performance.now());
       this.modes = payload.toggles || this.modes;
       this.nodes = buildFieldNodes(payload);
       this.clearNodes();
@@ -1019,83 +1643,124 @@ if (root) {
       this.keyTarget.y = clamp((this.keyTarget.y + this.keyVelocity.y) * (idleDecay ? 0.985 : 0.992), -0.78, 0.78);
 
       const slowTime = time * 0.001;
+      const reducedMotion = motionQuery.matches;
+      const focusReveal = this.focusId ? clamp((performance.now() - this.focusChangedAt) / (reducedMotion ? 220 : 720), 0, 1) : 0;
 
       this.nodeLookup.forEach((entry) => {
         const drift = time * 0.0002 * entry.node.driftSpeed;
-        entry.group.position.x = entry.node.anchor.x + Math.sin(drift + entry.node.orbitPhase) * (entry.node.tier === "flagship" ? 0.34 : entry.node.tier === "secondary" ? 0.22 : 0.18);
-        entry.group.position.y = entry.node.anchor.y + Math.cos(drift * 1.36 + entry.node.orbitPhase) * (entry.node.tier === "flagship" ? 0.3 : entry.node.tier === "secondary" ? 0.18 : 0.14);
-        entry.group.position.z = entry.node.anchor.z + Math.sin(drift * 0.88 + entry.node.orbitPhase) * (entry.node.tier === "outer" ? 0.32 : 0.18);
+        const siriPhase = slowTime * (0.48 + entry.node.driftSpeed * 0.34) + entry.node.orbitPhase;
+        const siriWaveA = Math.sin(siriPhase);
+        const siriWaveB = Math.sin(siriPhase * 1.37 + entry.node.cii * 4.2);
+        const siriWaveC = Math.cos(siriPhase * 0.82 - entry.node.cii * 3.1);
+        entry.group.position.x = entry.node.anchor.x
+          + siriWaveA * (entry.node.tier === "flagship" ? 0.3 : entry.node.tier === "secondary" ? 0.2 : 0.16)
+          + siriWaveB * 0.04;
+        entry.group.position.y = entry.node.anchor.y
+          + siriWaveB * (entry.node.tier === "flagship" ? 0.22 : entry.node.tier === "secondary" ? 0.15 : 0.12)
+          + siriWaveC * 0.035;
+        entry.group.position.z = entry.node.anchor.z
+          + siriWaveC * (entry.node.tier === "outer" ? 0.22 : 0.14)
+          + Math.sin(drift * 0.88 + entry.node.orbitPhase) * 0.04;
+        entry.group.rotation.z = Math.sin(siriPhase * 0.42) * 0.08;
+        entry.group.rotation.y = Math.cos(siriPhase * 0.36) * 0.06;
 
         const focused = this.focusId === entry.node.id;
         const hovered = this.hoverId === entry.node.id;
         const dimmed = Boolean(this.focusId) && !focused;
 
         /* ── Node breathing: subtle pulsing tied to CII ── */
-        const breatheRate = 0.6 + entry.node.cii * 1.4; /* higher CII = faster pulse */
-        const breatheAmp = entry.node.tier === "flagship" ? 0.06 : 0.035;
+        const breatheRate = 0.72 + entry.node.cii * 1.1;
+        const breatheAmp = reducedMotion ? 0 : entry.node.tier === "flagship" ? 0.072 : entry.node.tier === "secondary" ? 0.05 : 0.038;
         const breathe = 1.0 + Math.sin(slowTime * breatheRate + entry.node.orbitPhase) * breatheAmp;
 
         const targetScale = (focused ? 1.42 : hovered ? 1.22 : dimmed ? 0.76 : 1) * breathe;
         entry.group.scale.setScalar(lerp(entry.group.scale.x, targetScale, 0.12));
 
         /* ── Emissive intensity breathing — boosted on focus/hover ── */
-        const focusBoost = focused ? 0.72 : hovered ? 0.22 : 0;
+        const focusBoost = focused ? 0.86 : hovered ? 0.3 : 0;
         const emissivePulse = entry.baseEmissiveIntensity + focusBoost +
-          Math.sin(slowTime * breatheRate * 0.8 + entry.node.orbitPhase) * (entry.node.tier === "flagship" ? 0.35 : 0.15);
+          (reducedMotion ? 0 : Math.sin(slowTime * breatheRate * 0.8 + entry.node.orbitPhase) * (entry.node.tier === "flagship" ? 0.26 : entry.node.tier === "secondary" ? 0.18 : 0.1));
         entry.core.material.emissiveIntensity = lerp(entry.core.material.emissiveIntensity, emissivePulse, 0.08);
+
+        if (entry.livingCoreLayers) {
+          entry.livingCoreLayers.forEach((layer, index) => {
+            const layerWave = reducedMotion ? 0 : Math.sin(slowTime * (layer.speed + entry.node.cii * 0.18) + layer.phase);
+            const crossWave = reducedMotion ? 0 : Math.cos(slowTime * (layer.speed * 0.72 + 0.08) + layer.phase);
+            const focusLayerBoost = focused ? 1 + focusReveal * 0.22 : hovered ? 1.06 : dimmed ? 0.76 : 1;
+            layer.sprite.material.opacity = lerp(
+              layer.sprite.material.opacity,
+              (focused ? layer.baseOpacity * 1.9 : hovered ? layer.baseOpacity * 1.2 : dimmed ? layer.baseOpacity * 0.36 : layer.baseOpacity) * focusLayerBoost,
+              0.1,
+            );
+            layer.sprite.position.x = reducedMotion
+              ? layer.baseOffsetX
+              : layer.baseOffsetX + layerWave * entry.node.size * (0.12 + index * 0.02);
+            layer.sprite.position.y = reducedMotion
+              ? layer.baseOffsetY
+              : layer.baseOffsetY + crossWave * entry.node.size * (0.1 + index * 0.015);
+            layer.sprite.scale.set(
+              layer.baseScaleX * focusLayerBoost * (1 + layerWave * 0.08),
+              layer.baseScaleY * focusLayerBoost * (1 - crossWave * 0.06),
+              1,
+            );
+            if (!reducedMotion) {
+              layer.sprite.material.rotation += layer.speed * 0.0024;
+            }
+          });
+        }
 
         /* ── Nucleus brightness ── */
         if (entry.nucleus) {
           entry.nucleus.material.opacity = lerp(
             entry.nucleus.material.opacity,
-            focused ? 0.42 : hovered ? 0.34 : dimmed ? 0.12 : entry.baseNucleusOpacity,
+            focused ? 0.16 : hovered ? 0.11 : dimmed ? 0.04 : entry.baseNucleusOpacity,
             0.12,
           );
         }
 
         entry.core.material.opacity = lerp(
           entry.core.material.opacity,
-          focused ? Math.min(0.68, entry.baseCoreOpacity + 0.1) : hovered ? Math.min(0.58, entry.baseCoreOpacity + 0.06) : dimmed ? 0.18 : entry.baseCoreOpacity,
+          focused ? Math.min(0.7, entry.baseCoreOpacity + 0.16) : hovered ? Math.min(0.58, entry.baseCoreOpacity + 0.08) : dimmed ? 0.16 : entry.baseCoreOpacity,
           0.1,
         );
 
         if (entry.shell) {
           entry.shell.material.opacity = lerp(
             entry.shell.material.opacity,
-            focused ? 0.22 : hovered ? 0.18 : dimmed ? 0.03 :
-              entry.node.tier === "flagship" ? 0.12 : entry.node.tier === "secondary" ? 0.08 : 0.05,
+            focused ? 0.11 : hovered ? 0.1 : dimmed ? 0.02 :
+              entry.node.tier === "flagship" ? 0.08 : entry.node.tier === "secondary" ? 0.06 : 0.04,
             0.08,
           );
-          const shellScale = 1 + Math.sin(slowTime * 0.72 + entry.node.orbitPhase) * (entry.node.tier === "flagship" ? 0.06 : 0.04);
+          const shellScale = 1 + (reducedMotion ? 0 : Math.sin(slowTime * 0.72 + entry.node.orbitPhase) * (entry.node.tier === "flagship" ? 0.04 : 0.025));
           entry.shell.scale.setScalar(shellScale);
         }
 
         if (entry.lobes) {
           entry.lobes.forEach((lobe, index) => {
-            const wave = Math.sin(slowTime * (lobe.speed + entry.node.cii * 0.14) + lobe.phase);
-            const hueNudge = Math.sin(slowTime * 0.28 + lobe.phase + index) * 0.02;
+            const wave = reducedMotion ? 0 : Math.sin(slowTime * (lobe.speed + entry.node.cii * 0.14) + lobe.phase);
+            const hueNudge = reducedMotion ? 0 : Math.sin(slowTime * 0.28 + lobe.phase + index) * 0.01;
             lobe.sprite.material.color.copy(lobe.baseColor).offsetHSL(hueNudge, 0, wave * 0.03);
             lobe.sprite.material.opacity = lerp(
               lobe.sprite.material.opacity,
-              (focused ? 0.5 : hovered ? 0.4 : dimmed ? 0.05 : lobe.baseOpacity) * (0.88 + wave * 0.14),
+              (focused ? 0.34 : hovered ? 0.24 : dimmed ? 0.03 : lobe.baseOpacity) * (0.92 + wave * 0.1),
               0.08,
             );
-            lobe.sprite.position.x = lobe.baseX + Math.sin(slowTime * lobe.speed + lobe.phase) * lobe.baseWidth * lobe.amplitude * 0.12;
-            lobe.sprite.position.y = lobe.baseY + Math.cos(slowTime * (lobe.speed * 0.86) + lobe.phase) * lobe.baseHeight * lobe.amplitude * 0.1;
+            lobe.sprite.position.x = reducedMotion ? lobe.baseX : lobe.baseX + Math.sin(slowTime * lobe.speed + lobe.phase) * lobe.baseWidth * lobe.amplitude * 0.08;
+            lobe.sprite.position.y = reducedMotion ? lobe.baseY : lobe.baseY + Math.cos(slowTime * (lobe.speed * 0.86) + lobe.phase) * lobe.baseHeight * lobe.amplitude * 0.07;
             lobe.sprite.scale.set(
-              lobe.baseWidth * (1 + wave * 0.05),
-              lobe.baseHeight * (1 - wave * 0.04),
+              lobe.baseWidth * (1 + wave * 0.03),
+              lobe.baseHeight * (1 - wave * 0.025),
               1,
             );
-            lobe.sprite.material.rotation = lobe.rotation + slowTime * lobe.speed * 0.1;
+            lobe.sprite.material.rotation = reducedMotion ? lobe.rotation : lobe.rotation + slowTime * lobe.speed * 0.06;
           });
         }
 
         /* ── Primary halo opacity ── */
         entry.halo.material.opacity = lerp(
           entry.halo.material.opacity,
-          focused ? 1 : hovered ? 0.82 : dimmed ? 0.06 :
-            entry.node.tier === "flagship" ? 0.44 : entry.node.tier === "secondary" ? 0.3 : 0.2,
+          focused ? 0.28 : hovered ? 0.18 : dimmed ? 0.02 :
+            entry.node.tier === "flagship" ? 0.18 : entry.node.tier === "secondary" ? 0.12 : 0.08,
           0.12,
         );
 
@@ -1103,27 +1768,66 @@ if (root) {
         if (entry.aura) {
           entry.aura.material.opacity = lerp(
             entry.aura.material.opacity,
-            focused ? 0.20 : hovered ? 0.14 : dimmed ? 0.008 :
-              entry.node.tier === "flagship" ? 0.1 : entry.node.tier === "secondary" ? 0.06 : 0.03,
+            focused ? 0.04 : hovered ? 0.028 : dimmed ? 0.004 :
+              entry.node.tier === "flagship" ? 0.028 : entry.node.tier === "secondary" ? 0.02 : 0.012,
             0.06,
           );
+        }
+
+        if (entry.guideRing) {
+          entry.guideRing.material.opacity = lerp(
+            entry.guideRing.material.opacity,
+            focused ? 0.26 : hovered ? 0.18 : dimmed ? 0.03 :
+              entry.node.tier === "flagship" ? 0.18 : entry.node.tier === "secondary" ? 0.14 : 0.1,
+            0.09,
+          );
+          entry.guideRing.rotation.y += focused ? 0.014 : 0.006;
+          entry.guideRing.rotation.z -= focused ? 0.006 : 0.002;
         }
 
         /* ── Focus lock ring — measurement-lock indicator ── */
         if (entry.focusRing) {
           entry.focusRing.material.opacity = lerp(
             entry.focusRing.material.opacity,
-            focused ? 0.48 : 0,
+            focused ? 0.58 : 0,
             0.06,
           );
           if (focused) entry.focusRing.rotation.z -= 0.008;
         }
 
+        if (entry.metricBands && entry.metricBandGroup) {
+          const revealTarget = focused ? focusReveal : 0;
+          entry.metricBandGroup.visible = revealTarget > 0.01 || entry.metricBands.some(function (band) {
+            return band.reveal > 0.01;
+          });
+          entry.metricBandGroup.scale.setScalar(focused ? 1.02 + revealTarget * 0.04 : 1);
+          entry.metricBandGroup.rotation.z = reducedMotion ? 0 : Math.sin(slowTime * 0.18 + entry.node.orbitPhase) * 0.06;
+          entry.metricBands.forEach((band, index) => {
+            band.reveal = lerp(band.reveal, revealTarget, focused ? 0.14 : 0.12);
+            band.value = lerp(band.value, band.metric.value * band.reveal, focused ? 0.14 : 0.1);
+            this.setMetricArcGeometry(
+              band.active,
+              band.radius,
+              Math.max(5, band.value * FOCUS_RING_MAX_SWEEP),
+            );
+            band.track.material.opacity = lerp(
+              band.track.material.opacity,
+              focused ? Math.max(0.1, 0.14 - index * 0.015) : 0,
+              0.12,
+            );
+            band.active.material.opacity = lerp(
+              band.active.material.opacity,
+              focused ? Math.max(0.18, 0.5 - index * 0.055) * band.reveal : 0,
+              0.12,
+            );
+          });
+        }
+
         /* ── Accent ring opacity + rotation ── */
         entry.accentRing.material.opacity = lerp(
           entry.accentRing.material.opacity,
-          focused ? 0.62 : hovered ? 0.38 : dimmed ? 0.06 :
-            entry.node.tier === "flagship" ? 0.32 : entry.node.tier === "secondary" ? 0.18 : 0.09,
+            focused ? 0.44 : hovered ? 0.28 : dimmed ? 0.05 :
+            entry.node.tier === "flagship" ? 0.22 : entry.node.tier === "secondary" ? 0.16 : 0.1,
           0.1,
         );
         const ringSpeed = entry.node.tier === "flagship" ? 0.15 : 0.08;
@@ -1134,8 +1838,8 @@ if (root) {
         if (entry.orbitRing) {
           entry.orbitRing.material.opacity = lerp(
             entry.orbitRing.material.opacity,
-            focused ? 0.44 : hovered ? 0.28 : dimmed ? 0.03 :
-              entry.node.tier === "flagship" ? 0.18 : 0.08,
+            focused ? 0.18 : hovered ? 0.12 : dimmed ? 0.03 :
+              entry.node.tier === "flagship" ? 0.12 : 0.08,
             0.08,
           );
           const orbitSpeed = entry.node.tier === "flagship" ? 0.028 : 0.018;
@@ -1205,7 +1909,7 @@ if (root) {
         }
         ring.rotation.y += 0.0006 * (index + 1);
         /* 22s-cycle opacity breathing */
-        const baseOpacity = 0.22 - index * 0.03;
+        const baseOpacity = this.modes.threshold ? 0.26 - index * 0.04 : 0.035;
         ring.material.opacity = baseOpacity + Math.sin(t * 0.285 + index * 1.2) * 0.03;
       });
     }
@@ -1298,26 +2002,71 @@ if (root) {
       this.camera.lookAt(this.focusPoint);
     }
 
+    updateOverlay(time) {
+      if (!this.overlay) return;
+      if (!this.focusId || !this.nodeLookup.has(this.focusId)) {
+        this.overlay.update(time, null, null);
+        return;
+      }
+      const focusEntry = this.nodeLookup.get(this.focusId);
+      const position = focusEntry.group.position.clone().project(this.camera);
+      const visible = position.z > -1 && position.z < 1;
+      if (!visible) {
+        this.overlay.update(time, null, null);
+        return;
+      }
+      const width = this.target.clientWidth || 700;
+      const height = this.target.clientHeight || 460;
+      const target = {
+        x: ((position.x + 1) / 2) * width,
+        y: ((-position.y + 1) / 2) * height,
+        radius: 42 + (focusEntry.node.size * 148),
+        visible: true,
+      };
+      const meta = {
+        id: focusEntry.node.id,
+        label: focusEntry.node.label,
+        provider: focusEntry.node.provider,
+        tier: focusEntry.node.tier,
+        rank: focusEntry.node.relativeStanding || "--",
+        trend: `${focusEntry.node.rangeTrend >= 0 ? "+" : ""}${focusEntry.node.rangeTrend.toFixed(3)}`,
+        cii: (focusEntry.node.rangeCii || focusEntry.node.cii).toFixed(3),
+      };
+      this.overlay.update(time, target, meta);
+    }
+
     renderLabels() {
       if (!this.nodeLookup.size) return;
       const rect = this.renderer.domElement.getBoundingClientRect();
       const candidates = [];
+      const hasFocusedLock = Boolean(this.focusId);
       this.nodeLookup.forEach((entry) => {
         const position = entry.group.position.clone().project(this.camera);
         const visible = position.z > -1 && position.z < 1;
         if (!visible) {
           entry.label.classList.remove("is-visible");
+          entry.label.classList.remove("is-secondary-callout");
           return;
         }
         const x = ((position.x + 1) / 2) * rect.width;
         const y = ((-position.y + 1) / 2) * rect.height;
-        const focusBoost = this.focusId === entry.node.id ? 120 : this.hoverId === entry.node.id ? 95 : entry.node.tier === "flagship" ? 72 : entry.node.tier === "secondary" && position.z < 0.45 && !entry.node.stale ? 44 : 16;
+        const isFocused = this.focusId === entry.node.id;
+        const focusBoost = isFocused
+          ? 160
+          : this.hoverId === entry.node.id
+          ? 96
+          : entry.node.tier === "flagship"
+          ? 64
+          : entry.node.tier === "secondary" && position.z < 0.45 && !entry.node.stale
+          ? 38
+          : 12;
         if (focusBoost < 20) {
           entry.label.classList.remove("is-visible");
+          entry.label.classList.remove("is-secondary-callout");
           return;
         }
         const width = 118 + entry.node.label.length * 4.4;
-        candidates.push({ entry, x, y, width, height: 36, priority: focusBoost, depth: position.z });
+        candidates.push({ entry, x, y, width, height: 36, priority: focusBoost, depth: position.z, isFocused: isFocused });
       });
 
       candidates.sort(function (left, right) {
@@ -1325,25 +2074,42 @@ if (root) {
       });
 
       const accepted = [];
+      let secondaryCalloutCount = 0;
       candidates.forEach(function (candidate) {
-        const collision = accepted.some(function (other) {
-          return Math.abs(other.x - candidate.x) < (other.width + candidate.width) * 0.42
-            && Math.abs(other.y - candidate.y) < (other.height + candidate.height) * 0.68;
-        });
-        if (collision && candidate.priority < 90) {
+        if (hasFocusedLock && !candidate.isFocused && secondaryCalloutCount >= 1) {
           candidate.entry.label.classList.remove("is-visible");
+          candidate.entry.label.classList.remove("is-secondary-callout");
+          return;
+        }
+        const collision = accepted.some(function (other) {
+          const xFactor = other.isFocused || candidate.isFocused ? 0.66 : 0.42;
+          const yFactor = other.isFocused || candidate.isFocused ? 0.98 : 0.68;
+          return Math.abs(other.x - candidate.x) < (other.width + candidate.width) * xFactor
+            && Math.abs(other.y - candidate.y) < (other.height + candidate.height) * yFactor;
+        });
+        if (collision && (!candidate.isFocused || candidate.priority < 150)) {
+          candidate.entry.label.classList.remove("is-visible");
+          candidate.entry.label.classList.remove("is-secondary-callout");
+          return;
+        }
+        if (hasFocusedLock && !candidate.isFocused && candidate.priority < 90) {
+          candidate.entry.label.classList.remove("is-visible");
+          candidate.entry.label.classList.remove("is-secondary-callout");
           return;
         }
         accepted.push(candidate);
         candidate.entry.label.classList.add("is-visible");
         candidate.entry.label.classList.toggle("is-focused", this.focusId === candidate.entry.node.id);
         candidate.entry.label.classList.toggle("is-dimmed", Boolean(this.focusId) && this.focusId !== candidate.entry.node.id);
+        candidate.entry.label.classList.toggle("is-secondary-callout", hasFocusedLock && !candidate.isFocused);
+        if (hasFocusedLock && !candidate.isFocused) secondaryCalloutCount += 1;
         candidate.entry.label.style.transform = `translate(${candidate.x}px, ${candidate.y}px)`;
       }, this);
 
       this.nodeLookup.forEach(function (entry) {
         if (!accepted.some(function (candidate) { return candidate.entry === entry; })) {
           entry.label.classList.remove("is-visible");
+          entry.label.classList.remove("is-secondary-callout");
         }
       });
     }
@@ -1354,6 +2120,7 @@ if (root) {
       this.camera.aspect = width / height;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(width, height, false);
+      this.overlay.resize(width, height);
       if (this.composer) {
         this.composer.setSize(width, height);
       }
@@ -1400,6 +2167,8 @@ if (root) {
         this.renderLabels();
       }
 
+      this.updateOverlay(time);
+
       /* Render with bloom if available, otherwise standard */
       if (this.composer) {
         this.composer.render();
@@ -1443,6 +2212,8 @@ if (root) {
       this.frame = null;
       this.layers = [];
       this.nodeElements = new Map();
+      this.fieldNodes = [];
+      this.focusChangedAt = 0;
 
       this.target.innerHTML = `
         <div class="observatory-fallback-field ${reducedMotion ? "is-reduced" : ""}" tabindex="0" role="application" aria-label="Interactive observatory field">
@@ -1456,7 +2227,9 @@ if (root) {
       this.shell = this.target.firstElementChild;
       this.hud = this.shell.querySelector(".observatory-field-hud");
       this.layers = Array.from(this.shell.querySelectorAll(".observatory-fallback-layer"));
+      this.overlay = new ObservatoryScreenOverlay(this.shell, reducedMotion);
       this.bindEvents();
+      this.resize();
       this.setData(latestPayload);
       if (!this.reducedMotion) {
         this.animate = this.animate.bind(this);
@@ -1472,6 +2245,7 @@ if (root) {
       this.onWheel = this.onWheel.bind(this);
       this.onFocus = this.onFocus.bind(this);
       this.onBlur = this.onBlur.bind(this);
+      this.onResize = this.resize.bind(this);
       this.shell.addEventListener("pointermove", this.onPointerMove);
       this.shell.addEventListener("pointerleave", this.onPointerLeave);
       this.shell.addEventListener("pointerdown", this.onPointerDown);
@@ -1479,6 +2253,7 @@ if (root) {
       this.shell.addEventListener("keydown", this.onKeyDown);
       this.shell.addEventListener("focus", this.onFocus);
       this.shell.addEventListener("blur", this.onBlur);
+      window.addEventListener("resize", this.onResize);
     }
 
     setActive(active) {
@@ -1539,9 +2314,16 @@ if (root) {
     }
 
     setData(payload) {
+      const previousFocus = this.focusId;
       this.payload = payload;
       this.focusId = payload.focusModelId || null;
+      if (this.focusId !== previousFocus) {
+        this.focusChangedAt = performance.now();
+      }
+      this.overlay.setFocus(this.focusId, this.focusChangedAt || performance.now());
+      this.fieldNodes = buildFieldNodes(this.payload);
       this.render();
+      this.updateOverlay(performance.now());
     }
 
     render() {
@@ -1549,7 +2331,7 @@ if (root) {
         layer.innerHTML = "";
       });
       this.nodeElements.clear();
-      buildFieldNodes(this.payload).forEach((node) => {
+      this.fieldNodes.forEach((node) => {
         const normalizedX = clamp((node.anchor.x + 5.9) / 11.8, 0.09, 0.91);
         const normalizedY = clamp((node.anchor.y + 3.35) / 6.7, 0.12, 0.88);
         const layer = node.tier === "flagship" ? this.layers[2] : node.tier === "secondary" ? this.layers[1] : this.layers[0];
@@ -1563,7 +2345,16 @@ if (root) {
         element.style.top = `${normalizedY * 100}%`;
         element.style.setProperty("--node-size", `${40 + node.size * 100}px`);
         element.innerHTML = `
-          <span class="observatory-fallback-star"></span>
+          <span class="observatory-fallback-target-shell">
+            ${this.focusId === node.id ? buildFallbackRingMarkup(node) : ""}
+            <span class="observatory-fallback-star">
+              <span class="observatory-fallback-core">
+                <span class="observatory-fallback-core-layer observatory-fallback-core-layer--a"></span>
+                <span class="observatory-fallback-core-layer observatory-fallback-core-layer--b"></span>
+                <span class="observatory-fallback-core-layer observatory-fallback-core-layer--c"></span>
+              </span>
+            </span>
+          </span>
           <span class="observatory-fallback-label">
             <span class="observatory-fallback-label-name">${node.label}</span>
             <span class="observatory-fallback-label-meta">${node.provider} · ${node.cii.toFixed(3)}</span>
@@ -1579,6 +2370,43 @@ if (root) {
       });
     }
 
+    resize() {
+      if (!this.overlay) return;
+      this.overlay.resize(this.target.clientWidth || 700, this.target.clientHeight || 460);
+      this.updateOverlay(performance.now());
+    }
+
+    updateOverlay(time) {
+      if (!this.overlay || !this.focusId) {
+        if (this.overlay) this.overlay.update(time, null, null);
+        return;
+      }
+      const element = this.nodeElements.get(this.focusId);
+      const focusedNode = this.fieldNodes.find((node) => node.id === this.focusId);
+      if (!element || !focusedNode) {
+        this.overlay.update(time, null, null);
+        return;
+      }
+      const shellRect = this.shell.getBoundingClientRect();
+      const rect = element.getBoundingClientRect();
+      const target = {
+        x: rect.left - shellRect.left + (rect.width / 2),
+        y: rect.top - shellRect.top + (rect.height / 2),
+        radius: Math.max(42, rect.width * 0.7),
+        visible: true,
+      };
+      const meta = {
+        id: focusedNode.id,
+        label: focusedNode.label,
+        provider: focusedNode.provider,
+        tier: focusedNode.tier,
+        rank: focusedNode.relativeStanding || "--",
+        trend: `${focusedNode.rangeTrend >= 0 ? "+" : ""}${focusedNode.rangeTrend.toFixed(3)}`,
+        cii: (focusedNode.rangeCii || focusedNode.cii).toFixed(3),
+      };
+      this.overlay.update(time, target, meta);
+    }
+
     animate() {
       this.keyVelocity.x *= 0.86;
       this.keyVelocity.y *= 0.86;
@@ -1592,11 +2420,13 @@ if (root) {
         const scale = this.zoomCurrent * (1 + index * 0.06);
         layer.style.transform = `translate3d(${(this.pointer.x + this.keyOffset.x) * depth * 22}px, ${(this.pointer.y + this.keyOffset.y) * depth * 22}px, 0) scale(${scale})`;
       });
+      this.updateOverlay(performance.now());
       this.frame = window.requestAnimationFrame(this.animate);
     }
 
     destroy() {
       if (this.frame) window.cancelAnimationFrame(this.frame);
+      window.removeEventListener("resize", this.onResize);
       this.shell.removeEventListener("pointermove", this.onPointerMove);
       this.shell.removeEventListener("pointerleave", this.onPointerLeave);
       this.shell.removeEventListener("pointerdown", this.onPointerDown);
