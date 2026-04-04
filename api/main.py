@@ -127,7 +127,7 @@ def _bundle_context() -> dict[str, Any]:
     models_data = _read_bundle_json("models.json", {"models": []})
     falsification = _read_bundle_json(
         "falsification.json",
-        {"overall_status": "collecting", "status_text": "Awaiting current falsification data.", "models": []},
+        {"overall_status": "collecting", "status_text": "COLLECTING. The observatory is live, and this panel is awaiting sufficient provider-backed dimensionality-sweep history to evaluate Δ(d).", "models": []},
     )
     exports = _read_bundle_json("exports/all_metrics.json", [])
 
@@ -185,6 +185,8 @@ def page_context(page_name: str) -> dict[str, Any]:
         "route_links": "/links/",
         "asset_prefix": "/static",
         "asset_version": _latest_static_asset_version(),
+        "models_data_url": "/api/observatory/models",
+        "figures_prefix": "/static/figures/",
         "marquee_models": LIVE_MARQUEE_MODELS,
         "home_signal_score": 0.0,
         "github_href": "https://github.com/christopher-altman/persistence-signal-detector",

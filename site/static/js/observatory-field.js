@@ -137,15 +137,18 @@ if (root) {
   }
 
   function formatTooltipHTML(node) {
+    const trend = node.rangeTrend || 0;
+    const trendSign = trend > 0 ? "+" : "";
+    const trendClass = trend > 0.01 ? " is-rising" : trend < -0.01 ? " is-falling" : "";
     return `
       <div class="observatory-tooltip-header">${node.label}</div>
-      <div class="observatory-tooltip-provider">${node.provider}</div>
+      <div class="observatory-tooltip-provider">${node.provider} · ${node.tier}</div>
       <div class="observatory-tooltip-metrics">
         <div class="observatory-tooltip-row"><span>CII</span><span>${(node.rangeCii || node.cii).toFixed(3)}</span></div>
         <div class="observatory-tooltip-row"><span>IPS</span><span>${node.ips.toFixed(3)}</span></div>
         <div class="observatory-tooltip-row"><span>SRS</span><span>${node.srs.toFixed(3)}</span></div>
+        <div class="observatory-tooltip-row${trendClass}"><span>Trend</span><span>${trendSign}${trend.toFixed(3)}</span></div>
       </div>
-      <div class="observatory-tooltip-band">${node.tier} band</div>
     `;
   }
 
@@ -175,6 +178,8 @@ if (root) {
       this.frame = null;
       this.resizeObserver = null;
       this.labelFrameSkip = 0;
+      this.bloomImpulse = 0;
+      this.bloomBase = 0.68;
       this.modes = latestPayload.toggles || { history: true, compare: false, threshold: true };
 
       this.target.innerHTML = `
@@ -193,8 +198,9 @@ if (root) {
       this.shell.appendChild(this.tooltip);
 
       this.scene = new THREE.Scene();
-      this.scene.fog = new THREE.FogExp2(0x030609, 0.042);
-      this.camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+      this.scene.background = new THREE.Color(0x020408);
+      this.scene.fog = new THREE.FogExp2(0x030609, 0.034);
+      this.camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
       this.camera.position.set(0, 1.2, 11.8);
       this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
       this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -237,9 +243,9 @@ if (root) {
 
         this.bloomPass = new addons.UnrealBloomPass(
           new THREE.Vector2(this.target.clientWidth || 700, this.target.clientHeight || 460),
-          0.62,  /* strength — preserve color separation inside the orb */
-          0.56,  /* radius  — soft spread without washing lobe colors */
-          0.68   /* threshold — keeps highlights luminous while protecting contrast */
+          0.68,  /* strength — slightly more luminous */
+          0.52,  /* radius  — tighter, more precise spread */
+          0.62   /* threshold — catches more of the node glow */
         );
         this.composer.addPass(this.bloomPass);
       } catch (e) {
@@ -263,6 +269,8 @@ if (root) {
       const aqua = new THREE.PointLight(0x4fffd4, 1.05, 18, 1.8);
       aqua.position.set(2.5, -1.4, 4.8);
       this.scene.add(ambient, rim, fill, depthLight, prism, aqua);
+      this.ambientLight = ambient;
+      this.ambientBaseIntensity = 0.58;
 
       [2.0, 3.85, 5.35].forEach((radius, index) => {
         const points = [];
@@ -288,26 +296,28 @@ if (root) {
       });
 
       /* ── Star field with twinkling support ── */
-      const starCount = 1200;
+      const starCount = 1600;
       const positions = new Float32Array(starCount * 3);
       const colors = new Float32Array(starCount * 3);
       const starPhases = new Float32Array(starCount); /* per-star phase for twinkling */
       const starSpeeds = new Float32Array(starCount);
       const baseSizes = new Float32Array(starCount);
+      const anchorThreshold = starCount - 30; /* last 30 are bright anchor stars */
 
       for (let index = 0; index < starCount; index += 1) {
-        const distance = 18 + Math.random() * 24;
+        const isAnchor = index >= anchorThreshold;
+        const distance = (isAnchor ? 20 : 16) + Math.random() * (isAnchor ? 22 : 32);
         const angle = Math.random() * Math.PI * 2;
-        const elevation = (Math.random() - 0.5) * 20;
+        const elevation = (Math.random() - 0.5) * (isAnchor ? 18 : 28);
         positions[index * 3] = Math.cos(angle) * distance;
         positions[index * 3 + 1] = elevation;
-        positions[index * 3 + 2] = (Math.random() - 0.5) * 30;
+        positions[index * 3 + 2] = (Math.random() - 0.5) * 36;
         colors[index * 3] = 0.52 + Math.random() * 0.18;
         colors[index * 3 + 1] = 0.72 + Math.random() * 0.16;
         colors[index * 3 + 2] = 0.96;
         starPhases[index] = Math.random() * Math.PI * 2;
-        starSpeeds[index] = 0.3 + Math.random() * 1.2;
-        baseSizes[index] = 0.05 + Math.random() * 0.08;
+        starSpeeds[index] = isAnchor ? 0.15 + Math.random() * 0.35 : 0.3 + Math.random() * 1.2;
+        baseSizes[index] = isAnchor ? 0.12 + Math.random() * 0.04 : 0.05 + Math.random() * 0.08;
       }
       const starGeometry = new THREE.BufferGeometry();
       starGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
@@ -350,13 +360,14 @@ if (root) {
     }
 
     _buildShaderGrid(THREE) {
-      const gridPlane = new THREE.PlaneGeometry(28, 28);
+      const gridPlane = new THREE.PlaneGeometry(34, 34);
       const gridShaderMaterial = new THREE.ShaderMaterial({
         transparent: true,
         depthWrite: false,
         uniforms: {
-          uColor: { value: new THREE.Color(0x1a3a6a) },
-          uFade: { value: 12.0 },
+          uColor: { value: new THREE.Color(0x1a3568) },
+          uFade: { value: 15.0 },
+          uTime: { value: 0.0 },
         },
         vertexShader: [
           "varying vec2 vUv;",
@@ -371,6 +382,7 @@ if (root) {
         fragmentShader: [
           "uniform vec3 uColor;",
           "uniform float uFade;",
+          "uniform float uTime;",
           "varying vec2 vUv;",
           "varying vec3 vWorldPos;",
           "void main() {",
@@ -379,13 +391,14 @@ if (root) {
           "  float gridAlpha = 1.0 - min(line, 1.0);",
           "  float dist = length(vWorldPos.xz);",
           "  float radialFade = 1.0 - smoothstep(2.0, uFade, dist);",
-          "  gl_FragColor = vec4(uColor, gridAlpha * 0.18 * radialFade);",
+          "  float breath = 0.16 + 0.03 * sin(uTime * 0.35);",
+          "  gl_FragColor = vec4(uColor, gridAlpha * breath * radialFade);",
           "}",
         ].join("\n"),
       });
       const gridMesh = new THREE.Mesh(gridPlane, gridShaderMaterial);
       gridMesh.rotation.x = -Math.PI / 2;
-      gridMesh.position.y = -4.2;
+      gridMesh.position.y = -3.4;
       this.scene.add(gridMesh);
       this.gridMesh = gridMesh;
     }
@@ -435,6 +448,32 @@ if (root) {
       this.dustPhases = dustPhases;
       this.dustPositionsRef = dustPositions;
       this.scene.add(this.dustField);
+
+      /* ── Near-dust: larger foreground sensing motes ── */
+      const nearCount = 120;
+      const nearPositions = new Float32Array(nearCount * 3);
+      const nearPhases = new Float32Array(nearCount);
+      for (let i = 0; i < nearCount; i++) {
+        nearPositions[i * 3] = (Math.random() - 0.5) * 12;
+        nearPositions[i * 3 + 1] = (Math.random() - 0.5) * 8;
+        nearPositions[i * 3 + 2] = (Math.random() - 0.5) * 12;
+        nearPhases[i] = Math.random() * Math.PI * 2;
+      }
+      const nearGeometry = new THREE.BufferGeometry();
+      nearGeometry.setAttribute("position", new THREE.BufferAttribute(nearPositions, 3));
+      const nearMaterial = new THREE.PointsMaterial({
+        size: 0.09,
+        transparent: true,
+        opacity: 0.12,
+        color: 0x8fc4ff,
+        sizeAttenuation: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+      this.nearDust = new THREE.Points(nearGeometry, nearMaterial);
+      this.nearDustPhases = nearPhases;
+      this.nearDustPositionsRef = nearPositions;
+      this.scene.add(this.nearDust);
     }
 
     bindEvents() {
@@ -723,6 +762,23 @@ if (root) {
         group.add(orbitRing);
       }
 
+      /* ── Focus lock ring — measurement-lock indicator (hidden until focused) ── */
+      let focusRing = null;
+      const addFocusRing = node.tier !== "outer" || this.nodes.length <= 20;
+      if (addFocusRing) {
+        focusRing = new THREE.Mesh(
+          new THREE.TorusGeometry(node.size * 3.2, node.size * 0.02, 6, 48),
+          new THREE.MeshBasicMaterial({
+            color: palette.ring,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+          }),
+        );
+        focusRing.rotation.x = 0.6;
+        group.add(focusRing);
+      }
+
       const label = createLabelElement(node);
       this.labelLayer.appendChild(label);
 
@@ -738,6 +794,7 @@ if (root) {
         aura,
         accentRing,
         orbitRing,
+        focusRing,
         label,
         baseEmissiveIntensity: emissiveBase,
         baseCoreOpacity: core.material.opacity,
@@ -758,8 +815,13 @@ if (root) {
     }
 
     setData(payload) {
+      const prevFocus = this.focusId;
       this.payload = payload;
       this.focusId = payload.focusModelId || null;
+      /* Bloom impulse on new focus acquisition */
+      if (this.focusId && this.focusId !== prevFocus) {
+        this.bloomImpulse = 1.0;
+      }
       this.modes = payload.toggles || this.modes;
       this.nodes = buildFieldNodes(payload);
       this.clearNodes();
@@ -817,7 +879,6 @@ if (root) {
               linewidth: 1,
             });
         const guideLine = new this.THREE.Line(geometry, material);
-        guideLine.computeLineDistances();
         this.scene.add(guideLine);
         this.guides.push({
           fromId: edge.source,
@@ -974,11 +1035,11 @@ if (root) {
         const breatheAmp = entry.node.tier === "flagship" ? 0.06 : 0.035;
         const breathe = 1.0 + Math.sin(slowTime * breatheRate + entry.node.orbitPhase) * breatheAmp;
 
-        const targetScale = (focused ? 1.32 : hovered ? 1.18 : dimmed ? 0.84 : 1) * breathe;
+        const targetScale = (focused ? 1.42 : hovered ? 1.22 : dimmed ? 0.76 : 1) * breathe;
         entry.group.scale.setScalar(lerp(entry.group.scale.x, targetScale, 0.12));
 
         /* ── Emissive intensity breathing — boosted on focus/hover ── */
-        const focusBoost = focused ? 0.55 : hovered ? 0.22 : 0;
+        const focusBoost = focused ? 0.72 : hovered ? 0.22 : 0;
         const emissivePulse = entry.baseEmissiveIntensity + focusBoost +
           Math.sin(slowTime * breatheRate * 0.8 + entry.node.orbitPhase) * (entry.node.tier === "flagship" ? 0.35 : 0.15);
         entry.core.material.emissiveIntensity = lerp(entry.core.material.emissiveIntensity, emissivePulse, 0.08);
@@ -1033,7 +1094,7 @@ if (root) {
         /* ── Primary halo opacity ── */
         entry.halo.material.opacity = lerp(
           entry.halo.material.opacity,
-          focused ? 1 : hovered ? 0.82 : dimmed ? 0.12 :
+          focused ? 1 : hovered ? 0.82 : dimmed ? 0.06 :
             entry.node.tier === "flagship" ? 0.44 : entry.node.tier === "secondary" ? 0.3 : 0.2,
           0.12,
         );
@@ -1042,10 +1103,20 @@ if (root) {
         if (entry.aura) {
           entry.aura.material.opacity = lerp(
             entry.aura.material.opacity,
-            focused ? 0.20 : hovered ? 0.14 : dimmed ? 0.02 :
+            focused ? 0.20 : hovered ? 0.14 : dimmed ? 0.008 :
               entry.node.tier === "flagship" ? 0.1 : entry.node.tier === "secondary" ? 0.06 : 0.03,
             0.06,
           );
+        }
+
+        /* ── Focus lock ring — measurement-lock indicator ── */
+        if (entry.focusRing) {
+          entry.focusRing.material.opacity = lerp(
+            entry.focusRing.material.opacity,
+            focused ? 0.48 : 0,
+            0.06,
+          );
+          if (focused) entry.focusRing.rotation.z -= 0.008;
         }
 
         /* ── Accent ring opacity + rotation ── */
@@ -1110,6 +1181,21 @@ if (root) {
       positions.needsUpdate = true;
     }
 
+    /* ── Near-dust drift (foreground sensing motes) ── */
+    updateNearDust(time) {
+      if (!this.nearDust) return;
+      const positions = this.nearDust.geometry.attributes.position;
+      const t = time * 0.00018;
+      for (let i = 0; i < this.nearDustPhases.length; i++) {
+        const phase = this.nearDustPhases[i];
+        const base = i * 3;
+        positions.array[base] += Math.sin(t + phase) * 0.0009;
+        positions.array[base + 1] += Math.cos(t * 0.6 + phase) * 0.0007;
+        positions.array[base + 2] += Math.sin(t * 0.4 + phase * 1.2) * 0.0008;
+      }
+      positions.needsUpdate = true;
+    }
+
     /* ── Measurement ring animation (flowing dashes + gentle rotation) ── */
     updateMeasurementRings(time) {
       const t = time * 0.001;
@@ -1118,6 +1204,9 @@ if (root) {
           ring.material.dashOffset -= 0.002;
         }
         ring.rotation.y += 0.0006 * (index + 1);
+        /* 22s-cycle opacity breathing */
+        const baseOpacity = 0.22 - index * 0.03;
+        ring.material.opacity = baseOpacity + Math.sin(t * 0.285 + index * 1.2) * 0.03;
       });
     }
 
@@ -1135,12 +1224,12 @@ if (root) {
         guide.line.geometry.setFromPoints(pts);
         guide.line.computeLineDistances();
         if (guide.line.material.opacity != null) {
-          guide.line.material.opacity = guide.passive ? (this.modes.compare ? 0.12 : 0.04) : (this.focusId ? 0.42 : 0.16);
+          guide.line.material.opacity = guide.passive ? (this.modes.compare ? 0.12 : 0.04) : (this.focusId ? 0.56 : 0.16);
         }
 
-        /* ── Animated dash offset for flowing effect ── */
+        /* ── Animated dash offset for flowing effect (faster when focused) ── */
         if (!guide.passive && guide.line.material.dashOffset !== undefined) {
-          guide.line.material.dashOffset -= 0.004;
+          guide.line.material.dashOffset -= this.focusId ? 0.007 : 0.004;
         }
       });
     }
@@ -1181,8 +1270,8 @@ if (root) {
       this.zoomTarget = clamp(this.zoomTarget + this.zoomVelocity, this.zoomRange.min, this.zoomRange.max);
       this.zoomCurrent = lerp(this.zoomCurrent, this.zoomTarget, 0.08);
 
-      const idleX = motionQuery.matches ? 0 : Math.sin(time * 0.00011) * 0.26;
-      const idleY = motionQuery.matches ? 0 : Math.cos(time * 0.00008) * 0.1;
+      const idleX = motionQuery.matches ? 0 : Math.sin(time * 0.00008) * 0.18;
+      const idleY = motionQuery.matches ? 0 : Math.cos(time * 0.00006) * 0.07;
       const activityAlpha = clamp((performance.now() - this.lastInteractionAt) < 2200 ? 1 : 0.35, 0.35, 1);
       const focusAlpha = this.isActive ? 1 : 0.7;
       const userAlpha = activityAlpha * focusAlpha;
@@ -1193,9 +1282,9 @@ if (root) {
       if (this.focusId && this.nodeLookup.has(this.focusId)) {
         const focusEntry = this.nodeLookup.get(this.focusId);
         const focusPos = focusEntry.group.position.clone().multiplyScalar(0.12);
-        this.focusTarget.lerp(focusPos, 0.038);
+        this.focusTarget.lerp(focusPos, 0.028);
       } else {
-        this.focusTarget.lerp(new this.THREE.Vector3(0, 0, 0), 0.035);
+        this.focusTarget.lerp(new this.THREE.Vector3(0, 0, 0), 0.025);
       }
 
       const zoomNorm = (this.zoomCurrent - this.zoomRange.min) / (this.zoomRange.max - this.zoomRange.min);
@@ -1204,8 +1293,8 @@ if (root) {
         1.2 + pitch * lerp(4.8, 6.35, zoomNorm),
         this.zoomCurrent + Math.cos(yaw * 1.18) * 1.15,
       );
-      this.camera.position.lerp(desired, 0.04); /* slightly slower for smoother feel */
-      this.focusPoint.lerp(this.focusTarget, 0.06);
+      this.camera.position.lerp(desired, 0.032); /* slow and precise for instrument feel */
+      this.focusPoint.lerp(this.focusTarget, 0.04);
       this.camera.lookAt(this.focusPoint);
     }
 
@@ -1275,15 +1364,35 @@ if (root) {
     }
 
     animate(time) {
+      const slowTime = time * 0.001;
+
       this.updateHover();
       this.updateNodes(time);
       this.updateStars(time);
       this.updateDust(time);
+      this.updateNearDust(time);
       this.updateGuides(time);
       this.updateTrails();
       this.updateCamera(time);
       this.updateTooltipPosition();
       this.updateMeasurementRings(time);
+
+      /* ── Ambient light breathing (18s cycle) ── */
+      if (this.ambientLight) {
+        this.ambientLight.intensity = this.ambientBaseIntensity + Math.sin(slowTime * 0.35) * 0.04;
+      }
+
+      /* ── Grid time uniform for breathing ── */
+      if (this.gridMesh && this.gridMesh.material.uniforms && this.gridMesh.material.uniforms.uTime) {
+        this.gridMesh.material.uniforms.uTime.value = slowTime;
+      }
+
+      /* ── Bloom impulse decay ── */
+      if (this.bloomPass && this.bloomImpulse > 0) {
+        this.bloomImpulse *= 0.94;
+        if (this.bloomImpulse < 0.005) this.bloomImpulse = 0;
+        this.bloomPass.strength = this.bloomBase + this.bloomImpulse * 0.18;
+      }
 
       /* Throttle label rendering: every 3rd frame */
       this.labelFrameSkip = (this.labelFrameSkip + 1) % 3;

@@ -77,11 +77,11 @@
 <h2>Threshold Definitions</h2>
 <div class="panel">
   <dl class="definition-block">
-    <dt><span class="dot collecting"></span> COLLECTING — Awaiting Real Data</dt>
-    <dd>All available dimensionality sweep runs used <code>dry_run: true</code>.
-    Dry-run curves support interface inspection only.
-    Run sweeps with <code>dry_run: false</code> to generate a real verdict.
-    Dashed curves mark dry-run data in the chart.
+    <dt><span class="dot collecting"></span> COLLECTING — Awaiting Sufficient Live History</dt>
+    <dd>Threshold evaluation now tracks live provider-backed sweep measurements.
+    This state means the current high-dimensional evidence window is still too thin for a stable verdict across d &isin; {100, 200, 500}.
+    Status updates as live observations and dimensionality coverage accumulate.
+    Dashed dry-run reference curves, when present, remain excluded from the verdict.
     </dd>
 
     <dt><span class="dot green"></span> GREEN — Signal Holds</dt>

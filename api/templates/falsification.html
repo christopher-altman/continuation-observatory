@@ -32,8 +32,8 @@
 <div class="panel">
   <div class="panel-title">Research Framing</div>
   <p class="muted">
-    This panel reports falsification-oriented telemetry for the Continuation Observatory measurement layer. Dry-run or
-    synthetic sweep outputs are interface/demo data; live empirical findings come from real runs.
+    This panel reports live provider-backed falsification telemetry for the Continuation Observatory measurement layer.
+    Threshold verdicts tighten as sufficient sweep history accumulates; any dry-run reference traces are excluded from verdict logic.
   </p>
 </div>
 
@@ -57,9 +57,10 @@
 <h2>Threshold Definitions</h2>
 <div class="panel">
   <dl class="definition-block">
-    <dt><span class="dot collecting"></span> COLLECTING — Awaiting Real Data</dt>
-    <dd>All available dimensionality sweep runs used <code>dry_run: true</code>.
-    Dry-run data support interface inspection only.</dd>
+    <dt><span class="dot collecting"></span> COLLECTING — Awaiting Sufficient Live History</dt>
+    <dd>Threshold evaluation now tracks live provider-backed sweep measurements.
+    This state means the current high-dimensional evidence window is still too thin for a stable verdict across d &isin; {100, 200, 500}.
+    Status updates as live observations and dimensionality coverage accumulate.</dd>
 
     <dt><span class="dot green"></span> GREEN — Signal Holds</dt>
     <dd>All Δ(d) values at d &isin; {100, 200, 500} remain &ge; 0.10 for all real-run models.

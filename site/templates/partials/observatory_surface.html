@@ -56,6 +56,7 @@
       </div>
 
       <div class="observatory-field-frame">
+        <div class="observatory-field-reticle" aria-hidden="true"></div>
         <div class="observatory-field-overlay">
           <div class="observatory-field-copy">
             <span class="summary-label">Measurement Field</span>
@@ -109,7 +110,7 @@
               The field shows structure in space. This lower instrument resolves how each model's continuation signal shifts across the active tracking window.
             </p>
             <p class="observatory-history-mode-note" id="observatory-history-mode-note" hidden>
-              Preview mode. Placeholder telemetry for visual inspection only. Automatically replaced when live model history is available.
+              Live instrument active. This panel uses a provisional bridge view until the current range accumulates sufficient live model history.
             </p>
           </div>
           <div class="observatory-history-readout" aria-live="polite">
@@ -121,7 +122,7 @@
           <div id="observatory-history-root" class="observatory-history-root"></div>
           <div id="observatory-history-empty" class="observatory-history-empty" hidden>
             <span class="summary-label">Temporal Readout Unavailable</span>
-            <p class="muted">In-range CII history is still too short to resolve temporal change.</p>
+            <p class="muted">The current live window is still too short to resolve temporal change.</p>
           </div>
         </div>
       </section>
@@ -140,7 +141,7 @@
           <div class="panel-title">Aggregate Signal Timeline</div>
           <p class="observatory-band-note">The field resolves first. Aggregate signal, comparative heat, and events remain subordinate readouts.</p>
           <p class="observatory-history-mode-note" id="observatory-timeline-mode-note" hidden>
-            Preview mode. Placeholder telemetry for visual inspection only. Automatically replaced when live model history is available.
+            Live instrument active. This panel uses a provisional bridge view until the current range accumulates sufficient aggregate signal history.
           </p>
         </div>
       </div>
@@ -148,7 +149,7 @@
         <div id="timeline-root" class="timeline-root"></div>
         <div id="observatory-timeline-empty" class="observatory-history-empty" hidden>
           <span class="summary-label">Aggregate Signal Timeline Unavailable</span>
-          <p class="muted">No aggregate signal telemetry is available for this window yet.</p>
+          <p class="muted">The current live window has not yet accumulated sufficient aggregate signal history.</p>
         </div>
       </div>
     </div>

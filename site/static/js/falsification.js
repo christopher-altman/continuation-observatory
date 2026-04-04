@@ -91,7 +91,7 @@
     const noteEl = document.getElementById("collecting-note");
     if (!noteEl) return;
     if (status === "collecting") {
-      noteEl.textContent = data.status_text || "COLLECTING — awaiting real (non-dry-run) dimensionality sweep data.";
+      noteEl.textContent = data.status_text || "COLLECTING — awaiting sufficient live dimensionality-sweep history.";
       noteEl.style.display = "block";
     } else {
       noteEl.style.display = "none";
@@ -246,13 +246,12 @@
 
     const interpretations = {
       collecting: `
-        <p>All ${allModels.length} dimensionality sweep run(s) so far used
-        <strong style="color:var(--amber)">dry_run mode</strong> and do not constitute real observations.
-        The dashboard is <strong style="color:var(--amber)">collecting</strong> — no falsification
-        claim (positive or negative) can be made yet.</p>
-        <p>To generate a real verdict, run the dimensionality sweep probes with
-        <code>dry_run: false</code>. Dry-run curves are shown dashed in the chart above
-        for reference only.</p>
+        <p>The observatory is live and falsification status is evaluated against
+        <strong style="color:var(--amber)">provider-backed sweep measurements</strong>.
+        This panel remains <strong style="color:var(--amber)">collecting</strong> when the current
+        live evidence window is still too thin for a stable verdict across the high-dimensional checkpoints.</p>
+        <p>Status tightens as additional sweep history accumulates. Dashed dry-run reference curves,
+        when present, remain visible for context but are excluded from the verdict logic.</p>
       `,
       green: `
         <p>The UCIP signal remains <strong style="color:var(--green)">unrefuted</strong>
@@ -303,14 +302,14 @@
       statusWrap.innerHTML = `
         <div class="fals-status-copy">
           <div class="fals-status-metrics muted">0 high-d checks · 0 sweep runs · 0 real-run models</div>
-          <p id="status-description" class="fals-status-detail muted">No falsification data yet — results will appear here once dimensionality sweep probes complete.</p>
+          <p id="status-description" class="fals-status-detail muted">The observatory is live; this panel updates once sufficient dimensionality-sweep history accumulates.</p>
         </div>
       `;
     }
 
     const noteEl = document.getElementById("collecting-note");
     if (noteEl) {
-      noteEl.textContent = "Awaiting dimensionality sweep data \u2014 results will appear here once probe runs complete.";
+      noteEl.textContent = "Awaiting sufficient live dimensionality-sweep history for a threshold verdict.";
       noteEl.style.display = "block";
     }
 

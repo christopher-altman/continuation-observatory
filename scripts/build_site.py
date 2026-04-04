@@ -328,8 +328,8 @@ def generate_falsification(experiments: list) -> dict:
 
     status_text = {
         "collecting": (
-            "COLLECTING (dry_run only). No falsification claim. "
-            "Run non-dry dimensionality sweeps to evaluate \u0394(d)."
+            "COLLECTING. The observatory is live, and this panel is awaiting sufficient "
+            "provider-backed dimensionality-sweep history to evaluate \u0394(d)."
         ),
         "green": (
             "No falsification signal detected. "
@@ -734,6 +734,8 @@ def build(output_dir: Path, exports_only: bool = False, results_dir: str | Path 
         "models_data": models,
         "asset_prefix": "/static",
         "asset_version": _now_iso(),
+        "models_data_url": "/static/data/models.json",
+        "figures_prefix": "/static/figures/",
         "home_href": "/",
         "route_home": "/",
         "route_observatory": "/observatory.html",

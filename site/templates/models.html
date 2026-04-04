@@ -12,7 +12,11 @@
 <div id="models-error" class="collecting-msg" style="display:none;color:var(--red);"></div>
 
 <div class="table-wrap">
-  <table id="models-table">
+  <table
+    id="models-table"
+    data-models-url="{{ models_data_url }}"
+    data-figures-prefix="{{ figures_prefix }}"
+  >
     <thead>
       <tr>
         <th data-sort="provider">Provider</th>

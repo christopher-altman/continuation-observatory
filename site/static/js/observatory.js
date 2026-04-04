@@ -229,7 +229,7 @@
     return {
       values: values,
       isPreview: true,
-      label: "Preview aggregate telemetry",
+      label: "Provisional aggregate bridge",
     };
   }
 
@@ -564,6 +564,7 @@
   function renderInspector() {
     const target = qs("#observatory-inspector");
     if (!target || !observatoryState.view) return;
+    target.classList.toggle("has-focus", Boolean(observatoryState.focusModelId));
     const latestPcii = observatoryState.view.pciiSeries[observatoryState.view.pciiSeries.length - 1];
     const focused = observatoryState.view.models.find(function (model) {
       return model.model_id === observatoryState.focusModelId;
@@ -572,6 +573,7 @@
       const liveCount = observatoryState.view.models.filter(function (model) { return model.live; }).length;
       const topModels = observatoryState.view.models.slice(0, 3);
       target.innerHTML = `
+        <div class="observatory-inspector-content is-entering">
         <div class="panel-title">Inspector Rail</div>
         <div class="observatory-inspector-state">
           <div class="observatory-inspector-block">
@@ -611,7 +613,12 @@
             </div>
           </div>
         </div>
+        </div>
       `;
+      requestAnimationFrame(function () {
+        var wrapper = target.querySelector(".observatory-inspector-content");
+        if (wrapper) wrapper.classList.remove("is-entering");
+      });
       return;
     }
 
@@ -631,6 +638,7 @@
     const neighbors = focused.neighbors || [];
     const evidence = Array.isArray(focused.evidence_links) ? focused.evidence_links : [];
     target.innerHTML = `
+      <div class="observatory-inspector-content is-entering">
       <div class="panel-title">Model Dossier</div>
       <div class="observatory-dossier">
         <div class="observatory-dossier-head">
@@ -693,7 +701,12 @@
           </div>
         ` : ""}
       </div>
+      </div>
     `;
+    requestAnimationFrame(function () {
+      var wrapper = target.querySelector(".observatory-inspector-content");
+      if (wrapper) wrapper.classList.remove("is-entering");
+    });
   }
 
   function renderHistoryPanel() {
@@ -766,11 +779,11 @@
       if (focusedModel) {
         const focusedSeries = series.find(function (entry) { return entry.modelId === focusedModel.model_id; });
         focusReadout.textContent = focusedSeries
-          ? `${focusedModel.display_name} · ${usingPreview ? "preview " : ""}${focusedSeries.classification.toLowerCase()}`
-          : `${focusedModel.display_name} · ${usingPreview ? "preview trail" : "no in-range trail"}`;
+          ? `${focusedModel.display_name} · ${usingPreview ? "provisional " : ""}${focusedSeries.classification.toLowerCase()}`
+          : `${focusedModel.display_name} · ${usingPreview ? "provisional bridge" : "no in-range trail"}`;
       } else {
         focusReadout.textContent = usingPreview
-          ? "Preview telemetry · placeholder values"
+          ? "Provisional bridge view"
           : series.length ? `${series.length} model traces` : "All tracked models";
       }
     }
@@ -786,7 +799,7 @@
     }
     if (rangeReadout) {
       rangeReadout.textContent = usingPreview
-        ? `PREVIEW MODE · ${String(observatoryState.range || "24h").toUpperCase()}`
+        ? `PROVISIONAL VIEW · ${String(observatoryState.range || "24h").toUpperCase()}`
         : formatRangeLabel(observatoryState.range);
     }
     if (!series.length || typeof d3 === "undefined") {
@@ -926,7 +939,7 @@
       tooltip
         .html(
           `<div class="observatory-history-tooltip-title">${seriesEntry.label}</div>` +
-          `<div class="observatory-history-tooltip-meta">${seriesEntry.isPreview ? "Preview telemetry · " : ""}${seriesEntry.classification} · ${seriesEntry.historyDepth} sample${seriesEntry.historyDepth === 1 ? "" : "s"}</div>` +
+          `<div class="observatory-history-tooltip-meta">${seriesEntry.isPreview ? "Provisional bridge · " : ""}${seriesEntry.classification} · ${seriesEntry.historyDepth} sample${seriesEntry.historyDepth === 1 ? "" : "s"}</div>` +
           `<div class="observatory-history-tooltip-value">${fmt(seriesEntry.latest.v)} latest · ${seriesEntry.trend >= 0 ? "▲" : "▼"} ${fmt(Math.abs(seriesEntry.trend))}</div>`
         )
         .style("left", `${Math.min(pointerX + 18, width - 196)}px`)
