@@ -1185,13 +1185,39 @@
     const height = 250;
     const padding = { top: 18, right: 18, bottom: 28, left: 42 };
     const svg = d3.select(target).append("svg").attr("viewBox", `0 0 ${width} ${height}`);
-    const values = aggregateSeries.values;
-    const x = d3.scaleTime().domain(d3.extent(values, function (d) { return d.t; })).range([padding.left, width - padding.right]);
+    const sourceValues = aggregateSeries.values;
+    const smoothingRadius = aggregateSeries.isPreview
+      ? 0
+      : Math.min(10, Math.max(3, Math.floor(sourceValues.length / 32)));
+    const values = smoothingRadius
+      ? sourceValues.map(function (entry, index, rows) {
+          let weightedValue = 0;
+          let weightedMin = 0;
+          let weightedMax = 0;
+          let weightTotal = 0;
+          for (let offset = -smoothingRadius; offset <= smoothingRadius; offset += 1) {
+            const neighbor = rows[index + offset];
+            if (!neighbor) continue;
+            const weight = smoothingRadius + 1 - Math.abs(offset);
+            weightedValue += neighbor.v * weight;
+            weightedMin += (neighbor.min != null ? neighbor.min : neighbor.v) * weight;
+            weightedMax += (neighbor.max != null ? neighbor.max : neighbor.v) * weight;
+            weightTotal += weight;
+          }
+          return {
+            ...entry,
+            v: weightedValue / weightTotal,
+            min: weightedMin / weightTotal,
+            max: weightedMax / weightTotal,
+          };
+        })
+      : sourceValues;
+    const x = d3.scaleTime().domain(d3.extent(sourceValues, function (d) { return d.t; })).range([padding.left, width - padding.right]);
     const y = d3.scaleLinear().domain([
       0,
       Math.max(
         1,
-        d3.max(values, function (d) { return d.max != null ? d.max : d.v; }) || 1
+        d3.max(sourceValues, function (d) { return d.max != null ? d.max : d.v; }) || 1
       ),
     ]).nice().range([height - padding.bottom, padding.top]);
     const area = d3.area()
@@ -1219,7 +1245,7 @@
       .selectAll("stop")
       .data([
         { offset: "0%", color: "rgba(122, 210, 255, 0.38)" },
-        { offset: "100%", color: "rgba(122, 210, 255, 0.02)" },
+        { offset: "100%", color: "rgba(122, 210, 255, 0.01)" },
       ])
       .enter()
       .append("stop")
@@ -1235,7 +1261,7 @@
       .attr("y2", "100%")
       .selectAll("stop")
       .data([
-        { offset: "0%", color: aggregateSeries.isPreview ? "rgba(241, 190, 99, 0.14)" : "rgba(126, 199, 255, 0.12)" },
+        { offset: "0%", color: aggregateSeries.isPreview ? "rgba(241, 190, 99, 0.12)" : "rgba(126, 199, 255, 0.08)" },
         { offset: "100%", color: "rgba(126, 199, 255, 0.01)" },
       ])
       .enter()
@@ -1267,15 +1293,15 @@
       .datum(values)
       .attr("fill", "none")
       .attr("stroke", aggregateSeries.isPreview ? "var(--amber)" : "var(--cyan)")
-      .attr("stroke-width", 2.3)
+      .attr("stroke-width", 2.05)
       .attr("d", line);
     svg.selectAll("circle")
-      .data(values.slice(-18))
+      .data(values.slice(-1))
       .enter()
       .append("circle")
       .attr("cx", function (d) { return x(d.t); })
       .attr("cy", function (d) { return y(d.v); })
-      .attr("r", 2.4)
+      .attr("r", 2.8)
       .attr("fill", aggregateSeries.isPreview ? "var(--amber)" : "var(--accent)");
   }
 

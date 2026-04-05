@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&family=Michroma&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 *,
 *::before,
@@ -44,7 +44,7 @@
   --font-display: "Manrope", "Segoe UI", sans-serif;
   --font-body: "Manrope", "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
-  --font-observatory-display: "Space Grotesk", "Manrope", "Segoe UI", sans-serif;
+  --font-observatory-display: "Michroma", "Eurostile", "Microgramma D Extended", "Bank Gothic", "Space Grotesk", "Manrope", "Segoe UI", sans-serif;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* ── System tokens ── */
@@ -1878,17 +1878,17 @@ textarea {
   display: grid;
   gap: 0.18rem;
   min-width: 120px;
-  padding: 0.5rem 0.6rem;
-  border-radius: 14px;
-  border: 1px solid rgba(126, 199, 255, 0.08);
-  background: rgba(6, 11, 20, 0.58);
+  padding: 0.48rem 0.62rem 0.52rem;
+  border-radius: 15px;
+  border: 1px solid rgba(126, 199, 255, 0.06);
+  background: rgba(5, 10, 18, 0.54);
   backdrop-filter: blur(var(--blur-panel));
-  box-shadow: 0 12px 28px rgba(3, 10, 21, 0.28);
+  box-shadow: 0 14px 28px rgba(3, 10, 21, 0.24);
   opacity: 0;
   transform: translate(-50%, calc(-100% - 12px)) scale(0.92);
   transform-origin: bottom center;
   transition: opacity var(--transition-base) var(--ease), transform var(--transition-base) var(--ease), filter var(--transition-base) var(--ease);
-  filter: saturate(0.82);
+  filter: saturate(0.8);
   will-change: transform, opacity;
 }
 
@@ -1898,9 +1898,13 @@ textarea {
 }
 
 .observatory-node-label.is-focused {
-  border-color: rgba(143, 231, 255, 0.22);
-  box-shadow: 0 0 0 1px rgba(143, 231, 255, 0.08), 0 14px 36px rgba(44, 97, 171, 0.26);
-  filter: saturate(1);
+  border-color: rgba(186, 216, 255, 0.12);
+  padding: 0.52rem 0.72rem 0.58rem;
+  box-shadow: 0 0 0 1px rgba(173, 207, 255, 0.05), 0 18px 34px rgba(4, 14, 28, 0.24);
+  filter: saturate(0.92);
+  background:
+    linear-gradient(180deg, rgba(7, 13, 23, 0.94), rgba(5, 10, 18, 0.88)),
+    linear-gradient(90deg, rgba(195, 218, 255, 0.06), transparent 44%);
 }
 
 .observatory-node-label.is-dimmed {
@@ -1920,17 +1924,58 @@ textarea {
   min-width: 148px;
 }
 
-.observatory-node-label-name {
+.observatory-node-label-title,
+.observatory-fallback-label-title {
+  display: grid;
+  gap: 0.08rem;
+  min-width: 0;
+}
+
+.observatory-node-label-name,
+.observatory-fallback-label-name {
+  display: block;
   font-size: 0.84rem;
-  font-weight: 700;
-  line-height: 1.1;
+  font-weight: 590;
+  letter-spacing: 0.045em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.observatory-node-label-name--primary,
+.observatory-node-label-qualifier,
+.observatory-fallback-label-name--primary,
+.observatory-fallback-label-qualifier {
+  display: none;
+}
+
+.observatory-node-label.has-qualifier.is-focused .observatory-node-label-name--full,
+.observatory-fallback-node.has-qualifier.is-focused .observatory-fallback-label-name--full {
+  display: none;
+}
+
+.observatory-node-label.has-qualifier.is-focused .observatory-node-label-name--primary,
+.observatory-node-label.has-qualifier.is-focused .observatory-node-label-qualifier,
+.observatory-fallback-node.has-qualifier.is-focused .observatory-fallback-label-name--primary,
+.observatory-fallback-node.has-qualifier.is-focused .observatory-fallback-label-qualifier {
+  display: block;
+}
+
+.observatory-node-label-qualifier,
+.observatory-fallback-label-qualifier {
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.18em;
+  line-height: 1.15;
+  text-transform: uppercase;
+  color: rgba(205, 219, 236, 0.68);
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 .observatory-node-label-meta,
 .observatory-fallback-label-meta {
   font-family: var(--font-mono);
   font-size: 0.62rem;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
   font-variant-numeric: lining-nums tabular-nums;
@@ -2099,7 +2144,7 @@ textarea {
 
 .observatory-fallback-label {
   display: grid;
-  gap: 0.15rem;
+  gap: 0.16rem;
   padding: 0.42rem 0.56rem;
   border-radius: 14px;
   border: 1px solid rgba(126, 199, 255, 0.08);
@@ -2109,7 +2154,7 @@ textarea {
 
 .observatory-fallback-label-name {
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 650;
   line-height: 1.1;
 }
 
@@ -2124,6 +2169,7 @@ textarea {
 
 .observatory-fallback-node.is-focused .observatory-fallback-label {
   border-color: rgba(143, 231, 255, 0.18);
+  padding: 0.54rem 0.68rem 0.58rem;
   background:
     linear-gradient(180deg, rgba(7, 13, 25, 0.88), rgba(6, 11, 20, 0.78)),
     linear-gradient(90deg, rgba(143, 231, 255, 0.06), transparent 48%);
@@ -4162,8 +4208,29 @@ html.theme-transitions *::after {
   gap: 1rem;
 }
 
+.observatory-dossier-head > div {
+  position: relative;
+  padding-left: 1rem;
+}
+
+.observatory-dossier-head > div::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.12rem;
+  bottom: 0.08rem;
+  width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(194, 208, 227, 0.28), rgba(122, 142, 170, 0.16));
+  box-shadow: 0 0 0 1px rgba(213, 224, 240, 0.04);
+}
+
 .observatory-dossier-head h2 {
   margin: 0.15rem 0 0;
+  font-weight: 340;
+  letter-spacing: 0.1em;
+  line-height: 0.98;
+  text-transform: uppercase;
 }
 
 .observatory-metric-list,
@@ -4428,11 +4495,11 @@ html.theme-transitions *::after {
 
 .observatory-stage-head {
   justify-content: flex-start;
-  padding: 0.8rem 0 0.2rem;
+  padding: 0.8rem 0 0.28rem;
 }
 
 .observatory-stage-copy {
-  gap: 0.72rem;
+  gap: 0.8rem;
   max-width: 68rem;
 }
 
@@ -4448,11 +4515,13 @@ html.theme-transitions *::after {
 
 .observatory-page-wordmark {
   align-items: baseline;
-  gap: 0.24em;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25em;
   font-family: var(--font-body);
   font-size: clamp(2.8rem, 6vw, 5.1rem);
   font-weight: 300;
-  letter-spacing: 0.084em;
+  letter-spacing: 0.096em;
   line-height: 0.94;
   text-transform: uppercase;
   text-wrap: balance;
@@ -4463,7 +4532,7 @@ html.theme-transitions *::after {
 
 .observatory-page-wordmark .wordmark-continuation,
 .observatory-page-wordmark .wordmark-observatory {
-  letter-spacing: 0.072em;
+  letter-spacing: 0.10em;
 }
 
 .observatory-page-wordmark .wordmark-continuation {
@@ -4511,6 +4580,18 @@ html.theme-transitions *::after {
 .observatory-stage .observatory-node-label-name,
 .observatory-stage .observatory-tooltip-header {
   font-family: var(--font-observatory-display);
+}
+
+.observatory-stage .observatory-console-value,
+.observatory-stage .observatory-inspector-value,
+.observatory-stage .observatory-dossier-head h2,
+.observatory-stage .observatory-lock-chip-state,
+.observatory-stage .observatory-focus-ring-value,
+.observatory-stage .observatory-history-tooltip-value {
+  font-weight: 340;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
 }
 
 .observatory-field-shell::before,
@@ -4859,7 +4940,7 @@ html.theme-transitions *::after {
 
 .observatory-node-label {
   min-width: 136px;
-  padding: 0.55rem 0.7rem;
+  padding: 0.52rem 0.72rem 0.56rem;
   border-color: rgba(143, 231, 255, 0.12);
   background:
     linear-gradient(180deg, rgba(7, 14, 26, 0.84), rgba(5, 11, 21, 0.76)),
@@ -4868,17 +4949,60 @@ html.theme-transitions *::after {
 }
 
 .observatory-node-label-name {
-  font-size: 0.74rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  line-height: 1.02;
+  font-size: 0.68rem;
+  font-weight: 400;
+  letter-spacing: 0.24em;
+  line-height: 1;
   text-transform: uppercase;
+  color: rgba(231, 238, 247, 0.94);
 }
 
 .observatory-node-label-meta {
   color: rgba(189, 204, 224, 0.76);
-  font-size: 0.58rem;
-  letter-spacing: 0.12em;
+  font-size: 0.54rem;
+  letter-spacing: 0.22em;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+.observatory-node-label.is-focused .observatory-node-label-name,
+.observatory-fallback-node.is-focused .observatory-fallback-label-name {
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  line-height: 1;
+}
+
+.observatory-node-label.is-focused.has-qualifier,
+.observatory-fallback-node.is-focused.has-qualifier .observatory-fallback-label {
+  min-width: 176px;
+}
+
+.observatory-node-label-qualifier,
+.observatory-fallback-label-qualifier {
+  font-size: 0.53rem;
+  letter-spacing: 0.26em;
+  color: rgba(204, 218, 236, 0.76);
+}
+
+.observatory-stage .observatory-dossier-head h2,
+.observatory-stage .observatory-lock-chip-state,
+.observatory-stage .observatory-node-label-name,
+.observatory-stage .observatory-tooltip-header {
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.observatory-stage .observatory-dossier-head h2 {
+  letter-spacing: 0.14em;
+}
+
+.observatory-stage .observatory-console-value,
+.observatory-stage .observatory-inspector-value,
+.observatory-stage .observatory-focus-ring-value,
+.observatory-stage .observatory-history-tooltip-value {
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
 .observatory-tooltip {
@@ -4890,8 +5014,8 @@ html.theme-transitions *::after {
 
 .observatory-tooltip-header {
   font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-weight: 400;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
@@ -4942,38 +5066,49 @@ html.theme-transitions *::after {
 .observatory-screen-overlay__focus-sweep,
 .observatory-screen-overlay__focus-trace {
   fill: none;
-  stroke: rgba(var(--observatory-ice-rgb), 0.82);
   stroke-linecap: round;
 }
 
+.observatory-screen-overlay__focus-ring {
+  stroke: rgba(214, 227, 245, 0.7);
+}
+
 .observatory-screen-overlay__focus-echo {
-  stroke: rgba(var(--observatory-ice-soft-rgb), 0.42);
+  stroke: rgba(176, 203, 236, 0.24);
+}
+
+.observatory-screen-overlay__focus-bracket {
+  stroke: rgba(242, 247, 255, 0.98);
 }
 
 .observatory-screen-overlay__focus-sweep {
-  stroke: rgba(var(--observatory-ice-silver-rgb), 0.92);
+  stroke: rgba(205, 222, 247, 0.78);
+}
+
+.observatory-screen-overlay__focus-trace {
+  stroke: rgba(166, 191, 223, 0.38);
 }
 
 .observatory-screen-overlay__scan-line {
-  stroke: rgba(var(--observatory-ice-silver-rgb), 0.9);
+  stroke: rgba(var(--observatory-ice-silver-rgb), 0.96);
   stroke-width: 1.5px;
 }
 
 .observatory-screen-overlay__annotation {
-  fill: rgba(6, 12, 23, 0.92);
-  stroke: rgba(var(--observatory-ice-rgb), 0.28);
+  fill: rgba(5, 10, 18, 0.94);
+  stroke: rgba(194, 213, 240, 0.22);
 }
 
 .observatory-screen-overlay__annotation-text,
 .observatory-screen-overlay__annotation-meta {
-  fill: rgba(236, 244, 255, 0.98);
+  fill: rgba(236, 242, 250, 0.94);
   font-family: var(--font-mono);
-  letter-spacing: 0.16em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
 }
 
 .observatory-screen-overlay__annotation-meta {
-  fill: rgba(193, 208, 229, 0.76);
+  fill: rgba(183, 198, 219, 0.68);
 }
 
 @media (max-width: 1360px) {
@@ -5042,6 +5177,7 @@ html.theme-transitions *::after {
 @media (max-width: 720px) {
   .observatory-page-wordmark {
     font-size: clamp(2.2rem, 11vw, 3.2rem);
+    gap: 0.15em;
   }
 
   .observatory-field-frame {
