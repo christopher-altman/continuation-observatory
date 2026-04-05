@@ -4515,24 +4515,23 @@ html.theme-transitions *::after {
 
 .observatory-page-wordmark {
   align-items: baseline;
-  flex-wrap: wrap;
-  justify-content: center;
   gap: 0.25em;
-  font-family: var(--font-body);
-  font-size: clamp(2.8rem, 6vw, 5.1rem);
-  font-weight: 300;
-  letter-spacing: 0.096em;
-  line-height: 0.94;
+  font-family: var(--font-observatory-display);
+  font-size: clamp(1.8rem, 3.8vw, 3.1rem);
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  line-height: 0.96;
   text-transform: uppercase;
   text-wrap: balance;
+  font-variant-numeric: lining-nums tabular-nums;
   text-shadow:
-    0 0 30px rgba(120, 186, 255, 0.28),
-    0 0 68px rgba(120, 186, 255, 0.12);
+    0 0 24px rgba(120, 186, 255, 0.36),
+    0 0 48px rgba(120, 186, 255, 0.18);
 }
 
 .observatory-page-wordmark .wordmark-continuation,
 .observatory-page-wordmark .wordmark-observatory {
-  letter-spacing: 0.10em;
+  letter-spacing: 0.12em;
 }
 
 .observatory-page-wordmark .wordmark-continuation {
@@ -4984,6 +4983,15 @@ html.theme-transitions *::after {
   color: rgba(204, 218, 236, 0.76);
 }
 
+.observatory-node-label.is-inactive {
+  opacity: 0.72;
+  border-color: rgba(126, 199, 255, 0.04);
+}
+
+.observatory-node-label.is-inactive .observatory-node-label-meta {
+  color: rgba(180, 195, 215, 0.56);
+}
+
 .observatory-stage .observatory-dossier-head h2,
 .observatory-stage .observatory-lock-chip-state,
 .observatory-stage .observatory-node-label-name,
@@ -5176,7 +5184,9 @@ html.theme-transitions *::after {
 
 @media (max-width: 720px) {
   .observatory-page-wordmark {
-    font-size: clamp(2.2rem, 11vw, 3.2rem);
+    flex-wrap: wrap;
+    justify-content: center;
+    font-size: clamp(1.6rem, 9vw, 2.6rem);
     gap: 0.15em;
   }
 

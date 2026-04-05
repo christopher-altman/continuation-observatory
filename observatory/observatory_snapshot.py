@@ -317,10 +317,10 @@ def _pearson_similarity(left: list[float], right: list[float]) -> float | None:
 
 
 def build_constellation(models: list[dict[str, Any]] | None = None) -> dict[str, Any]:
-    models = [
-        model for model in (models if models is not None else models_payload())
-        if model["metrics"].get("cii") is not None
-    ]
+    all_models = models if models is not None else models_payload()
+    # Include all tracked models — those without CII retain null metrics.
+    # Live models have measured CII; inactive/configured models do not.
+    models = all_models
     observatory_cfg = load_observatory_config().get("constellation", {})
     threshold = float(
         observatory_cfg.get(
@@ -340,6 +340,11 @@ def build_constellation(models: list[dict[str, Any]] | None = None) -> dict[str,
             "srs": model["metrics"].get("srs"),
             "metrics": model["metrics"],
             "last_seen": model["last_seen"],
+            "telemetry_state": (
+                "live" if model["metrics"].get("cii") is not None and model.get("status") == "active"
+                else "configured" if model.get("status") == "configured"
+                else "inactive"
+            ),
         }
         for model in models
     ]

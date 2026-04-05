@@ -113,6 +113,7 @@ if (root) {
         const rangeCii = typeof model.rangeCii === "number"
           ? model.rangeCii
           : (typeof node.cii === "number" ? node.cii : metrics.cii) || 0;
+        const telemetryState = node.telemetry_state || (model.status === "active" ? "live" : model.status || "inactive");
         return {
           id: node.id,
           label: node.label,
@@ -131,6 +132,8 @@ if (root) {
           live: Boolean(model.live),
           lastSeen: node.last_seen || model.last_seen || null,
           ringMetrics: resolveFocusRingMetrics(metrics, rangeCii, payload.constellation && payload.constellation.threshold),
+          telemetryState: telemetryState,
+          inactive: telemetryState !== "live",
         };
       })
       .sort(function (left, right) {
@@ -147,30 +150,38 @@ if (root) {
       return node.rangeCii || node.cii || 0;
     }).concat([1]));
 
+    let activeCount = 0;
     return sorted.map(function (node, index) {
       const score = node.rangeCii || node.cii || 0;
-      const tier = index < 3 ? "flagship" : index < 7 ? "secondary" : "outer";
+      let tier;
+      if (node.inactive) {
+        tier = "outer";
+      } else {
+        const activeIndex = activeCount++;
+        tier = activeIndex < 3 ? "flagship" : activeIndex < 7 ? "secondary" : "outer";
+      }
       const baseHash = hashString(`${node.id}:${node.provider}`);
       const scoreNorm = clamp(score / maxScore, 0.08, 1);
       const rankNorm = sorted.length > 1 ? index / (sorted.length - 1) : 0;
       const providerBand = providerToBand.get(node.provider) || 0;
       const providerMid = (providers.length - 1) / 2;
       const bandBias = (providerBand - providerMid) * 0.52;
-      const tierRadius = tier === "flagship" ? 1.65 : tier === "secondary" ? 3.35 : 5.15;
-      const radius = tierRadius + rankNorm * 0.65 + (1 - scoreNorm) * 0.45 + (((baseHash * 7.13) % 1) - 0.5) * 0.42;
+      const tierRadius = node.inactive ? 6.5 : tier === "flagship" ? 1.65 : tier === "secondary" ? 3.35 : 5.15;
+      const radius = tierRadius + rankNorm * 0.65 + (1 - scoreNorm) * 0.45 + (((baseHash * 7.13) % 1) - 0.5) * (node.inactive ? 0.8 : 0.42);
       const angle = (baseHash * Math.PI * 2) + (index * 0.97) + providerBand * 0.18;
       const x = Math.cos(angle) * radius;
-      const y = bandBias + Math.sin(angle * 1.18) * (tier === "flagship" ? 0.42 : tier === "secondary" ? 0.56 : 0.68) + (((baseHash * 13.1) % 1) - 0.5) * 0.18;
-      const z = (tier === "flagship" ? -1.2 : tier === "secondary" ? 0.1 : 1.2) + (node.rangeTrend || 0) * 2.1 + (((baseHash * 11.37) % 1) - 0.5) * (tier === "outer" ? 1.5 : 0.95);
+      const y = bandBias + Math.sin(angle * 1.18) * (tier === "flagship" ? 0.42 : tier === "secondary" ? 0.56 : 0.68) + (((baseHash * 13.1) % 1) - 0.5) * (node.inactive ? 0.35 : 0.18);
+      const z = (node.inactive ? 1.8 : tier === "flagship" ? -1.2 : tier === "secondary" ? 0.1 : 1.2) + (node.rangeTrend || 0) * 2.1 + (((baseHash * 11.37) % 1) - 0.5) * (node.inactive ? 2.5 : tier === "outer" ? 1.5 : 0.95);
+      const inactiveScale = node.inactive ? 0.72 : 1;
       return {
         ...node,
         tier,
-        size: tier === "flagship" ? 0.22 + scoreNorm * 0.22 : tier === "secondary" ? 0.14 + scoreNorm * 0.14 : 0.09 + scoreNorm * 0.1,
+        size: (tier === "flagship" ? 0.36 + scoreNorm * 0.32 : tier === "secondary" ? 0.24 + scoreNorm * 0.22 : 0.16 + scoreNorm * 0.15) * inactiveScale,
         haloScale: tier === "flagship" ? 2.6 : tier === "secondary" ? 1.92 : 1.36,
         glow: tier === "flagship" ? 1 : tier === "secondary" ? 0.78 : 0.52,
         orbitPhase: baseHash * Math.PI * 2,
-        driftSpeed: 0.4 + (((baseHash * 17.11) % 1) * 0.36),
-        trailEligible: node.historyDepth >= 3,
+        driftSpeed: (0.4 + (((baseHash * 17.11) % 1) * 0.36)) * (node.inactive ? 0.3 : 1),
+        trailEligible: !node.inactive && node.historyDepth >= 3,
         anchor: { x, y, z },
       };
     });
@@ -697,9 +708,9 @@ if (root) {
       this.pointerTarget = { x: 0, y: 0 };
       this.keyTarget = { x: 0, y: 0 };
       this.keyVelocity = { x: 0, y: 0 };
-      this.zoomRange = { min: 8.6, max: 15.4 };
-      this.zoomTarget = 14.5;
-      this.zoomCurrent = 14.5;
+      this.zoomRange = { min: 7.2, max: 16.8 };
+      this.zoomTarget = 16.4;
+      this.zoomCurrent = 16.4;
       this.zoomVelocity = 0;
       this.lastInteractionAt = 0;
       this.isActive = false;
@@ -866,6 +877,46 @@ if (root) {
       this.starSpeeds = starSpeeds;
       this.starBaseSizes = baseSizes;
       this.scene.add(this.starField);
+
+      /* ── Warp lines — flowing radial hyperdrive streaks ── */
+      this.warpLineGroup = new THREE.Group();
+      const warpLineCount = 72;
+      this.warpLineMeta = [];
+      for (let i = 0; i < warpLineCount; i += 1) {
+        const angle = (i / warpLineCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.18;
+        const innerR = 1.2 + Math.random() * 1.8;
+        const outerR = 14 + Math.random() * 18;
+        const elev = (Math.random() - 0.5) * 6;
+        const thickness = 0.02 + Math.random() * 0.04;
+        /* Multi-segment line for visible thickness — parallel pair */
+        const pts1 = [];
+        const pts2 = [];
+        const segments = 8;
+        for (let s = 0; s <= segments; s += 1) {
+          const t = s / segments;
+          const r = innerR + t * (outerR - innerR);
+          const e = elev * 0.3 + t * elev * 0.7;
+          const x = Math.cos(angle) * r;
+          const z = Math.sin(angle) * r;
+          pts1.push(new THREE.Vector3(x, e - thickness, z));
+          pts2.push(new THREE.Vector3(x, e + thickness, z));
+        }
+        /* Pick color: mostly bright blue-white with warm accents */
+        const colorPool = [0x88ccff, 0xaaddff, 0xeef6ff, 0xffeedd, 0x99ddff, 0xbbddff, 0xddeeff, 0xffd488];
+        const lineColor = colorPool[i % colorPool.length];
+        const mat1 = new THREE.LineBasicMaterial({ color: lineColor, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+        const mat2 = new THREE.LineBasicMaterial({ color: lineColor, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+        const line1 = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts1), mat1);
+        const line2 = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts2), mat2);
+        this.warpLineGroup.add(line1, line2);
+        this.warpLineMeta.push({
+          line1, line2, mat1, mat2,
+          phase: Math.random() * Math.PI * 2,
+          flickerSpeed: 2 + Math.random() * 6,
+          baseOpacity: 0.3 + Math.random() * 0.4,
+        });
+      }
+      this.scene.add(this.warpLineGroup);
     }
 
     /*
@@ -1719,6 +1770,187 @@ if (root) {
       chapterRing.rotation.x = bezel.rotation.x;
       group.add(chapterRing);
 
+      /* ── JARVIS inner concentric rings — depth layers inside the disc ── */
+      const innerRingConfigs = [
+        { radiusFactor: 0.72, opacity: 0.14 },
+        { radiusFactor: 0.56, opacity: 0.10 },
+        { radiusFactor: 0.38, opacity: 0.08 },
+      ];
+      const innerRings = innerRingConfigs.map((config) => {
+        const ring = new THREE.Mesh(
+          new THREE.TorusGeometry(sphereRadius * config.radiusFactor, node.size * 0.012, 6, 64),
+          new THREE.MeshBasicMaterial({
+            color: palette.tickSoft,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+          }),
+        );
+        ring.rotation.x = bezel.rotation.x;
+        group.add(ring);
+        return { ring, baseOpacity: config.opacity };
+      });
+
+      /* ── JARVIS outer decorative rings — layered precision architecture ── */
+      /* Outer ring 1: segmented (gaps every 30 degrees) — group of 12 arcs */
+      const outerRing1Group = new THREE.Group();
+      const outerRing1Mat = new THREE.LineBasicMaterial({ color: palette.tickSoft, transparent: true, opacity: 0, depthWrite: false });
+      for (let seg = 0; seg < 12; seg += 1) {
+        const segStart = (seg / 12) * Math.PI * 2 + 0.02;
+        const segEnd = ((seg + 0.7) / 12) * Math.PI * 2;
+        const arcPts = [];
+        for (let j = 0; j <= 16; j += 1) {
+          const a = segStart + (j / 16) * (segEnd - segStart);
+          arcPts.push(new THREE.Vector3(Math.cos(a) * bezelRadius * 1.36, Math.sin(a) * bezelRadius * 1.36, 0));
+        }
+        const arcLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(arcPts), outerRing1Mat);
+        outerRing1Group.add(arcLine);
+      }
+      outerRing1Group.rotation.x = bezel.rotation.x;
+      group.add(outerRing1Group);
+
+      /* Outer ring 2: thin continuous torus */
+      const outerRing2 = new THREE.Mesh(
+        new THREE.TorusGeometry(bezelRadius * 1.52, node.size * 0.008, 6, 96),
+        new THREE.MeshBasicMaterial({ color: palette.metalLight, transparent: true, opacity: 0, depthWrite: false }),
+      );
+      outerRing2.rotation.x = bezel.rotation.x;
+      group.add(outerRing2);
+
+      /* Outer ring 3: broken arcs (4 segments of 60 degrees) — group of 4 arcs */
+      const outerRing3Group = new THREE.Group();
+      const outerRing3Mat = new THREE.LineBasicMaterial({ color: palette.tick, transparent: true, opacity: 0, depthWrite: false });
+      for (let seg = 0; seg < 4; seg += 1) {
+        const segStart = (seg / 4) * Math.PI * 2 + 0.15;
+        const segEnd = segStart + Math.PI / 3;
+        const arcPts = [];
+        for (let j = 0; j <= 24; j += 1) {
+          const a = segStart + (j / 24) * (segEnd - segStart);
+          arcPts.push(new THREE.Vector3(Math.cos(a) * bezelRadius * 1.68, Math.sin(a) * bezelRadius * 1.68, 0));
+        }
+        const arcLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(arcPts), outerRing3Mat);
+        outerRing3Group.add(arcLine);
+      }
+      outerRing3Group.rotation.x = bezel.rotation.x;
+      group.add(outerRing3Group);
+
+      const outerRings = [
+        { ring: outerRing1Group, material: outerRing1Mat, baseOpacity: 0.10, speed: -0.008, isGroup: true },
+        { ring: outerRing2, material: outerRing2.material, baseOpacity: 0.06, speed: 0.006, isGroup: false },
+        { ring: outerRing3Group, material: outerRing3Mat, baseOpacity: 0.08, speed: -0.01, isGroup: true },
+      ];
+
+      /* ── JARVIS clock-position markers — small circles at 6 positions ── */
+      const clockMarkers = [];
+      for (let ci = 0; ci < 6; ci += 1) {
+        const clockAngle = (ci / 6) * Math.PI * 2;
+        const cx = Math.cos(clockAngle) * bezelRadius * 0.94;
+        const cy = Math.sin(clockAngle) * bezelRadius * 0.94;
+        const markerPoints = [];
+        for (let j = 0; j <= 24; j += 1) {
+          const a = (j / 24) * Math.PI * 2;
+          markerPoints.push(new THREE.Vector3(
+            cx + Math.cos(a) * node.size * 0.06,
+            cy + Math.sin(a) * node.size * 0.06,
+            0,
+          ));
+        }
+        const marker = new THREE.LineLoop(
+          new THREE.BufferGeometry().setFromPoints(markerPoints),
+          new THREE.LineBasicMaterial({ color: palette.tick, transparent: true, opacity: 0, depthWrite: false }),
+        );
+        marker.rotation.x = bezel.rotation.x;
+        group.add(marker);
+        clockMarkers.push({ line: marker, baseOpacity: 0.16 });
+      }
+
+      /* ── JARVIS parallelogram tick layer — leaning 45deg right ── */
+      const parallelogramTicks = [];
+      for (let pi = 0; pi < 24; pi += 1) {
+        const pAngle = (pi / 24) * Math.PI * 2;
+        const pr = bezelRadius * 0.82;
+        const pcx = Math.cos(pAngle) * pr;
+        const pcy = Math.sin(pAngle) * pr;
+        const pw = node.size * 0.05;
+        const ph = node.size * 0.03;
+        const lean = 0.015; /* 45deg lean offset */
+        const pPoints = [
+          new THREE.Vector3(pcx - pw / 2 + lean, pcy - ph / 2, 0),
+          new THREE.Vector3(pcx + pw / 2 + lean, pcy - ph / 2, 0),
+          new THREE.Vector3(pcx + pw / 2 - lean, pcy + ph / 2, 0),
+          new THREE.Vector3(pcx - pw / 2 - lean, pcy + ph / 2, 0),
+        ];
+        const pLine = new THREE.LineLoop(
+          new THREE.BufferGeometry().setFromPoints(pPoints),
+          new THREE.LineBasicMaterial({ color: palette.tick, transparent: true, opacity: 0, depthWrite: false }),
+        );
+        pLine.rotation.x = bezel.rotation.x;
+        group.add(pLine);
+        parallelogramTicks.push({ line: pLine, baseOpacity: 0.12 });
+      }
+
+      /* ── JARVIS iris / shutter blades — glowing camera-aperture segments ── */
+      const irisBladeCount = 8;
+      const irisBlades = [];
+      const irisInnerR = bezelRadius * 0.68;
+      const irisOuterR = bezelRadius * 1.12;
+      const bladeSweep = (Math.PI * 2 / irisBladeCount) * 0.72;
+      for (let bi = 0; bi < irisBladeCount; bi += 1) {
+        const bladeAngle = (bi / irisBladeCount) * Math.PI * 2;
+        const bladePoints = [];
+        /* Trapezoid blade shape — inner arc to outer arc */
+        const steps = 12;
+        for (let s = 0; s <= steps; s += 1) {
+          const a = bladeAngle + (s / steps) * bladeSweep;
+          bladePoints.push(new THREE.Vector3(Math.cos(a) * irisInnerR, Math.sin(a) * irisInnerR, 0));
+        }
+        for (let s = steps; s >= 0; s -= 1) {
+          const a = bladeAngle + 0.04 + (s / steps) * (bladeSweep - 0.08);
+          bladePoints.push(new THREE.Vector3(Math.cos(a) * irisOuterR, Math.sin(a) * irisOuterR, 0));
+        }
+        bladePoints.push(bladePoints[0].clone());
+        const bladeLine = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(bladePoints),
+          new THREE.LineBasicMaterial({
+            color: palette.tick,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+          }),
+        );
+        bladeLine.rotation.x = bezel.rotation.x;
+        group.add(bladeLine);
+        irisBlades.push({ line: bladeLine, baseOpacity: 0.22 });
+      }
+
+      /* ── JARVIS iris glow ring — bright ring at iris inner edge ── */
+      const irisGlowRing = new THREE.Mesh(
+        new THREE.TorusGeometry(irisInnerR, node.size * 0.024, 8, 96),
+        new THREE.MeshBasicMaterial({
+          color: palette.tick,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      irisGlowRing.rotation.x = bezel.rotation.x;
+      group.add(irisGlowRing);
+
+      /* ── JARVIS iris outer glow ring ── */
+      const irisOuterGlowRing = new THREE.Mesh(
+        new THREE.TorusGeometry(irisOuterR, node.size * 0.018, 8, 96),
+        new THREE.MeshBasicMaterial({
+          color: palette.tickSoft,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      irisOuterGlowRing.rotation.x = bezel.rotation.x;
+      group.add(irisOuterGlowRing);
+
       const membraneTexture = this.siriCoreTexture || (this.siriCoreTexture = this.createSiriCoreTexture());
       /* ── Siri membrane tints — centralized for easy dial-back ── */
       const MEMBRANE_TINTS = [
@@ -1914,6 +2146,142 @@ if (root) {
         bezelRadius: bezelRadius,
       };
 
+      /* ── Siri-orb internal ribbons — bold luminous planes filling ~70% of sphere ── */
+      const siriColors = [0x5ef0ff, 0xc488ff, 0xff6eb4, 0x74eea0, 0x88bbff, 0xff99cc];
+      const siriRibbonConfigs = [
+        { scaleW: 1.52, scaleH: 1.24, rotX: 0.8, rotY: 0.3, rotZ: -0.2, opacity: 0.34, speed: 0.22 },
+        { scaleW: 1.38, scaleH: 1.44, rotX: -0.4, rotY: 1.1, rotZ: 0.4, opacity: 0.30, speed: -0.18 },
+        { scaleW: 1.46, scaleH: 1.12, rotX: 1.2, rotY: -0.5, rotZ: 0.7, opacity: 0.28, speed: 0.15 },
+        { scaleW: 1.28, scaleH: 1.36, rotX: -0.9, rotY: 0.6, rotZ: -0.8, opacity: 0.24, speed: -0.12 },
+        { scaleW: 1.18, scaleH: 1.52, rotX: 0.3, rotY: -0.9, rotZ: 1.1, opacity: 0.22, speed: 0.25 },
+        { scaleW: 1.34, scaleH: 0.98, rotX: 1.6, rotY: 0.2, rotZ: -0.5, opacity: 0.20, speed: -0.16 },
+      ];
+      const siriRibbons = siriRibbonConfigs.map((config, index) => {
+        const mesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(sphereRadius * config.scaleW, sphereRadius * config.scaleH),
+          new THREE.MeshBasicMaterial({
+            color: siriColors[index],
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide,
+          }),
+        );
+        mesh.rotation.set(config.rotX, config.rotY, config.rotZ);
+        group.add(mesh);
+        return {
+          mesh,
+          baseOpacity: config.opacity,
+          speed: config.speed,
+        };
+      });
+
+      /* ── Siri inner glow sphere — soft luminous body mass ── */
+      const siriGlowSphere = new THREE.Mesh(
+        new THREE.SphereGeometry(sphereRadius * 0.72, 24, 24),
+        new THREE.MeshBasicMaterial({
+          color: 0x4488cc,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      group.add(siriGlowSphere);
+
+      /* ── Siri central energy crossing — bright core point ── */
+      const siriCenter = new THREE.Mesh(
+        new THREE.SphereGeometry(node.size * 0.24, 16, 16),
+        new THREE.MeshBasicMaterial({
+          color: 0xeaf8ff,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      group.add(siriCenter);
+
+      /* ── Siri shell rim highlight — thin luminous edge ── */
+      const siriRim = new THREE.Mesh(
+        new THREE.TorusGeometry(sphereRadius * 1.0, sphereRadius * 0.028, 8, 96),
+        new THREE.MeshBasicMaterial({
+          color: palette.ring,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      siriRim.rotation.set(0.72, 0.28, 0.14);
+      group.add(siriRim);
+
+      /* ── Second Siri rim — 3D rim-light at different tilt ── */
+      const siriRim2 = new THREE.Mesh(
+        new THREE.TorusGeometry(sphereRadius * 1.01, sphereRadius * 0.022, 8, 96),
+        new THREE.MeshBasicMaterial({
+          color: palette.halo,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      siriRim2.rotation.set(1.42, -0.38, 0.52);
+      group.add(siriRim2);
+
+      /* ── Third Siri rim — equatorial highlight ── */
+      const siriRim3 = new THREE.Mesh(
+        new THREE.TorusGeometry(sphereRadius * 0.98, sphereRadius * 0.016, 8, 96),
+        new THREE.MeshBasicMaterial({
+          color: 0x5ef0ff,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      siriRim3.rotation.set(0.18, 1.12, -0.32);
+      group.add(siriRim3);
+
+      /* ── JARVIS-inspired chassis arcs — segmented precision decoration ── */
+      const chassisArcConfigs = [
+        { radius: bezelRadius * 1.14, startAngle: 0.4, sweepAngle: 1.8, segments: 48, opacity: 0.18, speed: -0.02, color: palette.tickSoft },
+        { radius: bezelRadius * 1.22, startAngle: 2.8, sweepAngle: 1.2, segments: 32, opacity: 0.14, speed: 0.015, color: palette.metalLight },
+        { radius: bezelRadius * 0.88, startAngle: 4.2, sweepAngle: 1.5, segments: 40, opacity: 0.16, speed: -0.025, color: palette.tick },
+        { radius: bezelRadius * 0.98, startAngle: 1.0, sweepAngle: 1.4, segments: 36, opacity: 0.14, speed: 0.018, color: palette.tick },
+        { radius: bezelRadius * 1.32, startAngle: 3.6, sweepAngle: 1.0, segments: 28, opacity: 0.11, speed: -0.012, color: palette.tickSoft },
+        { radius: bezelRadius * 1.06, startAngle: 5.2, sweepAngle: 0.8, segments: 24, opacity: 0.13, speed: 0.022, color: palette.metalLight },
+      ];
+      const chassisArcs = chassisArcConfigs.map((config) => {
+        const points = [];
+        for (let i = 0; i <= config.segments; i += 1) {
+          const angle = config.startAngle + (i / config.segments) * config.sweepAngle;
+          points.push(new THREE.Vector3(
+            Math.cos(angle) * config.radius,
+            Math.sin(angle) * config.radius,
+            0,
+          ));
+        }
+        const line = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(points),
+          new THREE.LineBasicMaterial({
+            color: config.color,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+          }),
+        );
+        line.rotation.x = bezel.rotation.x;
+        group.add(line);
+        return {
+          line,
+          baseOpacity: config.opacity,
+          speed: config.speed,
+        };
+      });
+
       return {
         group,
         sphere,
@@ -1931,6 +2299,20 @@ if (root) {
         wireframeSphere,
         cageLines,
         glow,
+        innerRings,
+        outerRings,
+        clockMarkers,
+        parallelogramTicks,
+        irisBlades,
+        irisGlowRing,
+        irisOuterGlowRing,
+        siriRibbons,
+        siriGlowSphere,
+        siriCenter,
+        siriRim,
+        siriRim2,
+        siriRim3,
+        chassisArcs,
         bezelGlint,
         bezelGlintState,
       };
@@ -1942,206 +2324,172 @@ if (root) {
       group.position.set(node.anchor.x, node.anchor.y, node.anchor.z);
       group.userData.modelId = node.id;
       const palette = this.buildOrbPalette(node);
+      const isInactive = Boolean(node.inactive);
 
-      /* ── Core sphere — luminous instrument orb ── */
-      const emissiveBase = node.tier === "flagship" ? 0.32 : node.tier === "secondary" ? 0.22 : 0.14;
+      /* ── Hero-style wireframe sphere cage (primary visual element) ── */
+      const tierDetail = node.tier === "flagship" ? 2 : 1;
+      const icoGeo = new THREE.IcosahedronGeometry(node.size * 1.0, tierDetail);
+      const edgesGeo = new THREE.EdgesGeometry(icoGeo, 1);
 
-      const core = new THREE.Mesh(
-        new THREE.SphereGeometry(node.size, 32, 32),
-        new THREE.MeshStandardMaterial({
-          color: palette.core,
-          emissive: palette.emissive,
-          emissiveIntensity: emissiveBase,
-          roughness: 0.16,
-          metalness: 0.1,
+      const wireOpacity = isInactive
+        ? (node.tier === "flagship" ? 0.15 : node.tier === "secondary" ? 0.11 : 0.07)
+        : (node.tier === "flagship" ? 0.38 : node.tier === "secondary" ? 0.28 : 0.18);
+      const wireframe = new THREE.LineSegments(
+        edgesGeo,
+        new THREE.LineBasicMaterial({
+          color: palette.ring,
           transparent: true,
-          opacity: node.tier === "flagship" ? 0.68 : node.tier === "secondary" ? 0.58 : 0.48,
+          opacity: wireOpacity,
+          depthWrite: false,
         }),
       );
-      core.userData.modelId = node.id;
-      group.add(core);
+      wireframe.userData.modelId = node.id;
+      group.add(wireframe);
 
-      const livingCoreGroup = new THREE.Group();
-      livingCoreGroup.position.z = node.size * 0.12;
-      const livingCoreTexture = this.livingCoreTexture || (this.livingCoreTexture = this.createLivingCoreTexture());
-      const livingCoreConfigs = [
-        { scaleX: 1.22, scaleY: 0.86, opacity: 0.10, offsetX: -0.1, offsetY: 0.02, speed: 0.26, driftX: 0.15, driftY: 0.09, scaleXAmplitude: 0.09, scaleYAmplitude: 0.06, rotation: -0.22, rotationAmplitude: 0.18, color: palette.emissive.clone().lerp(palette.ring, 0.18), blending: THREE.AdditiveBlending },
-        { scaleX: 0.92, scaleY: 1.14, opacity: 0.09, offsetX: 0.07, offsetY: -0.06, speed: 0.21, driftX: 0.12, driftY: 0.15, scaleXAmplitude: 0.07, scaleYAmplitude: 0.08, rotation: 0.54, rotationAmplitude: 0.16, color: palette.ring.clone().lerp(palette.shell, 0.12), blending: THREE.AdditiveBlending },
-        { scaleX: 0.72, scaleY: 0.66, opacity: 0.10, offsetX: 0.02, offsetY: 0.06, speed: 0.17, driftX: 0.1, driftY: 0.08, scaleXAmplitude: 0.07, scaleYAmplitude: 0.05, rotation: -0.46, rotationAmplitude: 0.12, color: palette.shell.clone().lerp(new THREE.Color(0x0b1524), 0.24), blending: THREE.NormalBlending },
-        { scaleX: 0.62, scaleY: 0.78, opacity: 0.05, offsetX: -0.02, offsetY: -0.05, speed: 0.13, driftX: 0.06, driftY: 0.1, scaleXAmplitude: 0.05, scaleYAmplitude: 0.07, rotation: 0.18, rotationAmplitude: 0.1, color: palette.halo.clone().lerp(palette.shell, 0.18), blending: THREE.AdditiveBlending },
-      ];
-      const livingCoreLayers = livingCoreConfigs.map((config, index) => {
-        const sprite = new THREE.Sprite(
-          new THREE.SpriteMaterial({
-            map: livingCoreTexture,
-            color: config.color,
-            transparent: true,
-            opacity: config.opacity,
-            depthWrite: false,
-            blending: config.blending,
-          }),
-        );
-        sprite.scale.set(node.size * config.scaleX, node.size * config.scaleY, 1);
-        sprite.position.set(node.size * config.offsetX, node.size * config.offsetY, 0);
-        sprite.material.rotation = config.rotation;
-        livingCoreGroup.add(sprite);
-        return {
-          sprite,
-          baseOpacity: config.opacity,
-          baseScaleX: node.size * config.scaleX,
-          baseScaleY: node.size * config.scaleY,
-          baseOffsetX: node.size * config.offsetX,
-          baseOffsetY: node.size * config.offsetY,
-          speed: config.speed,
-          driftX: config.driftX,
-          driftY: config.driftY,
-          scaleXAmplitude: config.scaleXAmplitude,
-          scaleYAmplitude: config.scaleYAmplitude,
-          baseRotation: config.rotation,
-          rotationAmplitude: config.rotationAmplitude,
-          blending: config.blending,
-          phase: node.orbitPhase + index * 1.1,
-        };
-      });
-      group.add(livingCoreGroup);
-
+      /* ── Shell sphere — faint dark fill for silhouette/depth ── */
+      const shellOpacity = isInactive
+        ? (node.tier === "flagship" ? 0.05 : 0.03)
+        : (node.tier === "flagship" ? 0.10 : node.tier === "secondary" ? 0.08 : 0.05);
       const shell = new THREE.Mesh(
-        new THREE.SphereGeometry(node.size * (node.tier === "flagship" ? 2.0 : node.tier === "secondary" ? 1.7 : 1.4), 28, 28),
+        new THREE.IcosahedronGeometry(node.size * 0.98, tierDetail),
         new THREE.MeshBasicMaterial({
           color: palette.shell,
           transparent: true,
-          opacity: node.tier === "flagship" ? 0.20 : node.tier === "secondary" ? 0.15 : 0.10,
-          blending: THREE.NormalBlending,
+          opacity: shellOpacity,
           depthWrite: false,
           side: THREE.BackSide,
         }),
       );
       group.add(shell);
 
-      const focusedCore = this.buildFocusedCore(node, palette);
-      group.add(focusedCore.group);
-
-      /* ── Nucleus — tight bright inner sprite echoing hero signal core ── */
-      const nucleus = new THREE.Sprite(
-        new THREE.SpriteMaterial({
-          map: this.nucleusTexture || (this.nucleusTexture = this.createNucleusTexture()),
-          color: palette.nucleus,
-          transparent: true,
-          opacity: node.tier === "flagship" ? 0.12 : node.tier === "secondary" ? 0.09 : 0.06,
-          depthWrite: false,
-          blending: THREE.AdditiveBlending,
-        }),
+      /* ── Hit sphere — invisible, for raycaster interaction ── */
+      const hitSphere = new THREE.Mesh(
+        new THREE.SphereGeometry(node.size * 1.1, 8, 8),
+        new THREE.MeshBasicMaterial({ visible: false }),
       );
-      nucleus.scale.setScalar(node.size * 1.3);
-      nucleus.userData.modelId = node.id;
-      group.add(nucleus);
+      hitSphere.userData.modelId = node.id;
+      group.add(hitSphere);
 
-      const lobeTexture = this.lobeTexture || (this.lobeTexture = this.createLobeTexture());
-      const lobeConfigs = [
-        { width: 2.08, height: 1.14, x: -0.08, y: 0.09, rotation: 0.3, speed: 0.58, amplitude: 0.09 },
-        { width: 1.86, height: 1.26, x: 0.1, y: -0.06, rotation: -0.9, speed: 0.46, amplitude: 0.08 },
-        { width: 1.94, height: 1.08, x: 0.06, y: 0.08, rotation: 1.16, speed: 0.5, amplitude: 0.07 },
-      ];
-      const lobeCount = node.tier === "flagship" ? 2 : node.tier === "secondary" ? 1 : 0;
-      const lobes = lobeConfigs.slice(0, lobeCount).map((config, index) => {
-        const sprite = new THREE.Sprite(
-          new THREE.SpriteMaterial({
-            map: lobeTexture,
-            color: palette.lobes[index],
-            transparent: true,
-            opacity: node.tier === "flagship" ? 0.08 : node.tier === "secondary" ? 0.05 : 0.03,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending,
-          }),
-        );
-        sprite.scale.set(node.size * config.width * node.haloScale, node.size * config.height * node.haloScale, 1);
-        sprite.position.set(node.size * config.x * node.haloScale, node.size * config.y * node.haloScale, 0);
-        sprite.material.rotation = config.rotation;
-        group.add(sprite);
-        return {
-          sprite,
-          baseColor: palette.lobes[index].clone(),
-          baseOpacity: sprite.material.opacity,
-          baseWidth: node.size * config.width * node.haloScale,
-          baseHeight: node.size * config.height * node.haloScale,
-          baseX: node.size * config.x * node.haloScale,
-          baseY: node.size * config.y * node.haloScale,
-          rotation: config.rotation,
-          speed: config.speed,
-          amplitude: config.amplitude,
-          phase: node.orbitPhase + index * 1.8,
-        };
-      });
-
-      /* ── Primary halo — layered outer bloom ── */
-      const halo = new THREE.Sprite(
-        new THREE.SpriteMaterial({
-          map: this.glowTexture || (this.glowTexture = this.createGlowTexture()),
+      /* ── Ghost sphere — subtle additive glow, tightly scaled ── */
+      const ghostOpacity = isInactive ? 0
+        : (node.tier === "flagship" ? 0.04 : node.tier === "secondary" ? 0.03 : 0.018);
+      const ghost = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(node.size * 1.02, tierDetail),
+        new THREE.MeshBasicMaterial({
           color: palette.halo,
           transparent: true,
-          opacity: node.tier === "flagship" ? 0.018 : node.tier === "secondary" ? 0.012 : 0.006,
+          opacity: ghostOpacity,
           depthWrite: false,
           blending: THREE.AdditiveBlending,
         }),
       );
-      halo.scale.setScalar(node.size * node.haloScale * 1.6);
-      halo.userData.modelId = node.id;
-      group.add(halo);
+      group.add(ghost);
 
-      /* ── Soft aura — ultra-wide subliminal depth glow (whisper layer) ── */
-      const aura = new THREE.Sprite(
-        new THREE.SpriteMaterial({
-          map: this.glowTexture,
-          color: palette.aura,
-          transparent: true,
-          opacity: node.tier === "flagship" ? 0.001 : node.tier === "secondary" ? 0.0007 : 0.0004,
-          depthWrite: false,
-          blending: THREE.AdditiveBlending,
-        }),
-      );
-      aura.scale.setScalar(node.size * node.haloScale * 2.0);
-      aura.userData.modelId = node.id;
-      group.add(aura);
+      /* ── Internal field contours — structural objecthood cue ── */
+      const nodeContourGroup = new THREE.Group();
+      const contourCount = isInactive ? 0 : (node.tier === "flagship" ? 3 : node.tier === "secondary" ? 2 : 1);
+      const nodeContourConfigs = [
+        { radiusX: node.size * 0.92, radiusY: node.size * 0.68, rotationX: 1.12, rotationY: 0.24, rotationZ: -0.18, opacity: node.tier === "flagship" ? 0.26 : 0.20, speed: 0.04 },
+        { radiusX: node.size * 0.74, radiusY: node.size * 0.86, rotationX: 0.48, rotationY: 0.78, rotationZ: 0.28, opacity: node.tier === "flagship" ? 0.18 : 0.14, speed: -0.03 },
+        { radiusX: node.size * 0.58, radiusY: node.size * 0.52, rotationX: 1.46, rotationY: 0.12, rotationZ: -0.42, opacity: 0.12, speed: 0.025 },
+      ];
+      const nodeContours = nodeContourConfigs.slice(0, contourCount).map((config) => {
+        const points = [];
+        for (let i = 0; i < 64; i += 1) {
+          const angle = (i / 64) * Math.PI * 2;
+          points.push(new THREE.Vector3(
+            Math.cos(angle) * config.radiusX,
+            Math.sin(angle) * config.radiusY,
+            0,
+          ));
+        }
+        const line = new THREE.LineLoop(
+          new THREE.BufferGeometry().setFromPoints(points),
+          new THREE.LineBasicMaterial({
+            color: palette.ring,
+            transparent: true,
+            opacity: config.opacity,
+            depthWrite: false,
+          }),
+        );
+        line.rotation.set(config.rotationX, config.rotationY, config.rotationZ);
+        nodeContourGroup.add(line);
+        return {
+          line,
+          baseOpacity: config.opacity,
+          baseRotationX: config.rotationX,
+          baseRotationY: config.rotationY,
+          baseRotationZ: config.rotationZ,
+          speed: config.speed,
+        };
+      });
+      group.add(nodeContourGroup);
 
-      const guideRing = new THREE.Mesh(
-        new THREE.TorusGeometry(node.size * (node.tier === "flagship" ? 1.92 : node.tier === "secondary" ? 1.64 : 1.42), node.size * 0.016, 6, 56),
+      /* ── Center node — bright core point (hero centerNode style) ── */
+      const centerNode = new THREE.Mesh(
+        new THREE.SphereGeometry(node.size * 0.12, 12, 12),
         new THREE.MeshBasicMaterial({
-          color: palette.ring,
+          color: palette.nucleus,
           transparent: true,
-          opacity: node.tier === "flagship" ? 0.18 : node.tier === "secondary" ? 0.14 : 0.1,
+          opacity: isInactive ? 0.18 : 0.42,
           depthWrite: false,
         }),
       );
-      guideRing.rotation.x = 1.22;
-      guideRing.rotation.z = -0.18;
-      group.add(guideRing);
+      group.add(centerNode);
+
+      /* ── Focused core (full apparatus — only built for active nodes) ── */
+      let focusedCore = null;
+      if (!isInactive) {
+        focusedCore = this.buildFocusedCore(node, palette);
+        group.add(focusedCore.group);
+      }
+
+      /* ── Guide ring — thin instrument torus ── */
+      let guideRing = null;
+      if (!isInactive) {
+        guideRing = new THREE.Mesh(
+          new THREE.TorusGeometry(node.size * (node.tier === "flagship" ? 1.92 : node.tier === "secondary" ? 1.64 : 1.42), node.size * 0.016, 6, 56),
+          new THREE.MeshBasicMaterial({
+            color: palette.ring,
+            transparent: true,
+            opacity: node.tier === "flagship" ? 0.25 : node.tier === "secondary" ? 0.20 : 0.14,
+            depthWrite: false,
+          }),
+        );
+        guideRing.rotation.x = 1.22;
+        guideRing.rotation.z = -0.18;
+        group.add(guideRing);
+      }
 
       /* ── Accent ring — inner instrument orbit ── */
-      const accentRing = new THREE.Mesh(
-        new THREE.TorusGeometry(node.size * (node.tier === "flagship" ? 2.6 : 2.0), node.size * 0.038, 10, 64),
-        new THREE.MeshStandardMaterial({
-          color: 0x000000,
-          emissive: palette.ring,
-          emissiveIntensity: node.tier === "flagship" ? 0.62 : node.tier === "secondary" ? 0.42 : 0.16,
-          roughness: 0.4,
-          metalness: 0.0,
-          transparent: true,
-          opacity: node.tier === "flagship" ? 0.22 : node.tier === "secondary" ? 0.14 : 0.04,
-        }),
-      );
-      accentRing.rotation.x = 1.0;
-      accentRing.rotation.z = 0.2;
-      group.add(accentRing);
-
-      /* ── Orbit ring — hero-style wide ellipse (flagship only) ── */
-      let orbitRing = null;
-      if (node.tier === "flagship") {
-        orbitRing = new THREE.Mesh(
-          new THREE.TorusGeometry(node.size * (node.tier === "flagship" ? 4.4 : 3.6), node.size * 0.018, 8, 64),
-          new THREE.MeshBasicMaterial({
-            color: palette.lobes[node.tier === "flagship" ? 1 : 2],
+      let accentRing = null;
+      if (!isInactive) {
+        accentRing = new THREE.Mesh(
+          new THREE.TorusGeometry(node.size * (node.tier === "flagship" ? 2.6 : 2.0), node.size * 0.038, 10, 64),
+          new THREE.MeshStandardMaterial({
+            color: 0x000000,
+            emissive: palette.ring,
+            emissiveIntensity: node.tier === "flagship" ? 0.62 : node.tier === "secondary" ? 0.42 : 0.16,
+            roughness: 0.4,
+            metalness: 0.0,
             transparent: true,
-            opacity: node.tier === "flagship" ? 0.10 : 0.06,
+            opacity: node.tier === "flagship" ? 0.33 : node.tier === "secondary" ? 0.21 : 0.06,
+          }),
+        );
+        accentRing.rotation.x = 1.0;
+        accentRing.rotation.z = 0.2;
+        group.add(accentRing);
+      }
+
+      /* ── Orbit ring — wide ellipse (flagship active only) ── */
+      let orbitRing = null;
+      if (node.tier === "flagship" && !isInactive) {
+        orbitRing = new THREE.Mesh(
+          new THREE.TorusGeometry(node.size * 4.4, node.size * 0.018, 8, 64),
+          new THREE.MeshBasicMaterial({
+            color: palette.lobes[1],
+            transparent: true,
+            opacity: 0.16,
           }),
         );
         orbitRing.rotation.x = 1.38;
@@ -2149,10 +2497,9 @@ if (root) {
         group.add(orbitRing);
       }
 
-      /* ── Focus lock ring — measurement-lock indicator (hidden until focused) ── */
+      /* ── Focus lock ring (hidden until focused) ── */
       let focusRing = null;
-      const addFocusRing = node.tier !== "outer" || this.nodes.length <= 20;
-      if (addFocusRing) {
+      if (!isInactive && (node.tier !== "outer" || this.nodes.length <= 20)) {
         focusRing = new THREE.Mesh(
           new THREE.TorusGeometry(node.size * 3.2, node.size * 0.02, 6, 48),
           new THREE.MeshBasicMaterial({
@@ -2166,6 +2513,7 @@ if (root) {
         group.add(focusRing);
       }
 
+      /* ── Metric bands ── */
       const metricBandGroup = new THREE.Group();
       metricBandGroup.position.z = node.size * 0.18;
       metricBandGroup.visible = false;
@@ -2189,64 +2537,36 @@ if (root) {
       });
       group.add(metricBandGroup);
 
-      /* ── Glint sprite — restrained specular highlight ── */
-      let glintSprite = null;
-      let glintState = null;
-      if (node.tier !== "outer" || Math.random() < 0.3) {
-        glintSprite = new THREE.Sprite(
-          new THREE.SpriteMaterial({
-            map: this.glintTexture || (this.glintTexture = this.createGlintTexture()),
-            color: 0xffffff,
-            transparent: true,
-            opacity: 0,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending,
-          }),
-        );
-        glintSprite.scale.setScalar(node.size * 0.28);
-        group.add(glintSprite);
-        const seed = hashString(node.id + "glint");
-        const baseInterval = node.tier === "flagship" ? 6000 : node.tier === "secondary" ? 10000 : 18000;
-        const intervalRange = node.tier === "flagship" ? 10000 : node.tier === "secondary" ? 18000 : 22000;
-        glintState = {
-          nextGlintAt: performance.now() + baseInterval + (seed % 1000) / 1000 * intervalRange,
-          progress: 0,
-          angle: ((seed % 628) / 100),
-          active: false,
-          baseInterval,
-          intervalRange,
-          seed,
-        };
-      }
-
       const label = createLabelElement(node);
+      if (isInactive) {
+        label.classList.add("is-inactive");
+      }
       this.labelLayer.appendChild(label);
 
       this.rootGroup.add(group);
       this.nodeLookup.set(node.id, {
         node,
         group,
-        core,
-        livingCoreGroup,
-        livingCoreLayers,
+        wireframe,
         shell,
+        hitSphere,
+        ghost,
+        centerNode,
+        nodeContours,
+        nodeContourGroup,
         focusedCore,
-        nucleus,
-        lobes,
-        halo,
-        aura,
         guideRing,
         accentRing,
         orbitRing,
         focusRing,
         metricBandGroup,
         metricBands,
-        glintSprite,
-        glintState,
         label,
-        baseEmissiveIntensity: emissiveBase,
-        baseCoreOpacity: core.material.opacity,
-        baseNucleusOpacity: nucleus.material.opacity,
+        baseWireOpacity: wireOpacity,
+        baseShellOpacity: shellOpacity,
+        baseGhostOpacity: ghostOpacity,
+        baseCenterOpacity: centerNode.material.opacity,
+        wireRotationSpeed: isInactive ? 0.018 : (node.tier === "flagship" ? 0.06 : node.tier === "secondary" ? 0.04 : 0.025),
       });
     }
 
@@ -2268,11 +2588,11 @@ if (root) {
       this.focusId = payload.focusModelId || null;
       if (this.focusId !== prevFocus) {
         this.focusChangedAt = performance.now();
-        /* Click-to-zoom: zoom in on focus, zoom out on clear */
+        /* Click-to-zoom: dramatic instrument acquisition / release */
         if (this.focusId) {
-          this.zoomTarget = this.zoomRange.min + 0.4;
+          this.zoomTarget = this.zoomRange.min;
         } else {
-          this.zoomTarget = this.zoomRange.max - 0.9;
+          this.zoomTarget = this.zoomRange.max - 0.4;
         }
       }
       /* Bloom impulse on new focus acquisition */
@@ -2429,7 +2749,7 @@ if (root) {
     updateHover() {
       this.raycaster.setFromCamera(this.mouse, this.camera);
       const intersections = this.raycaster.intersectObjects(
-        Array.from(this.nodeLookup.values()).map((entry) => entry.core),
+        Array.from(this.nodeLookup.values()).map((entry) => entry.hitSphere),
         false,
       );
       const prevHover = this.hoverId;
@@ -2479,133 +2799,92 @@ if (root) {
         const siriWaveA = Math.sin(siriPhase);
         const siriWaveB = Math.sin(siriPhase * 1.37 + entry.node.cii * 4.2);
         const siriWaveC = Math.cos(siriPhase * 0.82 - entry.node.cii * 3.1);
+        const isInactive = Boolean(entry.node.inactive);
+        const driftScale = isInactive ? 0.5 : 1;
         entry.group.position.x = entry.node.anchor.x
-          + siriWaveA * (entry.node.tier === "flagship" ? 0.3 : entry.node.tier === "secondary" ? 0.2 : 0.16)
-          + siriWaveB * 0.04;
+          + siriWaveA * (entry.node.tier === "flagship" ? 0.3 : entry.node.tier === "secondary" ? 0.2 : 0.16) * driftScale
+          + siriWaveB * 0.04 * driftScale;
         entry.group.position.y = entry.node.anchor.y
-          + siriWaveB * (entry.node.tier === "flagship" ? 0.22 : entry.node.tier === "secondary" ? 0.15 : 0.12)
-          + siriWaveC * 0.035;
+          + siriWaveB * (entry.node.tier === "flagship" ? 0.22 : entry.node.tier === "secondary" ? 0.15 : 0.12) * driftScale
+          + siriWaveC * 0.035 * driftScale;
         entry.group.position.z = entry.node.anchor.z
-          + siriWaveC * (entry.node.tier === "outer" ? 0.22 : 0.14)
-          + Math.sin(drift * 0.88 + entry.node.orbitPhase) * 0.04;
-        entry.group.rotation.z = Math.sin(siriPhase * 0.42) * 0.08;
-        entry.group.rotation.y = Math.cos(siriPhase * 0.36) * 0.06;
+          + siriWaveC * (entry.node.tier === "outer" ? 0.22 : 0.14) * driftScale
+          + Math.sin(drift * 0.88 + entry.node.orbitPhase) * 0.04 * driftScale;
+        entry.group.rotation.z = Math.sin(siriPhase * 0.42) * 0.08 * driftScale;
+        entry.group.rotation.y = Math.cos(siriPhase * 0.36) * 0.06 * driftScale;
 
         const focused = this.focusId === entry.node.id;
         const hovered = this.hoverId === entry.node.id;
         const dimmed = Boolean(this.focusId) && !focused;
         const focusLevel = focused ? easeOutCubic(focusReveal) : 0;
 
-        /* ── Node breathing: subtle pulsing tied to CII ── */
+        /* ── Node breathing: subtle pulsing ── */
         const breatheRate = 0.72 + entry.node.cii * 1.1;
-        const breatheAmp = reducedMotion ? 0 : entry.node.tier === "flagship" ? 0.072 : entry.node.tier === "secondary" ? 0.05 : 0.038;
+        const breatheAmp = reducedMotion ? 0 : (isInactive ? 0.02 : entry.node.tier === "flagship" ? 0.036 : entry.node.tier === "secondary" ? 0.025 : 0.019);
         const breathe = 1.0 + Math.sin(slowTime * breatheRate + entry.node.orbitPhase) * breatheAmp;
 
-        const targetScale = (focused ? 1.44 : hovered ? 1.22 : dimmed ? 0.68 : 1) * breathe;
+        const dimScale = isInactive ? 0.65 : 0.78;
+        const targetScale = (focused ? 1.92 : hovered ? 1.22 : dimmed ? dimScale : 1) * breathe;
         entry.group.scale.setScalar(lerp(entry.group.scale.x, targetScale, 0.12));
 
-        /* ── Emissive intensity breathing — boosted on hover, suppressed on focused replacement ── */
-        const focusBoost = focused ? 0.68 : hovered ? 0.28 : 0;
-        const emissivePulse = entry.baseEmissiveIntensity + focusBoost +
-          (reducedMotion ? 0 : Math.sin(slowTime * breatheRate * 0.8 + entry.node.orbitPhase) * (entry.node.tier === "flagship" ? 0.26 : entry.node.tier === "secondary" ? 0.18 : 0.1));
+        /* ── Wireframe sphere rotation ── */
+        if (entry.wireframe && !reducedMotion) {
+          entry.wireframe.rotation.y += entry.wireRotationSpeed * 0.016;
+          entry.wireframe.rotation.x += entry.wireRotationSpeed * 0.004;
+        }
 
-        if (entry.livingCoreLayers) {
-          entry.livingCoreLayers.forEach((layer, index) => {
-            const layerWave = reducedMotion ? 0 : Math.sin(slowTime * (layer.speed + entry.node.cii * 0.18) + layer.phase);
-            const crossWave = reducedMotion ? 0 : Math.cos(slowTime * (layer.speed * 0.72 + 0.08) + layer.phase);
-            const rotationWave = reducedMotion ? 0 : (Math.sin(slowTime * (layer.speed * 0.52 + 0.04) + layer.phase) * layer.rotationAmplitude)
-              + (Math.cos(slowTime * (layer.speed * 0.34 + 0.02) + layer.phase) * layer.rotationAmplitude * 0.45);
-            const focusLayerBoost = focused ? 0.3 : hovered ? 1.04 : dimmed ? 0.5 : 1;
-            layer.sprite.material.opacity = lerp(
-              layer.sprite.material.opacity,
-              (focused ? layer.baseOpacity * 0.04 : hovered ? layer.baseOpacity * 1.24 : dimmed ? layer.baseOpacity * 0.24 : layer.baseOpacity) * focusLayerBoost,
+        /* ── Wireframe opacity ── */
+        if (entry.wireframe) {
+          const wireTarget = focused ? 0.32 + focusLevel * 0.12
+            : hovered ? entry.baseWireOpacity * 1.5
+            : dimmed ? entry.baseWireOpacity * (isInactive ? 0.20 : 0.40)
+            : entry.baseWireOpacity;
+          entry.wireframe.material.opacity = lerp(entry.wireframe.material.opacity, wireTarget, 0.1);
+        }
+
+        /* ── Shell opacity ── */
+        if (entry.shell) {
+          const shellTarget = focused ? entry.baseShellOpacity * 0.3
+            : hovered ? entry.baseShellOpacity * 1.8
+            : dimmed ? entry.baseShellOpacity * (isInactive ? 0.20 : 0.30)
+            : entry.baseShellOpacity;
+          entry.shell.material.opacity = lerp(entry.shell.material.opacity, shellTarget, 0.08);
+        }
+
+        /* ── Ghost opacity ── */
+        if (entry.ghost) {
+          const ghostTarget = focused ? 0
+            : hovered ? entry.baseGhostOpacity * 1.6
+            : dimmed ? 0
+            : entry.baseGhostOpacity;
+          entry.ghost.material.opacity = lerp(entry.ghost.material.opacity, ghostTarget, 0.1);
+        }
+
+        /* ── Center node ── */
+        if (entry.centerNode) {
+          const centerTarget = focused ? 0.50
+            : hovered ? entry.baseCenterOpacity * 1.4
+            : dimmed ? entry.baseCenterOpacity * 0.40
+            : entry.baseCenterOpacity;
+          entry.centerNode.material.opacity = lerp(entry.centerNode.material.opacity, centerTarget, 0.12);
+        }
+
+        /* ── Internal field contour animation ── */
+        if (entry.nodeContours) {
+          entry.nodeContours.forEach((contour) => {
+            contour.line.material.opacity = lerp(
+              contour.line.material.opacity,
+              focused ? 0.02 : hovered ? contour.baseOpacity * 1.4 : dimmed ? contour.baseOpacity * 0.2 : contour.baseOpacity,
               0.1,
             );
-            layer.sprite.position.x = reducedMotion
-              ? layer.baseOffsetX
-              : layer.baseOffsetX + layerWave * entry.node.size * layer.driftX;
-            layer.sprite.position.y = reducedMotion
-              ? layer.baseOffsetY
-              : layer.baseOffsetY + crossWave * entry.node.size * layer.driftY;
-            layer.sprite.scale.set(
-              layer.baseScaleX * focusLayerBoost * (1 + layerWave * layer.scaleXAmplitude),
-              layer.baseScaleY * focusLayerBoost * (1 - crossWave * layer.scaleYAmplitude),
-              1,
-            );
-            layer.sprite.material.rotation = layer.baseRotation + rotationWave;
+            if (!reducedMotion) {
+              contour.line.rotation.y += contour.speed * 0.016;
+              contour.line.rotation.z = contour.baseRotationZ + Math.sin(slowTime * 0.3 + contour.speed * 6) * 0.03;
+            }
           });
         }
 
-        /* ── Nucleus brightness ── */
-        if (entry.nucleus) {
-          entry.nucleus.material.opacity = lerp(
-            entry.nucleus.material.opacity,
-            focused ? 0.002 : hovered ? 0.045 : dimmed ? 0.02 : entry.baseNucleusOpacity,
-            0.12,
-          );
-        }
-
-        entry.core.material.opacity = lerp(
-          entry.core.material.opacity,
-          focused ? 0.04 : hovered ? Math.min(0.46, entry.baseCoreOpacity + 0.045) : dimmed ? 0.06 : entry.baseCoreOpacity,
-          0.1,
-        );
-        entry.core.material.emissiveIntensity = lerp(
-          entry.core.material.emissiveIntensity,
-          focused ? entry.baseEmissiveIntensity * 0.2 : emissivePulse,
-          0.08,
-        );
-
-        if (entry.shell) {
-          entry.shell.material.opacity = lerp(
-            entry.shell.material.opacity,
-            focused ? 0.01 : hovered ? 0.16 : dimmed ? 0.015 :
-              entry.node.tier === "flagship" ? 0.20 : entry.node.tier === "secondary" ? 0.15 : 0.10,
-            0.08,
-          );
-          const shellScale = 1 + (reducedMotion ? 0 : Math.sin(slowTime * 0.72 + entry.node.orbitPhase) * (entry.node.tier === "flagship" ? 0.04 : 0.025));
-          entry.shell.scale.setScalar(shellScale);
-        }
-
-        if (entry.lobes) {
-          entry.lobes.forEach((lobe, index) => {
-            const wave = reducedMotion ? 0 : Math.sin(slowTime * (lobe.speed + entry.node.cii * 0.14) + lobe.phase);
-            const hueNudge = reducedMotion ? 0 : Math.sin(slowTime * 0.28 + lobe.phase + index) * 0.01;
-            lobe.sprite.material.color.copy(lobe.baseColor).offsetHSL(hueNudge, 0, wave * 0.03);
-            lobe.sprite.material.opacity = lerp(
-              lobe.sprite.material.opacity,
-              (focused ? 0.006 : hovered ? 0.15 : dimmed ? 0.01 : lobe.baseOpacity) * (0.92 + wave * 0.1),
-              0.08,
-            );
-            lobe.sprite.position.x = reducedMotion ? lobe.baseX : lobe.baseX + Math.sin(slowTime * lobe.speed + lobe.phase) * lobe.baseWidth * lobe.amplitude * 0.08;
-            lobe.sprite.position.y = reducedMotion ? lobe.baseY : lobe.baseY + Math.cos(slowTime * (lobe.speed * 0.86) + lobe.phase) * lobe.baseHeight * lobe.amplitude * 0.07;
-            lobe.sprite.scale.set(
-              lobe.baseWidth * (1 + wave * 0.03),
-              lobe.baseHeight * (1 - wave * 0.025),
-              1,
-            );
-            lobe.sprite.material.rotation = reducedMotion ? lobe.rotation : lobe.rotation + slowTime * lobe.speed * 0.06;
-          });
-        }
-
-        /* ── Primary halo opacity ── */
-        entry.halo.material.opacity = lerp(
-          entry.halo.material.opacity,
-          focused ? 0.008 : hovered ? 0.05 : dimmed ? 0.003 :
-            entry.node.tier === "flagship" ? 0.018 : entry.node.tier === "secondary" ? 0.012 : 0.006,
-          0.12,
-        );
-
-        /* ── Soft aura opacity (whisper layer — subliminal transitions) ── */
-        if (entry.aura) {
-          entry.aura.material.opacity = lerp(
-            entry.aura.material.opacity,
-            focused ? 0.001 : hovered ? 0.005 : dimmed ? 0.0003 :
-              entry.node.tier === "flagship" ? 0.001 : entry.node.tier === "secondary" ? 0.0007 : 0.0004,
-            0.06,
-          );
-        }
-
+        /* ── Guide ring ── */
         if (entry.guideRing) {
           entry.guideRing.material.opacity = lerp(
             entry.guideRing.material.opacity,
@@ -2617,7 +2896,7 @@ if (root) {
           entry.guideRing.rotation.z -= focused ? 0.006 : 0.002;
         }
 
-        /* ── Focus lock ring — measurement-lock indicator ── */
+        /* ── Focus lock ring ── */
         if (entry.focusRing) {
           entry.focusRing.material.opacity = lerp(
             entry.focusRing.material.opacity,
@@ -2627,6 +2906,7 @@ if (root) {
           if (focused) entry.focusRing.rotation.z -= 0.008;
         }
 
+        /* ── Metric bands ── */
         if (entry.metricBands && entry.metricBandGroup) {
           const revealTarget = focused ? focusReveal : 0;
           entry.metricBandGroup.visible = revealTarget > 0.01 || entry.metricBands.some(function (band) {
@@ -2655,23 +2935,25 @@ if (root) {
           });
         }
 
-        /* ── Accent ring opacity + rotation ── */
-        entry.accentRing.material.opacity = lerp(
-          entry.accentRing.material.opacity,
+        /* ── Accent ring ── */
+        if (entry.accentRing) {
+          entry.accentRing.material.opacity = lerp(
+            entry.accentRing.material.opacity,
             focused ? 0.018 : hovered ? 0.28 : dimmed ? 0.02 :
-            entry.node.tier === "flagship" ? 0.22 : entry.node.tier === "secondary" ? 0.14 : 0.04,
-          0.1,
-        );
-        const ringSpeed = entry.node.tier === "flagship" ? 0.15 : 0.08;
-        entry.accentRing.rotation.y += ringSpeed * 0.016; /* ~1/60s step */
-        entry.accentRing.rotation.z += ringSpeed * 0.007;
+              entry.node.tier === "flagship" ? 0.22 : entry.node.tier === "secondary" ? 0.14 : 0.04,
+            0.1,
+          );
+          const ringSpeed = entry.node.tier === "flagship" ? 0.15 : 0.08;
+          entry.accentRing.rotation.y += ringSpeed * 0.016;
+          entry.accentRing.rotation.z += ringSpeed * 0.007;
+        }
 
-        /* ── Orbit ring opacity + slow rotation ── */
+        /* ── Orbit ring ── */
         if (entry.orbitRing) {
           entry.orbitRing.material.opacity = lerp(
             entry.orbitRing.material.opacity,
-            focused ? 0.012 : hovered ? 0.12 : dimmed ? 0.01 :
-              entry.node.tier === "flagship" ? 0.10 : 0.06,
+            focused ? 0.012 : hovered ? 0.18 : dimmed ? 0.02 :
+              entry.node.tier === "flagship" ? 0.16 : 0.08,
             0.08,
           );
           const orbitSpeed = entry.node.tier === "flagship" ? 0.028 : 0.018;
@@ -2679,6 +2961,7 @@ if (root) {
           entry.orbitRing.rotation.z -= orbitSpeed * 0.004;
         }
 
+        /* ── Focused core apparatus ── */
         if (entry.focusedCore) {
           const focusCoreActive = focused || entry.focusedCore.sphere.material.opacity > 0.01;
           entry.focusedCore.group.visible = focusCoreActive;
@@ -2727,17 +3010,17 @@ if (root) {
           );
           entry.focusedCore.tickGlowRing.material.opacity = lerp(
             entry.focusedCore.tickGlowRing.material.opacity,
-            focused ? 0.12 + focusLevel * 0.06 : 0,
+            focused ? 0.18 + focusLevel * 0.08 : 0,
             0.1,
           );
           entry.focusedCore.tickDiffuseRing.material.opacity = lerp(
             entry.focusedCore.tickDiffuseRing.material.opacity,
-            focused ? 0.06 + focusLevel * 0.03 : 0,
+            focused ? 0.08 + focusLevel * 0.04 : 0,
             0.08,
           );
           entry.focusedCore.ticks.minor.material.opacity = lerp(
             entry.focusedCore.ticks.minor.material.opacity,
-            focused ? 0.68 + focusLevel * 0.1 : 0,
+            focused ? 0.80 + focusLevel * 0.08 : 0,
             0.12,
           );
           entry.focusedCore.ticks.major.material.opacity = lerp(
@@ -2750,31 +3033,19 @@ if (root) {
           entry.focusedCore.ticks.minor.rotation.z += reducedMotion ? 0 : 0.0014;
           entry.focusedCore.ticks.major.rotation.z -= reducedMotion ? 0 : 0.0018;
 
-          entry.focusedCore.membranes.forEach((layer, index) => {
-            const waveA = reducedMotion ? 0 : Math.sin(slowTime * (layer.speed + 0.08) + layer.phase);
-            const waveB = reducedMotion ? 0 : Math.cos(slowTime * (layer.speed * 0.74 + 0.06) + layer.phase);
-            const membraneBoost = index === 2 ? 0.94 + focusLevel * 0.18 : 1.14 + focusLevel * 0.24;
-            layer.sprite.material.opacity = lerp(
-              layer.sprite.material.opacity,
-              focused ? layer.baseOpacity * membraneBoost : 0,
-              0.14,
-            );
-            layer.sprite.position.x = layer.baseOffsetX + (reducedMotion ? 0 : waveA * entry.node.size * layer.driftX);
-            layer.sprite.position.y = layer.baseOffsetY + (reducedMotion ? 0 : waveB * entry.node.size * layer.driftY);
-            layer.sprite.scale.set(
-              layer.baseScaleX * (1 + waveA * layer.scaleAmpX),
-              layer.baseScaleY * (1 - waveB * layer.scaleAmpY),
-              1,
-            );
-            layer.sprite.material.rotation = layer.baseRotation + (reducedMotion ? 0 : (waveA * 0.1) + (waveB * 0.05));
+          /* ── Membranes — top 2 layers at low opacity for body mass, rest zero ── */
+          entry.focusedCore.membranes.forEach((layer, memIdx) => {
+            const memTarget = (focused && memIdx < 2) ? 0.08 * focusLevel : 0;
+            layer.sprite.material.opacity = lerp(layer.sprite.material.opacity, memTarget, 0.14);
           });
 
+          /* ── Contour bands ── */
           entry.focusedCore.contourBands.forEach((band) => {
             const wobble = reducedMotion ? 0 : Math.sin(slowTime * band.wobbleSpeed + band.phase);
             const bandScale = 1 + wobble * band.scaleAmplitude;
             band.line.material.opacity = lerp(
               band.line.material.opacity,
-              focused ? band.baseOpacity * (1 + focusLevel * 0.24) : 0,
+              focused ? band.baseOpacity * (1.3 + focusLevel * 0.32) : 0,
               0.12,
             );
             band.line.rotation.x = band.baseRotationX + (reducedMotion ? 0 : wobble * 0.08);
@@ -2783,23 +3054,16 @@ if (root) {
             band.line.scale.setScalar(bandScale);
           });
 
+          /* ── Highlights — fade to zero (fog eliminated) ── */
           entry.focusedCore.highlights.forEach((highlight) => {
-            const wave = reducedMotion ? 0 : Math.sin(slowTime * (0.44 + highlight.speed) + highlight.phase);
-            highlight.sprite.material.opacity = lerp(
-              highlight.sprite.material.opacity,
-              focused ? highlight.baseOpacity * (1.02 + focusLevel * 0.34) : 0,
-              0.12,
-            );
-            highlight.sprite.position.x = highlight.baseX + (reducedMotion ? 0 : wave * entry.node.size * 0.09);
-            highlight.sprite.position.y = highlight.baseY + (reducedMotion ? 0 : Math.cos(slowTime * 0.28 + highlight.phase) * entry.node.size * 0.06);
-            highlight.sprite.material.rotation = highlight.baseRotation + (reducedMotion ? 0 : wave * 0.12);
+            highlight.sprite.material.opacity = lerp(highlight.sprite.material.opacity, 0, 0.12);
           });
 
-          /* ── Wireframe sphere — slow geodesic rotation ── */
+          /* ── Wireframe sphere — boost on focus ── */
           if (entry.focusedCore.wireframeSphere) {
             entry.focusedCore.wireframeSphere.material.opacity = lerp(
               entry.focusedCore.wireframeSphere.material.opacity,
-              focused ? 0.14 + focusLevel * 0.06 : 0,
+              focused ? 0.32 + focusLevel * 0.12 : 0,
               0.1,
             );
             if (!reducedMotion) {
@@ -2808,10 +3072,11 @@ if (root) {
             }
           }
 
+          /* ── Cage lines (great-circle loops) ── */
           entry.focusedCore.cageLines.forEach((cage) => {
             cage.line.material.opacity = lerp(
               cage.line.material.opacity,
-              focused ? cage.baseOpacity : 0,
+              focused ? cage.baseOpacity * (1.2 + focusLevel * 0.3) : 0,
               0.1,
             );
             cage.line.rotation.x = cage.baseRotationX;
@@ -2819,9 +3084,171 @@ if (root) {
             cage.line.rotation.z = cage.baseRotationZ + (reducedMotion ? 0 : Math.sin(slowTime * 0.24 + cage.speed * 8) * 0.04);
           });
 
+          /* ── Siri-orb internal ribbons — bold luminous planes (focused only) ── */
+          if (entry.focusedCore.siriRibbons) {
+            entry.focusedCore.siriRibbons.forEach((ribbon, rIdx) => {
+              ribbon.mesh.material.opacity = lerp(
+                ribbon.mesh.material.opacity,
+                focused ? ribbon.baseOpacity * focusLevel : 0,
+                0.1,
+              );
+              if (!reducedMotion) {
+                ribbon.mesh.rotation.x += ribbon.speed * 0.008;
+                ribbon.mesh.rotation.y += ribbon.speed * 0.003 * Math.sin(slowTime * 0.4 + rIdx);
+                ribbon.mesh.rotation.z += ribbon.speed * 0.005;
+              }
+            });
+          }
+
+          /* ── Siri inner glow sphere ── */
+          if (entry.focusedCore.siriGlowSphere) {
+            entry.focusedCore.siriGlowSphere.material.opacity = lerp(
+              entry.focusedCore.siriGlowSphere.material.opacity,
+              focused ? 0.18 * focusLevel : 0,
+              0.08,
+            );
+            if (!reducedMotion) {
+              const gpulse = 1 + Math.sin(slowTime * 0.8) * 0.06;
+              entry.focusedCore.siriGlowSphere.scale.setScalar(gpulse);
+            }
+          }
+
+          /* ── Siri central energy crossing ── */
+          if (entry.focusedCore.siriCenter) {
+            entry.focusedCore.siriCenter.material.opacity = lerp(
+              entry.focusedCore.siriCenter.material.opacity,
+              focused ? 0.65 * focusLevel : 0,
+              0.1,
+            );
+            if (!reducedMotion) {
+              const pulse = 1 + Math.sin(slowTime * 1.2) * 0.12;
+              entry.focusedCore.siriCenter.scale.setScalar(pulse);
+            }
+          }
+
+          /* ── Siri rim highlight ── */
+          if (entry.focusedCore.siriRim) {
+            entry.focusedCore.siriRim.material.opacity = lerp(
+              entry.focusedCore.siriRim.material.opacity,
+              focused ? 0.26 * focusLevel : 0,
+              0.08,
+            );
+            if (!reducedMotion) {
+              entry.focusedCore.siriRim.rotation.x += 0.002;
+              entry.focusedCore.siriRim.rotation.z += 0.001;
+            }
+          }
+
+          /* ── Siri rim 2 — second rim-light at different tilt ── */
+          if (entry.focusedCore.siriRim2) {
+            entry.focusedCore.siriRim2.material.opacity = lerp(
+              entry.focusedCore.siriRim2.material.opacity,
+              focused ? 0.18 * focusLevel : 0,
+              0.08,
+            );
+            if (!reducedMotion) {
+              entry.focusedCore.siriRim2.rotation.x += 0.0015;
+              entry.focusedCore.siriRim2.rotation.z -= 0.0012;
+            }
+          }
+
+          /* ── Siri rim 3 — equatorial highlight ── */
+          if (entry.focusedCore.siriRim3) {
+            entry.focusedCore.siriRim3.material.opacity = lerp(
+              entry.focusedCore.siriRim3.material.opacity,
+              focused ? 0.14 * focusLevel : 0,
+              0.08,
+            );
+            if (!reducedMotion) {
+              entry.focusedCore.siriRim3.rotation.y += 0.0018;
+              entry.focusedCore.siriRim3.rotation.x += 0.0008;
+            }
+          }
+
+          /* ── JARVIS iris / shutter blades ── */
+          if (entry.focusedCore.irisBlades) {
+            entry.focusedCore.irisBlades.forEach((blade, bIdx) => {
+              blade.line.material.opacity = lerp(
+                blade.line.material.opacity,
+                focused ? blade.baseOpacity * focusLevel : 0,
+                0.1,
+              );
+            });
+            if (!reducedMotion) {
+              /* Slow collective rotation for iris breathing */
+              entry.focusedCore.irisBlades.forEach((blade) => {
+                blade.line.rotation.z += 0.0006;
+              });
+            }
+          }
+
+          /* ── JARVIS iris glow rings ── */
+          if (entry.focusedCore.irisGlowRing) {
+            entry.focusedCore.irisGlowRing.material.opacity = lerp(
+              entry.focusedCore.irisGlowRing.material.opacity,
+              focused ? 0.20 * focusLevel : 0,
+              0.1,
+            );
+            if (!reducedMotion) entry.focusedCore.irisGlowRing.rotation.z -= 0.0008;
+          }
+          if (entry.focusedCore.irisOuterGlowRing) {
+            entry.focusedCore.irisOuterGlowRing.material.opacity = lerp(
+              entry.focusedCore.irisOuterGlowRing.material.opacity,
+              focused ? 0.12 * focusLevel : 0,
+              0.1,
+            );
+            if (!reducedMotion) entry.focusedCore.irisOuterGlowRing.rotation.z += 0.0006;
+          }
+
+          /* ── JARVIS inner concentric rings ── */
+          if (entry.focusedCore.innerRings) {
+            entry.focusedCore.innerRings.forEach((ir) => {
+              ir.ring.material.opacity = lerp(ir.ring.material.opacity, focused ? ir.baseOpacity * focusLevel : 0, 0.1);
+            });
+          }
+
+          /* ── JARVIS outer decorative rings ── */
+          if (entry.focusedCore.outerRings) {
+            entry.focusedCore.outerRings.forEach((or) => {
+              or.material.opacity = lerp(or.material.opacity, focused ? or.baseOpacity * focusLevel : 0, 0.08);
+              if (!reducedMotion) {
+                or.ring.rotation.z += or.speed * 0.016;
+              }
+            });
+          }
+
+          /* ── JARVIS clock-position markers ── */
+          if (entry.focusedCore.clockMarkers) {
+            entry.focusedCore.clockMarkers.forEach((cm) => {
+              cm.line.material.opacity = lerp(cm.line.material.opacity, focused ? cm.baseOpacity * focusLevel : 0, 0.1);
+            });
+          }
+
+          /* ── JARVIS parallelogram ticks ── */
+          if (entry.focusedCore.parallelogramTicks) {
+            entry.focusedCore.parallelogramTicks.forEach((pt) => {
+              pt.line.material.opacity = lerp(pt.line.material.opacity, focused ? pt.baseOpacity * focusLevel : 0, 0.1);
+            });
+          }
+
+          /* ── JARVIS chassis arcs ── */
+          if (entry.focusedCore.chassisArcs) {
+            entry.focusedCore.chassisArcs.forEach((arc) => {
+              arc.line.material.opacity = lerp(
+                arc.line.material.opacity,
+                focused ? arc.baseOpacity * focusLevel : 0,
+                0.1,
+              );
+              if (!reducedMotion) {
+                arc.line.rotation.z += arc.speed * 0.016;
+              }
+            });
+          }
+
+          /* ── Focused glow — eliminated ── */
           entry.focusedCore.glow.material.opacity = lerp(
             entry.focusedCore.glow.material.opacity,
-            focused ? 0.027 : 0,
+            0,
             0.08,
           );
         }
@@ -2949,23 +3376,66 @@ if (root) {
     }
 
     updateCamera(time) {
+      const reducedMotion = motionQuery.matches;
       this.zoomVelocity *= this.isActive ? 0.84 : 0.78;
       this.zoomTarget = clamp(this.zoomTarget + this.zoomVelocity, this.zoomRange.min, this.zoomRange.max);
       this.zoomCurrent = lerp(this.zoomCurrent, this.zoomTarget, 0.08);
 
-      const idleX = motionQuery.matches ? 0 : Math.sin(time * 0.00008) * 0.18;
-      const idleY = motionQuery.matches ? 0 : Math.cos(time * 0.00006) * 0.07;
-      const activityAlpha = clamp((performance.now() - this.lastInteractionAt) < 2200 ? 1 : 0.35, 0.35, 1);
+      /* ── Cinematic transition speed boost ── */
+      const now = performance.now();
+      const transitionAge = (now - (this.focusChangedAt || 0)) / 1000;
+      const cameraLerp = transitionAge < 1.2 ? lerp(0.078, 0.032, transitionAge / 1.2) : 0.032;
+
+      /* ── Transition intensity — time-based for sustained hyperdrive effect ── */
+      const transitionDuration = 1.8;
+      const transitionRaw = clamp(1 - transitionAge / transitionDuration, 0, 1);
+      /* Sharp attack, slow decay for cinematic feel */
+      const transitionIntensity = transitionAge < 0.15
+        ? clamp(transitionAge / 0.15, 0, 1) * transitionRaw
+        : transitionRaw * transitionRaw;
+
+      /* ── Star field expansion during transition ── */
+      if (this.starField && !reducedMotion) {
+        const expansionFactor = 1 + transitionIntensity * 0.5;
+        this.starField.material.size = 0.08 * Math.pow(expansionFactor, 1.5);
+      }
+
+      /* ── Warp lines — flowing radial hyperdrive streaks ── */
+      if (this.warpLineMeta && !reducedMotion) {
+        const t = time * 0.001;
+        this.warpLineMeta.forEach((meta) => {
+          /* Per-line flicker for flowing animation */
+          const flicker = 0.5 + 0.5 * Math.sin(t * meta.flickerSpeed + meta.phase);
+          const pulse = 0.7 + 0.3 * Math.sin(t * meta.flickerSpeed * 0.37 + meta.phase * 2.1);
+          const warpOpacity = transitionIntensity > 0.02
+            ? clamp(transitionIntensity * meta.baseOpacity * flicker * pulse, 0, 0.65)
+            : 0;
+          meta.mat1.opacity = lerp(meta.mat1.opacity, warpOpacity, 0.22);
+          meta.mat2.opacity = lerp(meta.mat2.opacity, warpOpacity * 0.7, 0.22);
+        });
+        this.warpLineGroup.rotation.z += 0.001 * (1 + transitionIntensity * 2);
+        /* Extend line length based on intensity */
+        const warpScale = 1 + transitionIntensity * 0.8;
+        this.warpLineGroup.scale.setScalar(lerp(this.warpLineGroup.scale.x, warpScale, 0.12));
+      }
+
+      const idleX = reducedMotion ? 0 : Math.sin(time * 0.00008) * 0.18;
+      const idleY = reducedMotion ? 0 : Math.cos(time * 0.00006) * 0.07;
+      const activityAlpha = clamp((now - this.lastInteractionAt) < 2200 ? 1 : 0.35, 0.35, 1);
       const focusAlpha = this.isActive ? 1 : 0.7;
       const userAlpha = activityAlpha * focusAlpha;
       const yaw = idleX + (this.pointerTarget.x * 0.32 + this.keyTarget.x * 0.52) * userAlpha;
       const pitch = idleY + (this.pointerTarget.y * 0.16 + this.keyTarget.y * 0.3) * userAlpha;
 
-      /* ── Smoother camera fly-to on focus ── */
+      /* ── Camera re-centering on focused node — prevents peripheral off-screen ── */
       if (this.focusId && this.nodeLookup.has(this.focusId)) {
         const focusEntry = this.nodeLookup.get(this.focusId);
-        const focusPos = focusEntry.group.position.clone().multiplyScalar(0.12);
-        this.focusTarget.lerp(focusPos, 0.028);
+        /* Strong re-centering: use 0.45 of the node position so peripheral
+           nodes are pulled well into frame. Fast lerp (0.06) during fresh
+           transition, slower (0.025) once settled. */
+        const focusPos = focusEntry.group.position.clone().multiplyScalar(0.45);
+        const focusLerp = transitionAge < 1.5 ? 0.06 : 0.025;
+        this.focusTarget.lerp(focusPos, focusLerp);
       } else {
         this.focusTarget.lerp(new this.THREE.Vector3(0, 0, 0), 0.025);
       }
@@ -2976,7 +3446,7 @@ if (root) {
         1.2 + pitch * lerp(4.8, 6.35, zoomNorm),
         this.zoomCurrent + Math.cos(yaw * 1.18) * 1.15,
       );
-      this.camera.position.lerp(desired, 0.032); /* slow and precise for instrument feel */
+      this.camera.position.lerp(desired, cameraLerp);
       this.focusPoint.lerp(this.focusTarget, 0.04);
       this.camera.lookAt(this.focusPoint);
     }
