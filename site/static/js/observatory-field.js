@@ -887,6 +887,7 @@ if (root) {
       const starPhases = new Float32Array(starCount); /* per-star phase for twinkling */
       const starSpeeds = new Float32Array(starCount);
       const baseSizes = new Float32Array(starCount);
+      const baseAlphas = new Float32Array(starCount);
       const radialWeights = new Float32Array(starCount);
       const depthWeights = new Float32Array(starCount);
       const starSeeds = new Float32Array(starCount);
@@ -906,6 +907,7 @@ if (root) {
         starPhases[index] = Math.random() * Math.PI * 2;
         starSpeeds[index] = isAnchor ? 0.15 + Math.random() * 0.35 : 0.3 + Math.random() * 1.2;
         baseSizes[index] = isAnchor ? 0.12 + Math.random() * 0.04 : 0.05 + Math.random() * 0.08;
+        baseAlphas[index] = isAnchor ? 0.94 : 0.64 + Math.random() * 0.26;
         radialWeights[index] = 0.55 + Math.random() * 0.75;
         depthWeights[index] = isAnchor ? 0.44 + Math.random() * 0.36 : 0.75 + Math.random() * 0.85;
         starSeeds[index] = Math.random();
@@ -914,30 +916,66 @@ if (root) {
       starGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
       starGeometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
       starGeometry.setAttribute("size", new THREE.BufferAttribute(baseSizes.slice(), 1));
-      const starMaterial = new THREE.PointsMaterial({
-        size: 0.08,
+      starGeometry.setAttribute("alpha", new THREE.BufferAttribute(baseAlphas.slice(), 1));
+      const starTexture = this.hyperdriveStarTexture || (this.hyperdriveStarTexture = this.createHyperdriveStarTexture());
+      this.starPointScaleBase = 1550;
+      const starMaterial = new THREE.ShaderMaterial({
         transparent: true,
-        opacity: 0.7,
-        vertexColors: true,
-        sizeAttenuation: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        uniforms: {
+          uMap: { value: starTexture },
+          uOpacity: { value: 0.72 },
+          uPointScale: { value: this.starPointScaleBase * Math.min(window.devicePixelRatio || 1, 2) },
+        },
+        vertexShader: [
+          "attribute vec3 color;",
+          "attribute float size;",
+          "attribute float alpha;",
+          "varying vec3 vColor;",
+          "varying float vAlpha;",
+          "uniform float uPointScale;",
+          "void main() {",
+          "  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);",
+          "  float depth = max(0.9, -mvPosition.z);",
+          "  gl_Position = projectionMatrix * mvPosition;",
+          "  gl_PointSize = max(0.0, size * uPointScale / depth);",
+          "  vColor = color;",
+          "  vAlpha = alpha;",
+          "}",
+        ].join("\n"),
+        fragmentShader: [
+          "uniform sampler2D uMap;",
+          "uniform float uOpacity;",
+          "varying vec3 vColor;",
+          "varying float vAlpha;",
+          "void main() {",
+          "  vec4 sprite = texture2D(uMap, gl_PointCoord);",
+          "  float alpha = sprite.a * vAlpha * uOpacity;",
+          "  if (alpha <= 0.01) discard;",
+          "  gl_FragColor = vec4(vColor * sprite.rgb, alpha);",
+          "}",
+        ].join("\n"),
       });
       this.starField = new THREE.Points(starGeometry, starMaterial);
       this.starPhases = starPhases;
       this.starSpeeds = starSpeeds;
       this.starBaseSizes = baseSizes;
+      this.starBaseAlphas = baseAlphas;
       this.starBasePositions = positions.slice();
       this.starBaseColors = colors.slice();
       this.starRadialWeights = radialWeights;
       this.starDepthWeights = depthWeights;
       this.starSeeds = starSeeds;
+      this.starAnchorThreshold = anchorThreshold;
       this.scene.add(this.starField);
 
       /* ── Hyperdrive streaks — thick camera-facing radial thrust geometry ── */
       this.hyperdriveStreakGroup = new THREE.Group();
       this.hyperdriveStreakGroup.visible = false;
       const streakCount = 180;
-      const coreGeometry = new THREE.PlaneGeometry(0.08, 1);
-      const glowGeometry = new THREE.PlaneGeometry(0.18, 1);
+      const coreGeometry = new THREE.PlaneGeometry(0.07, 1);
+      const glowGeometry = new THREE.PlaneGeometry(0.24, 1);
       const streakTexture = this.hyperdriveStreakTexture || (this.hyperdriveStreakTexture = this.createHyperdriveStreakTexture());
       this.hyperdriveStreakMeta = [];
       for (let i = 0; i < streakCount; i += 1) {
@@ -1081,11 +1119,14 @@ if (root) {
       const dustGeometry = new THREE.BufferGeometry();
       dustGeometry.setAttribute("position", new THREE.BufferAttribute(dustPositions, 3));
       dustGeometry.setAttribute("color", new THREE.BufferAttribute(dustColors, 3));
+      const dustTexture = this.hyperdriveStarTexture || (this.hyperdriveStarTexture = this.createHyperdriveStarTexture());
       const dustMaterial = new THREE.PointsMaterial({
         size: 0.055,
         transparent: true,
         opacity: 0.34,
         vertexColors: true,
+        map: dustTexture,
+        alphaMap: dustTexture,
         sizeAttenuation: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
@@ -1107,11 +1148,14 @@ if (root) {
       }
       const nearGeometry = new THREE.BufferGeometry();
       nearGeometry.setAttribute("position", new THREE.BufferAttribute(nearPositions, 3));
+      const nearTexture = this.hyperdriveStarTexture || (this.hyperdriveStarTexture = this.createHyperdriveStarTexture());
       const nearMaterial = new THREE.PointsMaterial({
         size: 0.09,
         transparent: true,
         opacity: 0.12,
         color: 0x8fc4ff,
+        map: nearTexture,
+        alphaMap: nearTexture,
         sizeAttenuation: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
@@ -1183,33 +1227,71 @@ if (root) {
       return new this.THREE.CanvasTexture(canvas);
     }
 
+    createHyperdriveStarTexture() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 64;
+      canvas.height = 64;
+      const context = canvas.getContext("2d");
+      context.clearRect(0, 0, canvas.width, canvas.height);
+
+      const glow = context.createRadialGradient(32, 32, 0, 32, 32, 32);
+      glow.addColorStop(0, "rgba(255,255,255,1)");
+      glow.addColorStop(0.08, "rgba(248,252,255,0.98)");
+      glow.addColorStop(0.2, "rgba(228,240,255,0.72)");
+      glow.addColorStop(0.4, "rgba(172,204,248,0.24)");
+      glow.addColorStop(0.62, "rgba(116,160,230,0.06)");
+      glow.addColorStop(1, "rgba(0,0,0,0)");
+      context.fillStyle = glow;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      const texture = new this.THREE.CanvasTexture(canvas);
+      texture.generateMipmaps = false;
+      texture.needsUpdate = true;
+      return texture;
+    }
+
     createHyperdriveStreakTexture() {
       const canvas = document.createElement("canvas");
-      canvas.width = 96;
+      canvas.width = 128;
       canvas.height = 512;
       const context = canvas.getContext("2d");
       context.clearRect(0, 0, canvas.width, canvas.height);
 
-      const vertical = context.createLinearGradient(0, 0, 0, canvas.height);
-      vertical.addColorStop(0, "rgba(255,255,255,0)");
-      vertical.addColorStop(0.12, "rgba(255,255,255,0.18)");
-      vertical.addColorStop(0.5, "rgba(255,255,255,1)");
-      vertical.addColorStop(0.88, "rgba(255,255,255,0.18)");
-      vertical.addColorStop(1, "rgba(255,255,255,0)");
-      context.fillStyle = vertical;
+      const body = context.createLinearGradient(0, 0, 0, canvas.height);
+      body.addColorStop(0, "rgba(255,255,255,0)");
+      body.addColorStop(0.06, "rgba(255,255,255,0.12)");
+      body.addColorStop(0.18, "rgba(255,255,255,0.84)");
+      body.addColorStop(0.5, "rgba(255,255,255,1)");
+      body.addColorStop(0.82, "rgba(255,255,255,0.84)");
+      body.addColorStop(0.94, "rgba(255,255,255,0.12)");
+      body.addColorStop(1, "rgba(255,255,255,0)");
+      context.fillStyle = body;
       context.fillRect(0, 0, canvas.width, canvas.height);
 
-      const edgeFade = context.createRadialGradient(canvas.width * 0.5, canvas.height * 0.5, 0, canvas.width * 0.5, canvas.height * 0.5, canvas.width * 0.55);
-      edgeFade.addColorStop(0, "rgba(255,255,255,0)");
-      edgeFade.addColorStop(0.24, "rgba(255,255,255,0)");
-      edgeFade.addColorStop(0.7, "rgba(255,255,255,0.7)");
-      edgeFade.addColorStop(1, "rgba(255,255,255,1)");
+      const crossSection = context.createLinearGradient(0, 0, canvas.width, 0);
+      crossSection.addColorStop(0, "rgba(255,255,255,0)");
+      crossSection.addColorStop(0.18, "rgba(255,255,255,0.03)");
+      crossSection.addColorStop(0.34, "rgba(255,255,255,0.4)");
+      crossSection.addColorStop(0.5, "rgba(255,255,255,1)");
+      crossSection.addColorStop(0.66, "rgba(255,255,255,0.4)");
+      crossSection.addColorStop(0.82, "rgba(255,255,255,0.03)");
+      crossSection.addColorStop(1, "rgba(255,255,255,0)");
       context.globalCompositeOperation = "destination-in";
-      context.fillStyle = edgeFade;
+      context.fillStyle = crossSection;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      context.globalCompositeOperation = "screen";
+      const bloom = context.createRadialGradient(canvas.width * 0.5, canvas.height * 0.5, 0, canvas.width * 0.5, canvas.height * 0.5, canvas.width * 0.76);
+      bloom.addColorStop(0, "rgba(255,255,255,0.32)");
+      bloom.addColorStop(0.32, "rgba(224,240,255,0.12)");
+      bloom.addColorStop(0.72, "rgba(138,188,255,0.04)");
+      bloom.addColorStop(1, "rgba(0,0,0,0)");
+      context.fillStyle = bloom;
       context.fillRect(0, 0, canvas.width, canvas.height);
       context.globalCompositeOperation = "source-over";
 
       const texture = new this.THREE.CanvasTexture(canvas);
+      texture.generateMipmaps = false;
       texture.needsUpdate = true;
       return texture;
     }
@@ -2560,12 +2642,10 @@ if (root) {
       );
       group.add(centerNode);
 
-      /* ── Focused core (full apparatus — only built for active nodes) ── */
+      /* ── Focused core (full apparatus — built for every node so focus never falls back to legacy wireframe-only language) ── */
       let focusedCore = null;
-      if (!isInactive || node.focusEligible) {
-        focusedCore = this.buildFocusedCore(node, palette);
-        group.add(focusedCore.group);
-      }
+      focusedCore = this.buildFocusedCore(node, palette);
+      group.add(focusedCore.group);
 
       /* ── Guide ring — thin instrument torus ── */
       let guideRing = null;
@@ -2964,7 +3044,7 @@ if (root) {
 
         /* ── Wireframe opacity ── */
         if (entry.wireframe) {
-          const wireTarget = focused ? 0.16 + focusLevel * 0.06
+          const wireTarget = focused ? (isInactive ? 0.06 + focusLevel * 0.025 : 0.16 + focusLevel * 0.06)
             : hovered ? entry.baseWireOpacity * 1.5
             : dimmed ? entry.baseWireOpacity * (isInactive ? 0.28 : 0.52)
             : entry.baseWireOpacity;
@@ -2973,7 +3053,7 @@ if (root) {
 
         /* ── Shell opacity ── */
         if (entry.shell) {
-          const shellTarget = focused ? entry.baseShellOpacity * 0.96
+          const shellTarget = focused ? entry.baseShellOpacity * (isInactive ? 0.34 : 0.96)
             : hovered ? entry.baseShellOpacity * 1.8
             : dimmed ? entry.baseShellOpacity * (isInactive ? 0.28 : 0.42)
             : entry.baseShellOpacity;
@@ -3414,7 +3494,8 @@ if (root) {
       const positions = this.starField.geometry.attributes.position;
       const colors = this.starField.geometry.attributes.color;
       const sizes = this.starField.geometry.attributes.size;
-      if (!sizes || !positions || !colors) return;
+      const alphas = this.starField.geometry.attributes.alpha;
+      if (!sizes || !positions || !colors || !alphas) return;
       const t = time * 0.001;
       const reducedMotion = motionQuery.matches;
       const anchorEntry = state.active ? this.resolveHyperdriveAnchorEntry() : null;
@@ -3434,6 +3515,8 @@ if (root) {
       const axisCompression = state.active ? (reducedMotion ? 0.92 : 0.78) : 1;
       const radialBurstScale = reducedMotion ? 0.75 : 2.8;
       const tailDrift = reducedMotion ? 2.2 : 5.6;
+      const earlyHandoff = clamp((state.alpha - (reducedMotion ? 0.52 : 0.44)) / (reducedMotion ? 0.34 : 0.28), 0, 1);
+      const peakSuppression = easeInOutCubic(clamp(state.peak, 0, 1));
 
       for (let i = 0; i < this.starPhases.length; i++) {
         const s = this.starSpeeds[i];
@@ -3461,6 +3544,9 @@ if (root) {
           const radialWeight = this.starRadialWeights[i];
           const depthWeight = this.starDepthWeights[i];
           const seed = this.starSeeds[i];
+          const radialParticipation = clamp((radialWeight - 0.55) / 0.75, 0, 1);
+          const depthParticipation = clamp((depthWeight - 0.44) / 1.16, 0, 1);
+          const participation = clamp(radialParticipation * 0.62 + depthParticipation * 0.38, 0, 1);
           const flowProgress = state.direction > 0
             ? easeOutCubic(state.progress)
             : 1 - easeInOutCubic(state.progress);
@@ -3476,26 +3562,57 @@ if (root) {
           localZ -= state.direction > 0
             ? state.peak * (9 + depthWeight * 13) + state.tail * tailDrift * (0.5 + seed)
             : state.alpha * (2.5 + depthWeight * 3.5);
+
+          positions.array[base] = centerX + (localX * rx) + (localY * ux) + (localZ * fx);
+          positions.array[base + 1] = centerY + (localX * ry) + (localY * uy) + (localZ * fy);
+          positions.array[base + 2] = centerZ + (localX * rz) + (localY * uz) + (localZ * fz);
+
+          const isAnchor = i >= (this.starAnchorThreshold || this.starPhases.length);
+          const anchorSuppression = isAnchor ? 0.42 : 1;
+          const handoff = clamp(
+            (earlyHandoff * (0.24 + participation * 0.76))
+              + (peakSuppression * (0.34 + participation * 0.48)),
+            0,
+            1,
+          );
+          const densityReduction = clamp(
+            (peakSuppression * (0.56 + (1 - participation) * 0.12))
+              + (handoff * (0.12 + participation * 0.62))
+              + (state.tail * 0.06),
+            0,
+            isAnchor ? 0.68 : 0.96,
+          ) * anchorSuppression;
+          const pointFade = clamp(1 - densityReduction, isAnchor ? 0.22 : 0.04, 1);
+          const sizeFade = clamp(1 - (handoff * (0.24 + participation * 0.34)) - (peakSuppression * 0.2), isAnchor ? 0.58 : 0.18, 1.12);
+          const visibilityTwinkle = clamp(0.64 + twinkle * 0.24, 0.18, 1.05);
+          const luminosity = 1 + state.alpha * 0.14 + state.peak * (0.06 + participation * 0.08);
+
+          colors.array[base] = clamp(this.starBaseColors[base] * luminosity, 0, 1);
+          colors.array[base + 1] = clamp(this.starBaseColors[base + 1] * (luminosity + state.alpha * 0.04), 0, 1);
+          colors.array[base + 2] = clamp(this.starBaseColors[base + 2] * (1 + state.alpha * 0.08 + state.peak * 0.08), 0, 1);
+          sizes.array[i] = this.starBaseSizes[i] * twinkle * sizeFade;
+          alphas.array[i] = this.starBaseAlphas[i] * visibilityTwinkle * pointFade;
+          continue;
         }
 
         positions.array[base] = centerX + (localX * rx) + (localY * ux) + (localZ * fx);
         positions.array[base + 1] = centerY + (localX * ry) + (localY * uy) + (localZ * fy);
         positions.array[base + 2] = centerZ + (localX * rz) + (localY * uz) + (localZ * fz);
 
-        const luminosity = state.active
-          ? 1 + state.alpha * 0.22 + state.peak * (0.45 + this.starDepthWeights[i] * 0.16)
-          : 1;
-        colors.array[base] = clamp(this.starBaseColors[base] * luminosity, 0, 1);
-        colors.array[base + 1] = clamp(this.starBaseColors[base + 1] * (luminosity + state.peak * 0.06), 0, 1);
-        colors.array[base + 2] = clamp(this.starBaseColors[base + 2] * (1 + state.alpha * 0.12 + state.peak * 0.2), 0, 1);
-
+        colors.array[base] = this.starBaseColors[base];
+        colors.array[base + 1] = this.starBaseColors[base + 1];
+        colors.array[base + 2] = this.starBaseColors[base + 2];
         sizes.array[i] = this.starBaseSizes[i] * twinkle;
+        alphas.array[i] = this.starBaseAlphas[i] * clamp(0.66 + twinkle * 0.22, 0.24, 1.05);
       }
       positions.needsUpdate = true;
       colors.needsUpdate = true;
       sizes.needsUpdate = true;
-      this.starField.material.opacity = lerp(0.7, reducedMotion ? 0.84 : 0.97, state.alpha * 0.45 + state.peak * 0.55);
-      this.starField.material.size = 0.08 * (1 + state.alpha * 0.42 + state.peak * (reducedMotion ? 0.35 : 1.1));
+      alphas.needsUpdate = true;
+      this.starField.material.uniforms.uOpacity.value = lerp(0.82, reducedMotion ? 0.4 : 0.24, state.alpha * 0.38 + state.peak * 0.62);
+      this.starField.material.uniforms.uPointScale.value = (this.starPointScaleBase || 1550)
+        * Math.min(window.devicePixelRatio || 1, 2)
+        * lerp(1, reducedMotion ? 0.92 : 0.84, state.peak * 0.8 + earlyHandoff * 0.2);
     }
 
     /* ── Ambient dust drift ── */
@@ -3514,7 +3631,7 @@ if (root) {
         positions.array[base + 2] += Math.sin(t * 0.5 + phase * 1.3) * 0.0014 * damp;
       }
       positions.needsUpdate = true;
-      this.dustField.material.opacity = lerp(0.34, 0.05, state.alpha * 0.75 + state.peak * 0.25);
+      this.dustField.material.opacity = lerp(0.3, 0.025, state.alpha * 0.72 + state.peak * 0.46);
     }
 
     /* ── Near-dust drift (foreground sensing motes) ── */
@@ -3533,7 +3650,7 @@ if (root) {
         positions.array[base + 2] += Math.sin(t * 0.4 + phase * 1.2) * 0.0008 * damp;
       }
       positions.needsUpdate = true;
-      this.nearDust.material.opacity = lerp(0.12, 0.01, state.alpha * 0.9 + state.peak * 0.3);
+      this.nearDust.material.opacity = lerp(0.1, 0.004, state.alpha * 0.9 + state.peak * 0.42);
     }
 
     computeHyperdriveState() {
@@ -3644,26 +3761,26 @@ if (root) {
         const spreadProgress = easeInOutCubic(state.progress);
         const edgeWeight = clamp((meta.radius - 0.12) / 1.24, 0, 1);
         const activation = state.direction > 0
-          ? clamp((spreadProgress - edgeWeight * 0.72) / 0.28, 0, 1)
-          : clamp((spreadProgress - (1 - edgeWeight) * 0.72) / 0.28, 0, 1);
+          ? clamp((spreadProgress - edgeWeight * 0.58) / 0.42, 0, 1)
+          : clamp((spreadProgress - (1 - edgeWeight) * 0.58) / 0.42, 0, 1);
         const flowProgress = state.direction > 0 ? activation : 1 - activation;
-        const length = 0.22
+        const length = 0.24
           + activation * (
-            state.alpha * (1.8 + laneBoost * 1.1)
-            + state.peak * (8.8 + laneBoost * 9.4) * surge
+            state.alpha * (3.1 + laneBoost * 1.55)
+            + state.peak * (14.8 + laneBoost * 14.2) * surge
           );
         const innerOffset = 0.14 + meta.radius * 0.28;
         const outerOffset = 1.9 + meta.radius * 2.1 + meta.lane * 1.6;
         const centerOffset = lerp(innerOffset, outerOffset, flowProgress);
-        const coreWidth = 0.05 + state.alpha * 0.04 + state.peak * 0.2 * meta.width;
-        const glowWidth = coreWidth * 2.7;
-        const opacityCore = clamp((0.14 + state.alpha * 0.18 + state.peak * 0.72) * activation * flicker, 0, 0.94);
-        const opacityGlow = clamp((0.08 + state.alpha * 0.12 + state.peak * 0.42) * activation * (reducedMotion ? 1 : 0.92 + surge * 0.08), 0, 0.66);
+        const coreWidth = 0.046 + state.alpha * 0.04 + state.peak * 0.19 * meta.width;
+        const glowWidth = coreWidth * (4.25 + state.peak * 0.85);
+        const opacityCore = clamp((0.22 + state.alpha * 0.22 + state.peak * 0.9) * activation * flicker, 0, 0.98);
+        const opacityGlow = clamp((0.16 + state.alpha * 0.2 + state.peak * 0.64) * activation * (reducedMotion ? 1 : 0.94 + surge * 0.12), 0, 0.88);
 
         meta.core.position.y = centerOffset + length * 0.5;
         meta.glow.position.y = centerOffset + length * 0.5;
         meta.core.scale.set(coreWidth, length, 1);
-        meta.glow.scale.set(glowWidth, length * 1.18, 1);
+        meta.glow.scale.set(glowWidth, length * (1.34 + state.peak * 0.1), 1);
         meta.coreMaterial.opacity = opacityCore;
         meta.glowMaterial.opacity = opacityGlow;
       });
@@ -3947,6 +4064,9 @@ if (root) {
       this.camera.aspect = width / height;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(width, height, false);
+      if (this.starField && this.starField.material && this.starField.material.uniforms) {
+        this.starField.material.uniforms.uPointScale.value = (this.starPointScaleBase || 1550) * Math.min(window.devicePixelRatio || 1, 2);
+      }
       this.overlay.resize(width, height);
       if (this.composer) {
         this.composer.setSize(width, height);
