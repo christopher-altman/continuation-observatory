@@ -26,6 +26,18 @@ if (root) {
     return 1 - Math.pow(1 - clamped, 3);
   }
 
+  function easeInCubic(value) {
+    const clamped = clamp(value, 0, 1);
+    return clamped * clamped * clamped;
+  }
+
+  function easeInOutCubic(value) {
+    const clamped = clamp(value, 0, 1);
+    return clamped < 0.5
+      ? 4 * clamped * clamped * clamped
+      : 1 - Math.pow(-2 * clamped + 2, 3) / 2;
+  }
+
   function hashString(input) {
     let hash = 2166136261;
     for (let i = 0; i < input.length; i += 1) {
@@ -745,11 +757,13 @@ if (root) {
       this.scene.background = new THREE.Color(0x020408);
       this.scene.fog = new THREE.FogExp2(0x030609, 0.034);
       this.camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+      this.baseCameraFov = 38;
       this.camera.position.set(0, 1.2, 11.8);
       this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
       this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
       this.renderer.toneMappingExposure = 1.06;
+      this.baseToneMappingExposure = 1.06;
       this.renderer.domElement.className = "observatory-field-canvas";
       this.shell.prepend(this.renderer.domElement);
 
@@ -758,6 +772,25 @@ if (root) {
       this.mouse = new THREE.Vector2(-10, -10);
       this.focusPoint = new THREE.Vector3();
       this.focusTarget = new THREE.Vector3();
+      this.cameraForward = new THREE.Vector3();
+      this.cameraRight = new THREE.Vector3();
+      this.cameraUp = new THREE.Vector3();
+      this.hyperdriveGroupPosition = new THREE.Vector3();
+      this.hyperdriveBias = new THREE.Vector3();
+      this.hyperdriveState = {
+        age: Infinity,
+        progress: 0,
+        direction: 0,
+        alpha: 0,
+        peak: 0,
+        tail: 0,
+        vanishingBlend: 0,
+        biasX: 0,
+        biasY: 0,
+        active: false,
+      };
+      this.hyperdriveDirection = 0;
+      this.transitionFocusId = null;
 
       this.rootGroup = new THREE.Group();
       this.scene.add(this.rootGroup);
@@ -815,6 +848,14 @@ if (root) {
       this.scene.add(ambient, rim, fill, depthLight, prism, aqua);
       this.ambientLight = ambient;
       this.ambientBaseIntensity = 0.58;
+      this.sceneLights = { rim, fill, depthLight, prism, aqua };
+      this.sceneLightBase = {
+        rim: 2.8,
+        fill: 1.9,
+        depthLight: 0.94,
+        prism: 0.88,
+        aqua: 0.76,
+      };
 
       [1.55, 2.35, 3.85, 5.35].forEach((radius, index) => {
         const points = [];
@@ -846,6 +887,9 @@ if (root) {
       const starPhases = new Float32Array(starCount); /* per-star phase for twinkling */
       const starSpeeds = new Float32Array(starCount);
       const baseSizes = new Float32Array(starCount);
+      const radialWeights = new Float32Array(starCount);
+      const depthWeights = new Float32Array(starCount);
+      const starSeeds = new Float32Array(starCount);
       const anchorThreshold = starCount - 30; /* last 30 are bright anchor stars */
 
       for (let index = 0; index < starCount; index += 1) {
@@ -862,6 +906,9 @@ if (root) {
         starPhases[index] = Math.random() * Math.PI * 2;
         starSpeeds[index] = isAnchor ? 0.15 + Math.random() * 0.35 : 0.3 + Math.random() * 1.2;
         baseSizes[index] = isAnchor ? 0.12 + Math.random() * 0.04 : 0.05 + Math.random() * 0.08;
+        radialWeights[index] = 0.55 + Math.random() * 0.75;
+        depthWeights[index] = isAnchor ? 0.44 + Math.random() * 0.36 : 0.75 + Math.random() * 0.85;
+        starSeeds[index] = Math.random();
       }
       const starGeometry = new THREE.BufferGeometry();
       starGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
@@ -878,47 +925,62 @@ if (root) {
       this.starPhases = starPhases;
       this.starSpeeds = starSpeeds;
       this.starBaseSizes = baseSizes;
+      this.starBasePositions = positions.slice();
+      this.starBaseColors = colors.slice();
+      this.starRadialWeights = radialWeights;
+      this.starDepthWeights = depthWeights;
+      this.starSeeds = starSeeds;
       this.scene.add(this.starField);
 
-      /* ── Warp lines — flowing radial hyperdrive streaks ── */
-      this.warpLineGroup = new THREE.Group();
-      const warpLineCount = 72;
-      this.warpLineMeta = [];
-      for (let i = 0; i < warpLineCount; i += 1) {
-        const angle = (i / warpLineCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.18;
-        const innerR = 1.2 + Math.random() * 1.8;
-        const outerR = 14 + Math.random() * 18;
-        const elev = (Math.random() - 0.5) * 6;
-        const thickness = 0.02 + Math.random() * 0.04;
-        /* Multi-segment line for visible thickness — parallel pair */
-        const pts1 = [];
-        const pts2 = [];
-        const segments = 8;
-        for (let s = 0; s <= segments; s += 1) {
-          const t = s / segments;
-          const r = innerR + t * (outerR - innerR);
-          const e = elev * 0.3 + t * elev * 0.7;
-          const x = Math.cos(angle) * r;
-          const z = Math.sin(angle) * r;
-          pts1.push(new THREE.Vector3(x, e - thickness, z));
-          pts2.push(new THREE.Vector3(x, e + thickness, z));
-        }
-        /* Pick color: mostly bright blue-white with warm accents */
-        const colorPool = [0x88ccff, 0xaaddff, 0xeef6ff, 0xffeedd, 0x99ddff, 0xbbddff, 0xddeeff, 0xffd488];
-        const lineColor = colorPool[i % colorPool.length];
-        const mat1 = new THREE.LineBasicMaterial({ color: lineColor, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
-        const mat2 = new THREE.LineBasicMaterial({ color: lineColor, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
-        const line1 = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts1), mat1);
-        const line2 = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts2), mat2);
-        this.warpLineGroup.add(line1, line2);
-        this.warpLineMeta.push({
-          line1, line2, mat1, mat2,
-          phase: Math.random() * Math.PI * 2,
-          flickerSpeed: 2 + Math.random() * 6,
-          baseOpacity: 0.3 + Math.random() * 0.4,
+      /* ── Hyperdrive streaks — thick camera-facing radial thrust geometry ── */
+      this.hyperdriveStreakGroup = new THREE.Group();
+      this.hyperdriveStreakGroup.visible = false;
+      const streakCount = 180;
+      const coreGeometry = new THREE.PlaneGeometry(0.08, 1);
+      const glowGeometry = new THREE.PlaneGeometry(0.18, 1);
+      const streakTexture = this.hyperdriveStreakTexture || (this.hyperdriveStreakTexture = this.createHyperdriveStreakTexture());
+      this.hyperdriveStreakMeta = [];
+      for (let i = 0; i < streakCount; i += 1) {
+        const holder = new THREE.Group();
+        holder.rotation.z = (i / streakCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.06;
+        holder.position.z = -0.15 - Math.random() * 1.9;
+
+        const glowMaterial = new THREE.MeshBasicMaterial({
+          color: i % 5 === 0 ? 0xdff3ff : 0x67baff,
+          map: streakTexture,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+          side: THREE.DoubleSide,
+        });
+        const coreMaterial = new THREE.MeshBasicMaterial({
+          color: i % 6 === 0 ? 0xfafdff : 0xc9e6ff,
+          map: streakTexture,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+          side: THREE.DoubleSide,
+        });
+        const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+        const core = new THREE.Mesh(coreGeometry, coreMaterial);
+        holder.add(glow, core);
+        this.hyperdriveStreakGroup.add(holder);
+        this.hyperdriveStreakMeta.push({
+          holder,
+          glow,
+          core,
+          glowMaterial,
+          coreMaterial,
+          radius: 0.12 + Math.random() * 1.24,
+          lane: Math.random(),
+          seed: Math.random() * Math.PI * 2,
+          flickerSpeed: 7 + Math.random() * 10,
+          width: 0.55 + Math.random() * 0.9,
         });
       }
-      this.scene.add(this.warpLineGroup);
+      this.scene.add(this.hyperdriveStreakGroup);
     }
 
     /*
@@ -1119,6 +1181,37 @@ if (root) {
       context.fillStyle = gradient;
       context.fillRect(0, 0, 256, 256);
       return new this.THREE.CanvasTexture(canvas);
+    }
+
+    createHyperdriveStreakTexture() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 96;
+      canvas.height = 512;
+      const context = canvas.getContext("2d");
+      context.clearRect(0, 0, canvas.width, canvas.height);
+
+      const vertical = context.createLinearGradient(0, 0, 0, canvas.height);
+      vertical.addColorStop(0, "rgba(255,255,255,0)");
+      vertical.addColorStop(0.12, "rgba(255,255,255,0.18)");
+      vertical.addColorStop(0.5, "rgba(255,255,255,1)");
+      vertical.addColorStop(0.88, "rgba(255,255,255,0.18)");
+      vertical.addColorStop(1, "rgba(255,255,255,0)");
+      context.fillStyle = vertical;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      const edgeFade = context.createRadialGradient(canvas.width * 0.5, canvas.height * 0.5, 0, canvas.width * 0.5, canvas.height * 0.5, canvas.width * 0.55);
+      edgeFade.addColorStop(0, "rgba(255,255,255,0)");
+      edgeFade.addColorStop(0.24, "rgba(255,255,255,0)");
+      edgeFade.addColorStop(0.7, "rgba(255,255,255,0.7)");
+      edgeFade.addColorStop(1, "rgba(255,255,255,1)");
+      context.globalCompositeOperation = "destination-in";
+      context.fillStyle = edgeFade;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.globalCompositeOperation = "source-over";
+
+      const texture = new this.THREE.CanvasTexture(canvas);
+      texture.needsUpdate = true;
+      return texture;
     }
 
     /* Tight bright inner texture for the nucleus sprite */
@@ -2620,8 +2713,14 @@ if (root) {
         this.focusChangedAt = performance.now();
         /* Click-to-zoom: dramatic instrument acquisition / release */
         if (this.focusId) {
+          this.hyperdriveDirection = 1;
+          this.transitionFocusId = this.focusId;
+          this.zoomVelocity = -0.18;
           this.zoomTarget = this.zoomRange.min;
-        } else {
+        } else if (prevFocus) {
+          this.hyperdriveDirection = -1;
+          this.transitionFocusId = prevFocus;
+          this.zoomVelocity = 0.34;
           this.zoomTarget = this.zoomRange.max - 0.4;
         }
       }
@@ -3301,10 +3400,41 @@ if (root) {
     }
 
     /* ── Star field twinkling (multi-harmonic) ── */
+    resolveHyperdriveAnchorEntry() {
+      const transitFocusId = this.focusId || this.transitionFocusId;
+      if (transitFocusId && this.nodeLookup.has(transitFocusId)) {
+        return this.nodeLookup.get(transitFocusId);
+      }
+      return null;
+    }
+
     updateStars(time) {
+      if (!this.starField) return;
+      const state = this.hyperdriveState || { alpha: 0, peak: 0, tail: 0, active: false };
+      const positions = this.starField.geometry.attributes.position;
+      const colors = this.starField.geometry.attributes.color;
       const sizes = this.starField.geometry.attributes.size;
-      if (!sizes) return;
+      if (!sizes || !positions || !colors) return;
       const t = time * 0.001;
+      const reducedMotion = motionQuery.matches;
+      const anchorEntry = state.active ? this.resolveHyperdriveAnchorEntry() : null;
+      const anchorPosition = anchorEntry ? anchorEntry.group.position : this.focusPoint;
+      const centerX = anchorPosition.x;
+      const centerY = anchorPosition.y;
+      const centerZ = anchorPosition.z;
+      const rx = this.cameraRight.x;
+      const ry = this.cameraRight.y;
+      const rz = this.cameraRight.z;
+      const ux = this.cameraUp.x;
+      const uy = this.cameraUp.y;
+      const uz = this.cameraUp.z;
+      const fx = this.cameraForward.x;
+      const fy = this.cameraForward.y;
+      const fz = this.cameraForward.z;
+      const axisCompression = state.active ? (reducedMotion ? 0.92 : 0.78) : 1;
+      const radialBurstScale = reducedMotion ? 0.75 : 2.8;
+      const tailDrift = reducedMotion ? 2.2 : 5.6;
+
       for (let i = 0; i < this.starPhases.length; i++) {
         const s = this.starSpeeds[i];
         const p = this.starPhases[i];
@@ -3316,9 +3446,56 @@ if (root) {
         if (p < 0.19) {
           twinkle *= 1 + 0.4 * Math.pow(Math.sin(t * 0.4 + p), 8);
         }
+        const base = i * 3;
+        const bx = this.starBasePositions[base];
+        const by = this.starBasePositions[base + 1];
+        const bz = this.starBasePositions[base + 2];
+        const dx = bx - centerX;
+        const dy = by - centerY;
+        const dz = bz - centerZ;
+        let localX = (dx * rx) + (dy * ry) + (dz * rz);
+        let localY = (dx * ux) + (dy * uy) + (dz * uz);
+        let localZ = (dx * fx) + (dy * fy) + (dz * fz);
+
+        if (state.active) {
+          const radialWeight = this.starRadialWeights[i];
+          const depthWeight = this.starDepthWeights[i];
+          const seed = this.starSeeds[i];
+          const flowProgress = state.direction > 0
+            ? easeOutCubic(state.progress)
+            : 1 - easeInOutCubic(state.progress);
+          const axisPull = state.direction > 0
+            ? lerp(1, axisCompression, state.alpha * (0.8 + depthWeight * 0.12))
+            : lerp(1 + state.alpha * 0.14, 0.74, state.progress);
+          const burstFactor = state.direction > 0
+            ? 1 + state.peak * radialBurstScale * radialWeight
+            : lerp(1.22 + state.alpha * 0.2 * radialWeight, 0.82, 1 - flowProgress);
+          const flicker = reducedMotion ? 1 : 0.9 + Math.sin(t * (8 + seed * 7) + p) * 0.1;
+          localX *= axisPull * burstFactor * flicker;
+          localY *= axisPull * burstFactor;
+          localZ -= state.direction > 0
+            ? state.peak * (9 + depthWeight * 13) + state.tail * tailDrift * (0.5 + seed)
+            : state.alpha * (2.5 + depthWeight * 3.5);
+        }
+
+        positions.array[base] = centerX + (localX * rx) + (localY * ux) + (localZ * fx);
+        positions.array[base + 1] = centerY + (localX * ry) + (localY * uy) + (localZ * fy);
+        positions.array[base + 2] = centerZ + (localX * rz) + (localY * uz) + (localZ * fz);
+
+        const luminosity = state.active
+          ? 1 + state.alpha * 0.22 + state.peak * (0.45 + this.starDepthWeights[i] * 0.16)
+          : 1;
+        colors.array[base] = clamp(this.starBaseColors[base] * luminosity, 0, 1);
+        colors.array[base + 1] = clamp(this.starBaseColors[base + 1] * (luminosity + state.peak * 0.06), 0, 1);
+        colors.array[base + 2] = clamp(this.starBaseColors[base + 2] * (1 + state.alpha * 0.12 + state.peak * 0.2), 0, 1);
+
         sizes.array[i] = this.starBaseSizes[i] * twinkle;
       }
+      positions.needsUpdate = true;
+      colors.needsUpdate = true;
       sizes.needsUpdate = true;
+      this.starField.material.opacity = lerp(0.7, reducedMotion ? 0.84 : 0.97, state.alpha * 0.45 + state.peak * 0.55);
+      this.starField.material.size = 0.08 * (1 + state.alpha * 0.42 + state.peak * (reducedMotion ? 0.35 : 1.1));
     }
 
     /* ── Ambient dust drift ── */
@@ -3326,14 +3503,18 @@ if (root) {
       if (!this.dustField) return;
       const positions = this.dustField.geometry.attributes.position;
       const t = time * 0.0003;
+      const state = this.hyperdriveState || { alpha: 0, peak: 0 };
+      const reducedMotion = motionQuery.matches;
       for (let i = 0; i < this.dustPhases.length; i++) {
         const phase = this.dustPhases[i];
         const base = i * 3;
-        positions.array[base] += Math.sin(t + phase) * 0.0016;
-        positions.array[base + 1] += Math.cos(t * 0.7 + phase) * 0.0012;
-        positions.array[base + 2] += Math.sin(t * 0.5 + phase * 1.3) * 0.0014;
+        const damp = 1 - state.alpha * (reducedMotion ? 0.45 : 0.82);
+        positions.array[base] += Math.sin(t + phase) * 0.0016 * damp;
+        positions.array[base + 1] += Math.cos(t * 0.7 + phase) * 0.0012 * damp;
+        positions.array[base + 2] += Math.sin(t * 0.5 + phase * 1.3) * 0.0014 * damp;
       }
       positions.needsUpdate = true;
+      this.dustField.material.opacity = lerp(0.34, 0.05, state.alpha * 0.75 + state.peak * 0.25);
     }
 
     /* ── Near-dust drift (foreground sensing motes) ── */
@@ -3341,14 +3522,151 @@ if (root) {
       if (!this.nearDust) return;
       const positions = this.nearDust.geometry.attributes.position;
       const t = time * 0.00018;
+      const state = this.hyperdriveState || { alpha: 0, peak: 0 };
+      const reducedMotion = motionQuery.matches;
       for (let i = 0; i < this.nearDustPhases.length; i++) {
         const phase = this.nearDustPhases[i];
         const base = i * 3;
-        positions.array[base] += Math.sin(t + phase) * 0.0009;
-        positions.array[base + 1] += Math.cos(t * 0.6 + phase) * 0.0007;
-        positions.array[base + 2] += Math.sin(t * 0.4 + phase * 1.2) * 0.0008;
+        const damp = 1 - state.alpha * (reducedMotion ? 0.55 : 0.92);
+        positions.array[base] += Math.sin(t + phase) * 0.0009 * damp;
+        positions.array[base + 1] += Math.cos(t * 0.6 + phase) * 0.0007 * damp;
+        positions.array[base + 2] += Math.sin(t * 0.4 + phase * 1.2) * 0.0008 * damp;
       }
       positions.needsUpdate = true;
+      this.nearDust.material.opacity = lerp(0.12, 0.01, state.alpha * 0.9 + state.peak * 0.3);
+    }
+
+    computeHyperdriveState() {
+      const reducedMotion = motionQuery.matches;
+      const age = (performance.now() - (this.focusChangedAt || 0)) / 1000;
+      if (!this.hyperdriveDirection || age < 0) {
+        return {
+          age,
+          progress: 0,
+          direction: 0,
+          alpha: 0,
+          peak: 0,
+          tail: 0,
+          vanishingBlend: 0,
+          biasX: 0,
+          biasY: 0,
+          active: false,
+        };
+      }
+
+      const reversePass = this.hyperdriveDirection < 0;
+      const timing = reversePass
+        ? (reducedMotion
+          ? { attack: 0.05, surge: 0.14, decay: 0.38, settle: 0.62 }
+          : { attack: 0.06, surge: 0.17, decay: 0.48, settle: 0.76 })
+        : (reducedMotion
+          ? { attack: 0.1, surge: 0.26, decay: 0.72, settle: 0.95 }
+          : { attack: 0.14, surge: 0.36, decay: 1.05, settle: 1.4 });
+
+      let alpha = 0;
+      let peak = 0;
+      let tail = 0;
+
+      if (age <= timing.attack) {
+        const stage = easeOutCubic(age / timing.attack);
+        if (reversePass) {
+          alpha = 0.56 + stage * 0.26;
+          peak = 0.28 + stage * 0.38;
+        } else {
+          alpha = 0.38 + stage * 0.28;
+          peak = stage * 0.22;
+        }
+      } else if (age <= timing.surge) {
+        const stage = easeInOutCubic((age - timing.attack) / (timing.surge - timing.attack));
+        if (reversePass) {
+          alpha = lerp(0.82, 1, stage);
+          peak = lerp(0.66, 1, stage);
+        } else {
+          alpha = lerp(0.66, 1, stage);
+          peak = lerp(0.22, 1, stage);
+        }
+      } else if (age <= timing.decay) {
+        const stage = easeOutCubic((age - timing.surge) / (timing.decay - timing.surge));
+        alpha = lerp(1, reversePass ? 0.18 : 0.24, stage);
+        peak = lerp(1, reversePass ? 0.08 : 0.12, stage);
+        tail = stage;
+      } else if (age <= timing.settle) {
+        const stage = easeInOutCubic((age - timing.decay) / (timing.settle - timing.decay));
+        alpha = lerp(reversePass ? 0.18 : 0.24, 0, stage);
+        peak = lerp(reversePass ? 0.08 : 0.12, 0, stage);
+        tail = 1;
+      }
+
+      if (reducedMotion) {
+        alpha *= 0.48;
+        peak *= 0.34;
+        tail *= 0.68;
+      }
+
+      return {
+        age,
+        progress: clamp(age / timing.settle, 0, 1),
+        direction: this.hyperdriveDirection,
+        alpha: clamp(alpha, 0, 1),
+        peak: clamp(peak, 0, 1),
+        tail: clamp(tail, 0, 1),
+        vanishingBlend: 0,
+        biasX: 0,
+        biasY: 0,
+        active: age <= timing.settle && (alpha > 0.001 || peak > 0.001),
+      };
+    }
+
+    updateHyperdriveStreaks(time) {
+      if (!this.hyperdriveStreakGroup || !this.hyperdriveStreakMeta) return;
+      const state = this.hyperdriveState || { alpha: 0, peak: 0, active: false, vanishingBlend: 0, biasX: 0, biasY: 0 };
+      const reducedMotion = motionQuery.matches;
+      this.hyperdriveStreakGroup.visible = state.active;
+      if (!state.active) return;
+
+      const t = time * 0.001;
+      const planeDistance = 8.3;
+      const planeHalfHeight = Math.tan((this.camera.fov * Math.PI) / 360) * planeDistance;
+      const planeHalfWidth = planeHalfHeight * this.camera.aspect;
+      this.hyperdriveGroupPosition.copy(this.camera.position)
+        .addScaledVector(this.cameraForward, planeDistance)
+        .addScaledVector(this.cameraRight, state.biasX * planeHalfWidth)
+        .addScaledVector(this.cameraUp, state.biasY * planeHalfHeight);
+      this.hyperdriveStreakGroup.position.copy(this.hyperdriveGroupPosition);
+      this.hyperdriveStreakGroup.quaternion.copy(this.camera.quaternion);
+
+      this.hyperdriveStreakMeta.forEach((meta) => {
+        const flicker = reducedMotion
+          ? 1
+          : 0.82 + 0.18 * Math.sin(t * meta.flickerSpeed + meta.seed);
+        const surge = 0.72 + 0.28 * Math.sin(t * (meta.flickerSpeed * 0.42) + meta.seed * 1.8);
+        const laneBoost = 0.62 + meta.lane * 1.1;
+        const spreadProgress = easeInOutCubic(state.progress);
+        const edgeWeight = clamp((meta.radius - 0.12) / 1.24, 0, 1);
+        const activation = state.direction > 0
+          ? clamp((spreadProgress - edgeWeight * 0.72) / 0.28, 0, 1)
+          : clamp((spreadProgress - (1 - edgeWeight) * 0.72) / 0.28, 0, 1);
+        const flowProgress = state.direction > 0 ? activation : 1 - activation;
+        const length = 0.22
+          + activation * (
+            state.alpha * (1.8 + laneBoost * 1.1)
+            + state.peak * (8.8 + laneBoost * 9.4) * surge
+          );
+        const innerOffset = 0.14 + meta.radius * 0.28;
+        const outerOffset = 1.9 + meta.radius * 2.1 + meta.lane * 1.6;
+        const centerOffset = lerp(innerOffset, outerOffset, flowProgress);
+        const coreWidth = 0.05 + state.alpha * 0.04 + state.peak * 0.2 * meta.width;
+        const glowWidth = coreWidth * 2.7;
+        const opacityCore = clamp((0.14 + state.alpha * 0.18 + state.peak * 0.72) * activation * flicker, 0, 0.94);
+        const opacityGlow = clamp((0.08 + state.alpha * 0.12 + state.peak * 0.42) * activation * (reducedMotion ? 1 : 0.92 + surge * 0.08), 0, 0.66);
+
+        meta.core.position.y = centerOffset + length * 0.5;
+        meta.glow.position.y = centerOffset + length * 0.5;
+        meta.core.scale.set(coreWidth, length, 1);
+        meta.glow.scale.set(glowWidth, length * 1.18, 1);
+        meta.coreMaterial.opacity = opacityCore;
+        meta.glowMaterial.opacity = opacityGlow;
+      });
     }
 
     /* ── Measurement ring animation (flowing dashes + gentle rotation) ── */
@@ -3425,43 +3743,15 @@ if (root) {
       this.zoomVelocity *= this.isActive ? 0.84 : 0.78;
       this.zoomTarget = clamp(this.zoomTarget + this.zoomVelocity, this.zoomRange.min, this.zoomRange.max);
       this.zoomCurrent = lerp(this.zoomCurrent, this.zoomTarget, 0.08);
+      this.hyperdriveState = this.computeHyperdriveState();
 
-      /* ── Cinematic transition speed boost ── */
       const now = performance.now();
-      const transitionAge = (now - (this.focusChangedAt || 0)) / 1000;
-      const cameraLerp = transitionAge < 1.2 ? lerp(0.078, 0.032, transitionAge / 1.2) : 0.032;
-
-      /* ── Transition intensity — time-based for sustained hyperdrive effect ── */
-      const transitionDuration = 1.8;
-      const transitionRaw = clamp(1 - transitionAge / transitionDuration, 0, 1);
-      /* Sharp attack, slow decay for cinematic feel */
-      const transitionIntensity = transitionAge < 0.15
-        ? clamp(transitionAge / 0.15, 0, 1) * transitionRaw
-        : transitionRaw * transitionRaw;
-      /* ── Star field expansion during transition ── */
-      if (this.starField && !reducedMotion) {
-        const expansionFactor = 1 + transitionIntensity * 0.5;
-        this.starField.material.size = 0.08 * Math.pow(expansionFactor, 1.5);
-      }
-
-      /* ── Warp lines — flowing radial hyperdrive streaks ── */
-      if (this.warpLineMeta && !reducedMotion) {
-        const t = time * 0.001;
-        this.warpLineMeta.forEach((meta) => {
-          /* Per-line flicker for flowing animation */
-          const flicker = 0.5 + 0.5 * Math.sin(t * meta.flickerSpeed + meta.phase);
-          const pulse = 0.7 + 0.3 * Math.sin(t * meta.flickerSpeed * 0.37 + meta.phase * 2.1);
-          const warpOpacity = transitionIntensity > 0.02
-            ? clamp(transitionIntensity * meta.baseOpacity * flicker * pulse, 0, 0.65)
-            : 0;
-          meta.mat1.opacity = lerp(meta.mat1.opacity, warpOpacity, 0.22);
-          meta.mat2.opacity = lerp(meta.mat2.opacity, warpOpacity * 0.7, 0.22);
-        });
-        this.warpLineGroup.rotation.z += 0.001 * (1 + transitionIntensity * 2);
-        /* Extend line length based on intensity */
-        const warpScale = 1 + transitionIntensity * 0.8;
-        this.warpLineGroup.scale.setScalar(lerp(this.warpLineGroup.scale.x, warpScale, 0.12));
-      }
+      const transitionAge = this.hyperdriveState.age;
+      const cameraLerp = transitionAge < 1.2 ? lerp(0.082, 0.034, clamp(transitionAge / 1.2, 0, 1)) : 0.034;
+      const hyperdriveDolly = this.hyperdriveState.peak * (reducedMotion ? 0.18 : 0.72);
+      const fovTarget = this.baseCameraFov + this.hyperdriveState.peak * (reducedMotion ? 0.45 : 1.35);
+      this.camera.fov = lerp(this.camera.fov, fovTarget, 0.12);
+      this.camera.updateProjectionMatrix();
 
       const idleX = reducedMotion ? 0 : Math.sin(time * 0.00008) * 0.18;
       const idleY = reducedMotion ? 0 : Math.cos(time * 0.00006) * 0.07;
@@ -3474,10 +3764,8 @@ if (root) {
       /* ── Camera re-centering on focused node — prevents peripheral off-screen ── */
       if (this.focusId && this.nodeLookup.has(this.focusId)) {
         const focusEntry = this.nodeLookup.get(this.focusId);
-        /* Strong re-centering: use 0.45 of the node position so peripheral
-           nodes are pulled well into frame. Fast lerp (0.06) during fresh
-           transition, slower (0.025) once settled. */
-        const focusPos = focusEntry.group.position.clone().multiplyScalar(0.45);
+        const focusWeight = this.hyperdriveState.active ? 0.16 : 0.4;
+        const focusPos = focusEntry.group.position.clone().multiplyScalar(focusWeight);
         const focusLerp = transitionAge < 1.5 ? 0.06 : 0.025;
         this.focusTarget.lerp(focusPos, focusLerp);
       } else {
@@ -3488,11 +3776,49 @@ if (root) {
       const desired = new this.THREE.Vector3(
         Math.sin(yaw) * lerp(2.7, 3.8, zoomNorm),
         1.2 + pitch * lerp(4.8, 6.35, zoomNorm),
-        this.zoomCurrent + Math.cos(yaw * 1.18) * 1.15,
+        this.zoomCurrent + Math.cos(yaw * 1.18) * 1.15 - hyperdriveDolly,
       );
       this.camera.position.lerp(desired, cameraLerp);
       this.focusPoint.lerp(this.focusTarget, 0.04);
       this.camera.lookAt(this.focusPoint);
+
+      this.cameraForward.set(0, 0, -1).applyQuaternion(this.camera.quaternion);
+      this.cameraRight.set(1, 0, 0).applyQuaternion(this.camera.quaternion);
+      this.cameraUp.set(0, 1, 0).applyQuaternion(this.camera.quaternion);
+
+      let biasX = 0;
+      let biasY = 0;
+      const transitAnchor = this.hyperdriveState.active ? this.resolveHyperdriveAnchorEntry() : null;
+      if (transitAnchor) {
+        const focusProjection = transitAnchor.group.position.clone().project(this.camera);
+        const vanishingBlend = 1;
+        biasX = clamp(focusProjection.x, -1.08, 1.08);
+        biasY = clamp(focusProjection.y, -0.9, 0.9);
+        this.hyperdriveState.vanishingBlend = vanishingBlend;
+      } else {
+        this.hyperdriveState.vanishingBlend = 0;
+      }
+      this.hyperdriveState.biasX = biasX;
+      this.hyperdriveState.biasY = biasY;
+
+      this.renderer.toneMappingExposure = lerp(
+        this.renderer.toneMappingExposure,
+        this.baseToneMappingExposure + this.hyperdriveState.alpha * 0.12 + this.hyperdriveState.peak * (reducedMotion ? 0.08 : 0.24),
+        0.12,
+      );
+
+      if (this.sceneLights) {
+        this.sceneLights.rim.intensity = lerp(this.sceneLights.rim.intensity, this.sceneLightBase.rim + this.hyperdriveState.peak * 1.1, 0.12);
+        this.sceneLights.fill.intensity = lerp(this.sceneLights.fill.intensity, this.sceneLightBase.fill + this.hyperdriveState.alpha * 0.45, 0.1);
+        this.sceneLights.depthLight.intensity = lerp(this.sceneLights.depthLight.intensity, this.sceneLightBase.depthLight + this.hyperdriveState.peak * 0.48, 0.12);
+        this.sceneLights.prism.intensity = lerp(this.sceneLights.prism.intensity, this.sceneLightBase.prism + this.hyperdriveState.alpha * 0.34, 0.1);
+        this.sceneLights.aqua.intensity = lerp(this.sceneLights.aqua.intensity, this.sceneLightBase.aqua + this.hyperdriveState.alpha * 0.22, 0.1);
+      }
+
+      if (!this.hyperdriveState.active && this.hyperdriveDirection) {
+        this.hyperdriveDirection = 0;
+        this.transitionFocusId = this.focusId;
+      }
     }
 
     updateOverlay(time) {
@@ -3721,19 +4047,24 @@ if (root) {
 
       this.updateHover();
       this.updateNodes(time);
+      this.updateCamera(time);
       this.updateStars(time);
       this.updateDust(time);
       this.updateNearDust(time);
+      this.updateHyperdriveStreaks(time);
       this.updateGuides(time);
       this.updateTrails();
       this.updateGlints(time);
-      this.updateCamera(time);
       this.updateTooltipPosition();
       this.updateMeasurementRings(time);
 
       /* ── Ambient light breathing (18s cycle) ── */
       if (this.ambientLight) {
-        this.ambientLight.intensity = this.ambientBaseIntensity + Math.sin(slowTime * 0.35) * 0.04;
+        const state = this.hyperdriveState || { alpha: 0, peak: 0 };
+        this.ambientLight.intensity = this.ambientBaseIntensity
+          + Math.sin(slowTime * 0.35) * 0.04
+          + state.alpha * 0.08
+          + state.peak * 0.12;
       }
 
       /* ── Grid time uniform for breathing ── */
@@ -3747,8 +4078,14 @@ if (root) {
           this.bloomImpulse *= 0.94;
           if (this.bloomImpulse < 0.005) this.bloomImpulse = 0;
         }
+        const state = this.hyperdriveState || { alpha: 0, peak: 0 };
         const bloomTarget = this.focusId ? 0.34 : this.bloomBase;
         this.bloomPass.strength = lerp(this.bloomPass.strength, bloomTarget + this.bloomImpulse * 0.12, 0.08);
+        this.bloomPass.strength = lerp(
+          this.bloomPass.strength,
+          bloomTarget + this.bloomImpulse * 0.12 + state.alpha * 0.16 + state.peak * 0.42,
+          0.12,
+        );
       }
 
       /* Throttle label rendering: every 3rd frame */
