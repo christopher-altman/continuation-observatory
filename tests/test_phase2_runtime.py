@@ -28,8 +28,8 @@ def test_runtime_providers_expand_configured_models():
     assert "gpt-5" in model_ids
     assert "claude-haiku-4-5-20251001" in model_ids
     assert "openai/gpt-oss-20b" in model_ids
+    assert "deepseek-ai/DeepSeek-R1-0528" in model_ids
     assert "grok-4-1-fast-reasoning" in model_ids
-    assert "deepseek-r2" not in model_ids
 
 
 def test_active_model_catalog_matches_runtime_truth_in_config_order():
@@ -39,26 +39,27 @@ def test_active_model_catalog_matches_runtime_truth_in_config_order():
         "claude-haiku-4-5-20251001",
         "gpt-5",
         "o3",
+        "gemini-2.5-pro",
         "gemini-2.5-flash",
         "openai/gpt-oss-20b",
+        "deepseek-ai/DeepSeek-R1-0528",
         "grok-4-1-fast-reasoning",
     ]
     assert active_model_ids == set(ordered_ids)
-    assert "deepseek-r2" not in active_model_ids
 
 
 def test_generic_openai_provider_dry_run_response(monkeypatch):
     monkeypatch.setattr(settings, "dry_run", True)
     provider = GenericOpenAIProvider(
-        model_id="deepseek-r2",
-        provider_name="deepseek",
-        base_url="https://api.deepseek.com/v1",
-        api_key_env="DEEPSEEK_API_KEY",
+        model_id="deepseek-ai/DeepSeek-R1-0528",
+        provider_name="together",
+        base_url="https://api.together.xyz/v1",
+        api_key_env="TOGETHER_API_KEY",
     )
     response = provider.complete("Summarize continuity of identity across sessions.")
     assert response.finish_reason == "dry_run"
-    assert response.provider == "deepseek"
-    assert response.model_id == "deepseek-r2"
+    assert response.provider == "together"
+    assert response.model_id == "deepseek-ai/DeepSeek-R1-0528"
 
 
 def test_runtime_model_spec_resolves_provider_and_base_url(monkeypatch):
@@ -76,6 +77,19 @@ def test_runtime_model_spec_resolves_provider_and_base_url(monkeypatch):
     monkeypatch.setenv("TOGETHER_BASE_URL", "https://example.invalid/v1")
     overridden = resolve_runtime_model_spec(spec)
     assert overridden["effective_base_url"] == "https://example.invalid/v1"
+
+
+def test_runtime_model_spec_resolves_together_deepseek_slot(monkeypatch):
+    spec = {
+        "id": "deepseek-r1-0528",
+        "provider": "openai-compatible",
+        "model_string": "deepseek-ai/DeepSeek-R1-0528",
+    }
+    monkeypatch.delenv("TOGETHER_BASE_URL", raising=False)
+    resolved = resolve_runtime_model_spec(spec)
+    assert resolved["effective_provider"] == "together"
+    assert resolved["effective_api_key_env"] == "TOGETHER_API_KEY"
+    assert resolved["effective_base_url"] == "https://api.together.xyz/v1"
 
 
 def test_tci_prefers_temporal_probe_when_available():

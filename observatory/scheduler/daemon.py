@@ -15,7 +15,7 @@ import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from observatory.config import settings
+from observatory.config import get_probe_cycle_interval_hours, settings
 from observatory.scheduler.scheduler import run_cycle, run_sweep_cycle
 
 logger = logging.getLogger(__name__)
@@ -33,11 +33,12 @@ def _run_sweep_job() -> None:
 
 async def _run_daemon() -> None:
     scheduler = AsyncIOScheduler(timezone=settings.scheduler_timezone)
+    probe_cycle_hours = get_probe_cycle_interval_hours()
 
     scheduler.add_job(
         _run_cycle_job,
         "interval",
-        hours=6,
+        hours=probe_cycle_hours,
         id="probe_cycle",
         replace_existing=True,
     )
@@ -53,7 +54,8 @@ async def _run_daemon() -> None:
     scheduler.start()
     logger.info(
         "Scheduler daemon started.  "
-        "Probe interval: every 6 h | Sweep: Sunday 02:00 %s",
+        "Probe interval: every %s h | Sweep: Sunday 02:00 %s",
+        probe_cycle_hours,
         settings.scheduler_timezone,
     )
 

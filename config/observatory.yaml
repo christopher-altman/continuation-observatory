@@ -2,6 +2,7 @@ runtime:
   expand_configured_models: true
   hot_reload: true
   include_disabled_models_in_api: true
+  probe_cycle_hours: 6
 constellation:
   similarity_window_days: 7
   edge_threshold: 0.60
@@ -25,6 +26,18 @@ public_feed:
     - low balance
     - insufficient balance
     - credit exhausted
+  resolved_payment_residue_patterns:
+    - quota exhausted
+    - quota exceeded
+    - exceeded your current quota
+    - insufficient quota
+    - low balance
+    - insufficient balance
+    - credit exhausted
+    - billing details
+    - check your plan
+    - payment
+    - billing
 providers:
   anthropic:
     enabled: true
@@ -55,10 +68,10 @@ providers:
       base_url: https://api.x.ai/v1
       api_key_env: XAI_API_KEY
       enabled: true
-    deepseek-r2:
-      provider_name: deepseek
-      base_url: https://api.deepseek.com/v1
-      api_key_env: DEEPSEEK_API_KEY
+    deepseek-r1-0528:
+      provider_name: together
+      base_url: https://api.together.xyz/v1
+      api_key_env: TOGETHER_API_KEY
       enabled: true
     llama-4-maverick:
       provider_name: meta

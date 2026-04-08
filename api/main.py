@@ -36,17 +36,14 @@ templates.env.loader = ChoiceLoader(
 
 
 LIVE_MARQUEE_MODELS = [
-    "Claude Sonnet 4.6",
+    "Claude Haiku 4.5",
+    "GPT-5",
+    "OpenAI o3",
     "Gemini 2.5 Pro",
-    "DeepSeek R2",
-    "Grok 3",
-    "Qwen 3",
-    "Command A",
-    "Mistral Large 3",
-    "Llama 4 Maverick",
-    "SmolLM2-135M-Instruct",
-    "o3",
     "Gemini 2.5 Flash",
+    "Together GPT-OSS 20B",
+    "Together DeepSeek R1-0528",
+    "Grok 4.1 Fast Reasoning",
     "bootstrap-v0",
 ]
 

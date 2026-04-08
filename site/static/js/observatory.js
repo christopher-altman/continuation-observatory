@@ -77,6 +77,14 @@
     return typeof value === "number" && Number.isFinite(value) ? value.toFixed(digits) : "--";
   }
 
+  function isRenderableNumber(value) {
+    return typeof value === "number" && Number.isFinite(value);
+  }
+
+  function fmtSurfaceValue(value, digits = 3, fallback = "No current sample") {
+    return isRenderableNumber(value) ? value.toFixed(digits) : fallback;
+  }
+
   function normalizeMetric(value) {
     return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
   }
@@ -158,6 +166,43 @@
 
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
+  }
+
+  function resolveBoundedValueDomain(minValue, maxValue, options) {
+    const minimumSpan = Math.max(0, (options && options.minimumSpan) || 0);
+    const paddingRatio = Math.max(0, (options && options.paddingRatio) || 0);
+    const fallbackCenter = isRenderableNumber(minValue) ? minValue : isRenderableNumber(maxValue) ? maxValue : 0.5;
+    const lower = isRenderableNumber(minValue) ? minValue : fallbackCenter;
+    const upper = isRenderableNumber(maxValue) ? maxValue : fallbackCenter;
+    const center = (lower + upper) / 2;
+    const span = Math.max(upper - lower, minimumSpan);
+    const halfSpan = (span * (1 + paddingRatio * 2)) / 2;
+
+    let domainMin = center - halfSpan;
+    let domainMax = center + halfSpan;
+    if (domainMin < 0) {
+      domainMax = Math.min(1, domainMax - domainMin);
+      domainMin = 0;
+    }
+    if (domainMax > 1) {
+      domainMin = Math.max(0, domainMin - (domainMax - 1));
+      domainMax = 1;
+    }
+
+    if ((domainMax - domainMin) < minimumSpan) {
+      const shortfall = minimumSpan - (domainMax - domainMin);
+      domainMin = Math.max(0, domainMin - shortfall / 2);
+      domainMax = Math.min(1, domainMax + shortfall / 2);
+      if ((domainMax - domainMin) < minimumSpan) {
+        if (domainMin === 0) {
+          domainMax = Math.min(1, minimumSpan);
+        } else if (domainMax === 1) {
+          domainMin = Math.max(0, 1 - minimumSpan);
+        }
+      }
+    }
+
+    return [domainMin, domainMax];
   }
 
   function classifyHistorySeries(series) {
@@ -606,7 +651,7 @@
         <div class="observatory-inspector-state">
           <div class="observatory-inspector-block">
             <span class="summary-label">No target lock</span>
-            <div class="observatory-inspector-value">${fmt(latestPcii && latestPcii.value)}</div>
+            <div class="observatory-inspector-value">${latestPcii ? fmt(latestPcii.value) : "No current sample"}</div>
             <p class="observatory-inspector-copy">
               ${latestPcii ? `${observatoryState.view.models.length} tracked models · ${liveCount} currently live · latest aggregate sample ${ageLabel(latestPcii.timestamp)}.` : "Awaiting aggregate signal telemetry."}
             </p>
@@ -658,7 +703,7 @@
         <div class="observatory-metric-row">
           <span>${METRIC_LABELS[metric] || metric.toUpperCase()}</span>
           <div class="observatory-metric-bar"><div style="width:${width}%"></div></div>
-          <span>${fmt(value)}</span>
+          <span>${fmtSurfaceValue(value)}</span>
         </div>
       `;
     }).join("");
@@ -689,7 +734,7 @@
         <div class="observatory-inspector-grid">
           <div>
             <span class="summary-label">CII / Core Score</span>
-            <strong>${fmt(focused.metrics.cii)}</strong>
+            <strong>${fmtSurfaceValue(focused.metrics.cii)}</strong>
           </div>
           <div>
             <span class="summary-label">Recency</span>
@@ -1150,12 +1195,6 @@
       const placeholderAggregate = buildPlaceholderAggregateSeries(observatoryState.view.models, observatoryState.range);
       if (placeholderAggregate) {
         aggregateSeries = placeholderAggregate;
-      } else if (realValues.length === 1) {
-        aggregateSeries = {
-          values: realValues,
-          isPreview: false,
-          label: "Aggregate signal telemetry",
-        };
       }
     }
 
@@ -1213,13 +1252,20 @@
         })
       : sourceValues;
     const x = d3.scaleTime().domain(d3.extent(sourceValues, function (d) { return d.t; })).range([padding.left, width - padding.right]);
-    const y = d3.scaleLinear().domain([
-      0,
-      Math.max(
-        1,
-        d3.max(sourceValues, function (d) { return d.max != null ? d.max : d.v; }) || 1
-      ),
-    ]).nice().range([height - padding.bottom, padding.top]);
+    const timelineMin = d3.min(sourceValues, function (entry) {
+      return entry.min != null ? entry.min : entry.v;
+    });
+    const timelineMax = d3.max(sourceValues, function (entry) {
+      return entry.max != null ? entry.max : entry.v;
+    });
+    const timelineDomain = resolveBoundedValueDomain(timelineMin, timelineMax, {
+      minimumSpan: aggregateSeries.isPreview ? 0.08 : 0.035,
+      paddingRatio: aggregateSeries.isPreview ? 0.16 : 0.22,
+    });
+    const y = d3.scaleLinear()
+      .domain(timelineDomain)
+      .nice()
+      .range([height - padding.bottom, padding.top]);
     const area = d3.area()
       .x(function (d) { return x(d.t); })
       .y0(height - padding.bottom)
@@ -1275,7 +1321,7 @@
       .attr("class", "axis");
     svg.append("g")
       .attr("transform", `translate(${padding.left},0)`)
-      .call(d3.axisLeft(y).ticks(5).tickSizeOuter(0))
+      .call(d3.axisLeft(y).ticks(5).tickSizeOuter(0).tickFormat(d3.format(".3f")))
       .attr("class", "axis");
     if (values.some(function (entry) {
       return entry.min != null && entry.max != null && entry.max !== entry.min;
@@ -1308,12 +1354,17 @@
   function renderHeatmap() {
     const target = qs("#heatmap-root");
     if (!target || !observatoryState.view) return;
-    const rows = observatoryState.view.models.slice(0, 10);
+    const metrics = ["cii", "ips", "srs", "mpg", "tci", "edp"];
+    const rows = observatoryState.view.models.filter(function (model) {
+      if (!model || !model.metrics) return false;
+      return metrics.some(function (metric) {
+        return isRenderableNumber(model.metrics[metric]);
+      });
+    }).slice(0, 10);
     if (!rows.length) {
       target.innerHTML = `<p class="muted">No comparative metric rows available.</p>`;
       return;
     }
-    const metrics = ["cii", "ips", "srs", "mpg", "tci", "edp"];
     let html = `<div class="heatmap-table"><div class="heatmap-cell head">MODEL</div>`;
     html += metrics.map(function (metric) {
       return `<div class="heatmap-cell head">${METRIC_LABELS[metric] || metric.toUpperCase()}</div>`;
@@ -1322,8 +1373,9 @@
       html += `<div class="heatmap-cell label">${model.display_name}</div>`;
       metrics.forEach(function (metric) {
         const value = model.metrics[metric];
-        const alpha = value == null ? 0.08 : Math.max(0.08, Math.min(0.95, value));
-        html += `<div class="heatmap-cell metric" style="background: rgba(92, 166, 255, ${alpha});">${fmt(value)}</div>`;
+        const alpha = isRenderableNumber(value) ? Math.max(0.08, Math.min(0.95, value)) : 0.12;
+        const label = isRenderableNumber(value) ? fmt(value) : "No current sample";
+        html += `<div class="heatmap-cell metric" style="background: rgba(92, 166, 255, ${alpha});">${label}</div>`;
       });
     });
     html += `</div>`;

@@ -108,6 +108,20 @@ def load_observatory_config() -> dict[str, Any]:
     return _load_yaml_file("observatory.yaml")
 
 
+def get_probe_cycle_interval_hours(observatory_config: dict[str, Any] | None = None) -> int:
+    observatory_config = observatory_config or load_observatory_config()
+    runtime_config = observatory_config.get("runtime", {})
+    try:
+        value = int(runtime_config.get("probe_cycle_hours", 6))
+    except (TypeError, ValueError):
+        value = 6
+    return max(1, value)
+
+
+def get_probe_cycle_interval_minutes(observatory_config: dict[str, Any] | None = None) -> int:
+    return get_probe_cycle_interval_hours(observatory_config) * 60
+
+
 def _provider_base_url_env_name(provider_name: str) -> str:
     normalized = provider_name.upper().replace("-", "_")
     return f"{normalized}_BASE_URL"

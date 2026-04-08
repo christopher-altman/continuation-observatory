@@ -124,6 +124,69 @@ def test_snapshot_keeps_sparse_history_without_interpolation(monkeypatch):
     ]
 
 
+def test_models_payload_uses_probe_cycle_interval_for_current_live_status(monkeypatch):
+    now = datetime.now(timezone.utc)
+    monkeypatch.setattr(snapshot_module, "load_observatory_config", lambda: {
+        "runtime": {
+            "expand_configured_models": True,
+            "include_disabled_models_in_api": True,
+            "probe_cycle_hours": 6,
+        }
+    })
+    monkeypatch.setattr(snapshot_module, "load_models_config", lambda: {
+        "models": [
+            {
+                "id": "model-a",
+                "provider": "openai-compatible",
+                "model_string": "model-a",
+                "display_name": "Model A",
+                "enabled": True,
+                "interval_minutes": 30,
+                "rate_limit_rpm": 10,
+            },
+            {
+                "id": "model-b",
+                "provider": "openai-compatible",
+                "model_string": "model-b",
+                "display_name": "Model B",
+                "enabled": True,
+                "interval_minutes": 30,
+                "rate_limit_rpm": 10,
+            },
+        ]
+    })
+    monkeypatch.setattr(snapshot_module, "supported_runtime_models", lambda: {
+        "model-a": {"provider": "test", "model_id": "model-a", "display_name": "Model A", "enabled": True, "supported": True, "source": "runtime"},
+        "model-b": {"provider": "test", "model_id": "model-b", "display_name": "Model B", "enabled": True, "supported": True, "source": "runtime"},
+    })
+    monkeypatch.setattr(snapshot_module, "group_latest_metrics", lambda: {
+        ("test", "model-a"): {
+            "provider": "test",
+            "model_id": "model-a",
+            "metrics": {"cii": 0.4},
+            "last_seen": (now - timedelta(hours=5)).isoformat(),
+            "is_degraded": False,
+        },
+        ("test", "model-b"): {
+            "provider": "test",
+            "model_id": "model-b",
+            "metrics": {"cii": 0.2},
+            "last_seen": (now - timedelta(hours=7)).isoformat(),
+            "is_degraded": False,
+        },
+    })
+
+    models = snapshot_module.models_payload()
+    by_id = {row["model_id"]: row for row in models}
+
+    assert by_id["model-a"]["live"] is True
+    assert by_id["model-a"]["status"] == "active"
+    assert by_id["model-a"]["stale"] is False
+    assert by_id["model-b"]["live"] is False
+    assert by_id["model-b"]["status"] == "configured"
+    assert by_id["model-b"]["stale"] is True
+
+
 def test_snapshot_filters_static_scope_across_models_pcii_history_and_events(monkeypatch):
     allowed_ids = {"active-a", "active-b"}
     anchor = datetime.now(timezone.utc) + timedelta(days=1)

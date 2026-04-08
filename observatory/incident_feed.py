@@ -63,6 +63,24 @@ def get_public_feed_config(observatory_config: dict[str, Any] | None = None) -> 
                 ],
             )
         ),
+        "resolved_payment_residue_patterns": list(
+            feed_config.get(
+                "resolved_payment_residue_patterns",
+                [
+                    "quota exhausted",
+                    "quota exceeded",
+                    "exceeded your current quota",
+                    "insufficient quota",
+                    "insufficient balance",
+                    "low balance",
+                    "credit exhausted",
+                    "billing details",
+                    "check your plan",
+                    "payment",
+                    "billing",
+                ],
+            )
+        ),
         "observatory_scope_min_providers": int(feed_config.get("observatory_scope_min_providers", 2)),
         "observatory_scope_min_models": int(feed_config.get("observatory_scope_min_models", 3)),
         "provider_scope_min_models": int(feed_config.get("provider_scope_min_models", 2)),
@@ -265,6 +283,33 @@ def _matches_suppression(
         normalized_pattern = _normalize_text(pattern)
         if normalized_pattern and normalized_pattern in haystack:
             return str(pattern)
+    return None
+
+
+def _resolved_payment_residue_reason(
+    item: dict[str, Any],
+    *,
+    feed_config: dict[str, Any],
+) -> str | None:
+    if str(item.get("status") or "") != "recovered":
+        return None
+
+    payload = item.get("payload") or {}
+    haystack = " ".join(
+        [
+            _normalize_text(item.get("headline")),
+            _normalize_text(item.get("summary")),
+            _normalize_text(item.get("event_type")),
+            _normalize_text(item.get("incident_family")),
+            _normalize_text(payload.get("error_class")),
+            _normalize_text(payload.get("error")),
+            _normalize_text(payload.get("message")),
+        ]
+    )
+    for pattern in feed_config["resolved_payment_residue_patterns"]:
+        normalized_pattern = _normalize_text(pattern)
+        if normalized_pattern and normalized_pattern in haystack:
+            return "resolved_payment_residue"
     return None
 
 
@@ -705,6 +750,32 @@ def _relevant_models_for_item(item: dict[str, Any], active_model_ids: set[str]) 
     return set(active_model_ids)
 
 
+def _scope_has_current_support(
+    item: dict[str, Any],
+    *,
+    active_model_ids: set[str],
+    active_providers_by_model: dict[str, str],
+) -> bool:
+    active_providers = {provider for provider in active_providers_by_model.values() if provider}
+    item_models = {str(model_id) for model_id in item.get("affected_models", []) if model_id}
+    item_providers = {str(provider) for provider in item.get("affected_providers", []) if provider}
+
+    if item.get("scope") == "model":
+        model_id = str(item.get("model_id") or "")
+        return bool(model_id) and model_id in active_model_ids
+
+    if item_models and (item_models & active_model_ids):
+        return True
+
+    if item.get("scope") == "provider":
+        return bool(item_providers & active_providers)
+
+    if item.get("scope") == "observatory":
+        return bool(active_model_ids) and (not item_models or bool(item_models & active_model_ids))
+
+    return False
+
+
 def _success_supports_scope(
     cluster: dict[str, Any],
     item: dict[str, Any],
@@ -979,16 +1050,28 @@ def _board_meta(
     source_event_count: int,
     visible_event_count: int,
     suppressed_reasons: Counter[str],
+    suppressed_item_reasons: Counter[str],
     total_unsuppressed_items: int,
     total_unsuppressed_events: int,
 ) -> dict[str, Any]:
+    combined_suppressed = suppressed_reasons + suppressed_item_reasons
     return {
         "source_event_count": source_event_count,
         "visible_event_count": visible_event_count,
-        "suppressed_count": sum(suppressed_reasons.values()),
+        "suppressed_count": sum(combined_suppressed.values()),
+        "suppressed_event_count": sum(suppressed_reasons.values()),
+        "suppressed_item_count": sum(suppressed_item_reasons.values()),
         "suppressed_reasons": [
             {"reason": reason, "count": count}
+            for reason, count in combined_suppressed.most_common()
+        ],
+        "suppressed_event_reasons": [
+            {"reason": reason, "count": count}
             for reason, count in suppressed_reasons.most_common()
+        ],
+        "suppressed_item_reasons": [
+            {"reason": reason, "count": count}
+            for reason, count in suppressed_item_reasons.most_common()
         ],
         "rollup_count": max(0, total_unsuppressed_events - total_unsuppressed_items),
     }
@@ -1076,14 +1159,6 @@ def build_public_incident_board(
     classified_items: list[dict[str, Any]] = []
     active_negative_items: list[dict[str, Any]] = []
     for item in merged_negative_items:
-        if item.get("_window_bucket") == "active":
-            item.pop("_window_bucket", None)
-            item["status"] = "active"
-            item["latest_transition"] = TRANSITION_LABELS["active"]
-            item["status_hint"] = "active_fresh"
-            active_negative_items.append(item)
-            classified_items.append(item)
-            continue
         recovery_cluster = _find_recovery_cluster(
             item,
             success_clusters,
@@ -1102,12 +1177,26 @@ def build_public_incident_board(
                     latest_pcii_value=latest_pcii_value,
                 )
             )
-        else:
+            continue
+
+        if item.get("_window_bucket") == "active" and _scope_has_current_support(
+            item,
+            active_model_ids=active_model_ids,
+            active_providers_by_model=active_providers_by_model,
+        ):
             item.pop("_window_bucket", None)
-            item["status"] = "stale"
-            item["latest_transition"] = TRANSITION_LABELS["stale"]
-            item["status_hint"] = "stale_inferred"
+            item["status"] = "active"
+            item["latest_transition"] = TRANSITION_LABELS["active"]
+            item["status_hint"] = "active_fresh"
+            active_negative_items.append(item)
             classified_items.append(item)
+            continue
+
+        item.pop("_window_bucket", None)
+        item["status"] = "stale"
+        item["latest_transition"] = TRANSITION_LABELS["stale"]
+        item["status_hint"] = "stale_inferred"
+        classified_items.append(item)
 
     healthy_now_item = None
     active_cutoff = current_time - timedelta(hours=feed_config["active_window_hours"])
@@ -1135,8 +1224,20 @@ def build_public_incident_board(
             )
         ]
         merged_items.append(healthy_now_item)
+    suppressed_item_reasons: Counter[str] = Counter()
+    visible_items: list[dict[str, Any]] = []
+    for item in merged_items:
+        suppression_reason = _resolved_payment_residue_reason(
+            item,
+            feed_config=feed_config,
+        )
+        if suppression_reason:
+            suppressed_item_reasons[suppression_reason] += 1
+            continue
+        visible_items.append(item)
+
     limited_items = _limit_board_items(
-        merged_items,
+        visible_items,
         max_items=max_items or feed_config["max_items"],
     )
 
@@ -1146,7 +1247,8 @@ def build_public_incident_board(
             source_event_count=source_event_count,
             visible_event_count=visible_event_count,
             suppressed_reasons=suppressed_reasons,
-            total_unsuppressed_items=len(merged_items),
+            suppressed_item_reasons=suppressed_item_reasons,
+            total_unsuppressed_items=len(visible_items),
             total_unsuppressed_events=len(unsuppressed_events),
         ),
         "active": [],

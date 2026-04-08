@@ -69,6 +69,18 @@ if (root) {
     return clamp(isFiniteNumber(value) ? value : 0, 0, 1);
   }
 
+  function formatNodeMetric(value, fallback = "offline") {
+    return isFiniteNumber(value) ? value.toFixed(3) : fallback;
+  }
+
+  function resolveNodeReadout(node) {
+    if (!node) return "offline";
+    return formatNodeMetric(
+      isFiniteNumber(node.rangeCii) ? node.rangeCii : node.cii,
+      node.inactive ? "offline" : "unavailable",
+    );
+  }
+
   function thresholdRelativeMetric(rangeCii, threshold) {
     if (!isFiniteNumber(rangeCii)) return 0;
     if (!isFiniteNumber(threshold)) return normalizeMetric(rangeCii);
@@ -124,9 +136,13 @@ if (root) {
         const metrics = model.metrics || {};
         const rangeCii = typeof model.rangeCii === "number"
           ? model.rangeCii
-          : (typeof node.cii === "number" ? node.cii : metrics.cii) || 0;
+          : typeof node.cii === "number"
+          ? node.cii
+          : isFiniteNumber(metrics.cii)
+          ? metrics.cii
+          : null;
         const telemetryState = node.telemetry_state || (model.status === "active" ? "live" : model.status || "inactive");
-        const hasMeasuredSignal = isFiniteNumber(rangeCii) && rangeCii > 0;
+        const hasMeasuredSignal = isFiniteNumber(rangeCii);
         return {
           id: node.id,
           label: node.label,
@@ -135,12 +151,12 @@ if (root) {
           rank: typeof model.rank === "number" ? model.rank : null,
           relativeStanding: model.relativeStanding || null,
           metrics: metrics,
-          cii: typeof node.cii === "number" ? node.cii : metrics.cii || 0,
+          cii: typeof node.cii === "number" ? node.cii : isFiniteNumber(metrics.cii) ? metrics.cii : null,
           rangeCii: rangeCii,
           rangeTrend: typeof model.rangeTrend === "number" ? model.rangeTrend : 0,
           historyDepth: typeof model.historyDepth === "number" ? model.historyDepth : ((payload.ciiHistory && payload.ciiHistory[node.id]) || []).length,
-          ips: typeof node.ips === "number" ? node.ips : metrics.ips || 0,
-          srs: typeof node.srs === "number" ? node.srs : metrics.srs || 0,
+          ips: typeof node.ips === "number" ? node.ips : isFiniteNumber(metrics.ips) ? metrics.ips : null,
+          srs: typeof node.srs === "number" ? node.srs : isFiniteNumber(metrics.srs) ? metrics.srs : null,
           stale: Boolean(model.stale),
           live: Boolean(model.live),
           lastSeen: node.last_seen || model.last_seen || null,
@@ -249,14 +265,14 @@ if (root) {
   }
 
   function createLabelElement(node) {
-    const element = document.createElement("div");
+      const element = document.createElement("div");
     element.className = `observatory-node-label observatory-node-label--${node.tier}`;
     if (node.labelDisplay && node.labelDisplay.qualifier) {
       element.classList.add("has-qualifier");
     }
     element.innerHTML = `
       ${buildLabelTitleMarkup("observatory-node-label", node.labelDisplay || splitFocusedLabel(node.label))}
-      <span class="observatory-node-label-meta">${node.provider} · ${(node.rangeCii || node.cii).toFixed(3)}</span>
+      <span class="observatory-node-label-meta">${node.provider} · ${resolveNodeReadout(node)}</span>
     `;
     return element;
   }
@@ -277,9 +293,9 @@ if (root) {
       <div class="observatory-tooltip-header">${node.label}</div>
       <div class="observatory-tooltip-provider">${node.provider} · ${node.tier}</div>
       <div class="observatory-tooltip-metrics">
-        <div class="observatory-tooltip-row"><span>CII</span><span>${(node.rangeCii || node.cii).toFixed(3)}</span></div>
-        <div class="observatory-tooltip-row"><span>IPS</span><span>${node.ips.toFixed(3)}</span></div>
-        <div class="observatory-tooltip-row"><span>SRS</span><span>${node.srs.toFixed(3)}</span></div>
+        <div class="observatory-tooltip-row"><span>CII</span><span>${resolveNodeReadout(node)}</span></div>
+        <div class="observatory-tooltip-row"><span>IPS</span><span>${formatNodeMetric(node.ips, node.inactive ? "offline" : "unavailable")}</span></div>
+        <div class="observatory-tooltip-row"><span>SRS</span><span>${formatNodeMetric(node.srs, node.inactive ? "offline" : "unavailable")}</span></div>
         <div class="observatory-tooltip-row${trendClass}"><span>Trend</span><span>${trendSign}${trend.toFixed(3)}</span></div>
       </div>
     `;
@@ -3968,7 +3984,7 @@ if (root) {
         tier: focusEntry.node.tier,
         rank: focusEntry.node.relativeStanding || "--",
         trend: `${focusEntry.node.rangeTrend >= 0 ? "+" : ""}${focusEntry.node.rangeTrend.toFixed(3)}`,
-        cii: (focusEntry.node.rangeCii || focusEntry.node.cii).toFixed(3),
+        cii: resolveNodeReadout(focusEntry.node),
       };
       this.overlay.update(time, target, meta);
     }
@@ -4393,7 +4409,7 @@ if (root) {
           </span>
           <span class="observatory-fallback-label">
             ${buildLabelTitleMarkup("observatory-fallback-label", node.labelDisplay || splitFocusedLabel(node.label))}
-            <span class="observatory-fallback-label-meta">${node.provider} · ${node.cii.toFixed(3)}</span>
+            <span class="observatory-fallback-label-meta">${node.provider} · ${resolveNodeReadout(node)}</span>
           </span>
         `;
         element.addEventListener("click", () => {
@@ -4440,7 +4456,7 @@ if (root) {
         tier: focusedNode.tier,
         rank: focusedNode.relativeStanding || "--",
         trend: `${focusedNode.rangeTrend >= 0 ? "+" : ""}${focusedNode.rangeTrend.toFixed(3)}`,
-        cii: (focusedNode.rangeCii || focusedNode.cii).toFixed(3),
+        cii: resolveNodeReadout(focusedNode),
       };
       this.overlay.update(time, target, meta);
     }

@@ -5,10 +5,11 @@ from math import sqrt
 from typing import Any
 
 from observatory.config import (
+    get_probe_cycle_interval_minutes,
     load_models_config,
     load_observatory_config,
-    resolve_runtime_model_spec,
     load_weights_config,
+    resolve_runtime_model_spec,
 )
 from observatory.incident_feed import (
     build_public_incident_board,
@@ -169,6 +170,7 @@ def models_payload(allowed_model_ids: set[str] | None = None) -> list[dict[str, 
     latest = group_latest_metrics()
     merged: dict[str, dict[str, Any]] = {}
     include_disabled = observatory_config.get("runtime", {}).get("include_disabled_models_in_api", True)
+    probe_cycle_minutes = get_probe_cycle_interval_minutes(observatory_config)
 
     for spec in configured:
         resolved = resolve_runtime_model_spec(spec, observatory_config=observatory_config)
@@ -234,21 +236,22 @@ def models_payload(allowed_model_ids: set[str] | None = None) -> list[dict[str, 
     payload = []
     for record in merged.values():
         last_seen = record["last_seen"]
-        interval = record["interval_minutes"] or 60
+        interval = max(int(record["interval_minutes"] or 0), probe_cycle_minutes)
         stale = True
         if last_seen:
             last_seen_dt = datetime.fromisoformat(last_seen)
             if last_seen_dt.tzinfo is None:
                 last_seen_dt = last_seen_dt.replace(tzinfo=timezone.utc)
-            stale = now - last_seen_dt > timedelta(minutes=interval * 2)
+            stale = now - last_seen_dt > timedelta(minutes=interval)
+        is_live = record["last_seen"] is not None and not stale
         payload.append(
             {
                 **record,
-                "live": record["last_seen"] is not None,
+                "live": is_live,
                 "stale": stale,
                 "status": (
                     "active"
-                    if record["last_seen"] and not stale
+                    if is_live
                     else "configured"
                     if record["enabled"]
                     else "inactive"

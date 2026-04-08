@@ -84,9 +84,9 @@ def test_build_filters_disabled_models_and_keeps_active_empty_states(tmp_path, m
             ),
             _write_experiment(
                 tmp_path,
-                name="continuation_interest_deepseek",
-                provider="deepseek",
-                model_id="deepseek-r2",
+                name="continuation_interest_llama",
+                provider="meta",
+                model_id="llama-4-maverick",
                 probe_name="continuation_interest",
                 entropy_delta=0.3,
             ),
@@ -139,18 +139,20 @@ def test_build_filters_disabled_models_and_keeps_active_empty_states(tmp_path, m
 
     latest_ids = {row["model_id"] for row in latest["models"]}
     assert latest_ids == {"o3"}
-    assert "deepseek-r2" not in json.dumps(timeseries)
+    assert "llama-4-maverick" not in json.dumps(timeseries)
     assert {row["model_id"] for row in falsification["models"]} == {"o3"}
-    assert all(row["model_id"] != "deepseek-r2" for row in exports)
-    assert "deepseek-r2" not in csv_export
+    assert all(row["model_id"] != "llama-4-maverick" for row in exports)
+    assert "llama-4-maverick" not in csv_export
 
     model_rows = {row["model_id"]: row for row in models_data["models"]}
     assert list(model_rows) == [
         "claude-haiku-4-5-20251001",
         "gpt-5",
         "o3",
+        "gemini-2.5-pro",
         "gemini-2.5-flash",
         "openai/gpt-oss-20b",
+        "deepseek-ai/DeepSeek-R1-0528",
         "grok-4-1-fast-reasoning",
     ]
     assert model_rows["gpt-5"]["timestamp"] is None
@@ -159,13 +161,14 @@ def test_build_filters_disabled_models_and_keeps_active_empty_states(tmp_path, m
     assert model_rows["openai/gpt-oss-20b"]["provider"] == "together"
     assert model_rows["grok-4-1-fast-reasoning"]["provider"] == "xai"
 
-    assert "deepseek-r2" not in home_html
-    assert "deepseek-r2" not in models_html
-    assert "deepseek-r2" not in timeseries_html
-    assert "deepseek-r2" not in falsification_html
+    assert "llama-4-maverick" not in home_html
+    assert "llama-4-maverick" not in models_html
+    assert "llama-4-maverick" not in timeseries_html
+    assert "llama-4-maverick" not in falsification_html
     assert "gpt-5" in home_html
-    assert "gemini-2.5-pro" not in home_html
+    assert "deepseek-ai/DeepSeek-R1-0528" in home_html
     assert "openai/gpt-oss-20b" in models_html
+    assert "deepseek-ai/DeepSeek-R1-0528" in models_html
     assert "grok-4-1-fast-reasoning" in models_html
     assert "gpt-5" in models_html
-    assert "gemini-2.5-pro" not in models_html
+    assert "gemini-2.5-pro" in models_html

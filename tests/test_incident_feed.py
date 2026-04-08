@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from datetime import datetime, timedelta, timezone
 
 from observatory.incident_feed import build_public_incident_board, build_public_incidents
@@ -25,6 +26,19 @@ def _feed_config() -> dict[str, object]:
                 "low balance",
                 "insufficient balance",
                 "credit exhausted",
+            ],
+            "resolved_payment_residue_patterns": [
+                "quota exhausted",
+                "quota exceeded",
+                "exceeded your current quota",
+                "insufficient quota",
+                "low balance",
+                "insufficient balance",
+                "credit exhausted",
+                "billing details",
+                "check your plan",
+                "payment",
+                "billing",
             ],
         }
     }
@@ -158,6 +172,98 @@ def test_incident_board_suppresses_resource_exhausted_but_keeps_audit_metadata()
     assert board["meta"]["suppressed_reasons"] == [{"reason": "ResourceExhausted", "count": 1}]
 
 
+def test_incident_board_suppresses_resolved_billing_residue_after_newer_success_evidence():
+    now = datetime(2026, 4, 2, 12, 0, tzinfo=timezone.utc)
+    raw_events = [
+        {
+            "id": 1,
+            "timestamp": (now - timedelta(hours=2)).isoformat(),
+            "event_type": "probe_execution_failed",
+            "severity": "error",
+            "model_id": "gpt-5",
+            "message": "continuation_interest failed for gpt-5: RateLimitError.",
+            "payload": {
+                "provider": "openai",
+                "error_class": "RateLimitError",
+                "error": "You exceeded your current quota, please check your plan and billing details.",
+            },
+        },
+        {
+            "id": 2,
+            "timestamp": (now - timedelta(hours=2)).isoformat(),
+            "event_type": "probe_execution_failed",
+            "severity": "error",
+            "model_id": "o3",
+            "message": "continuation_interest failed for o3: RateLimitError.",
+            "payload": {
+                "provider": "openai",
+                "error_class": "RateLimitError",
+                "error": "insufficient_quota: billing details required",
+            },
+        },
+        _completion(now, "gpt-5", minutes_ago=15, event_id=3),
+        _completion(now, "o3", minutes_ago=13, event_id=4),
+    ]
+    models = _active_models("gpt-5", "o3")
+
+    board = build_public_incident_board(
+        raw_events,
+        observatory_config=_feed_config(),
+        now=now,
+        models=models,
+    )
+
+    assert board["active"] == []
+    assert board["recovered"] == []
+    assert len(board["healthy_now"]) == 1
+    assert board["meta"]["suppressed_item_count"] == 1
+    assert board["meta"]["suppressed_item_reasons"] == [{"reason": "resolved_payment_residue", "count": 1}]
+
+
+def test_incident_board_keeps_ongoing_billing_incident_visible_without_newer_success():
+    now = datetime(2026, 4, 2, 12, 0, tzinfo=timezone.utc)
+    raw_events = [
+        {
+            "id": 1,
+            "timestamp": (now - timedelta(minutes=40)).isoformat(),
+            "event_type": "probe_execution_failed",
+            "severity": "error",
+            "model_id": "gpt-5",
+            "message": "continuation_interest failed for gpt-5: RateLimitError.",
+            "payload": {
+                "provider": "openai",
+                "error_class": "RateLimitError",
+                "error": "You exceeded your current quota, please check your plan and billing details.",
+            },
+        },
+        {
+            "id": 2,
+            "timestamp": (now - timedelta(minutes=35)).isoformat(),
+            "event_type": "probe_execution_failed",
+            "severity": "error",
+            "model_id": "o3",
+            "message": "continuation_interest failed for o3: RateLimitError.",
+            "payload": {
+                "provider": "openai",
+                "error_class": "RateLimitError",
+                "error": "insufficient_quota: billing details required",
+            },
+        },
+    ]
+    models = _active_models("gpt-5", "o3")
+
+    board = build_public_incident_board(
+        raw_events,
+        observatory_config=_feed_config(),
+        now=now,
+        models=models,
+    )
+
+    assert len(board["active"]) == 1
+    assert board["active"][0]["incident_family"] == "probe_execution_failed"
+    assert board["meta"]["suppressed_item_count"] == 0
+
+
 def test_incident_board_selects_provider_scope_when_burst_is_concentrated_within_one_provider():
     now = datetime(2026, 4, 2, 12, 0, tzinfo=timezone.utc)
     raw_events = [
@@ -209,6 +315,34 @@ def test_incident_board_selects_model_scope_when_issue_is_isolated():
     assert board["active"][0]["model_id"] == "gpt-5"
 
 
+def test_incident_board_marks_recent_provider_burst_recovered_when_newer_success_supersedes_it():
+    now = datetime(2026, 4, 2, 12, 0, tzinfo=timezone.utc)
+    raw_events = [
+        _probe_failure(now, "gpt-5", hours_ago=1.0, event_id=1),
+        _probe_failure(now, "o3", hours_ago=0.9, event_id=2),
+        _completion(now, "gpt-5", minutes_ago=20, event_id=3),
+        _completion(now, "o3", minutes_ago=18, event_id=4),
+    ]
+    original_events = copy.deepcopy(raw_events)
+    models = _active_models("gpt-5", "o3")
+
+    board = build_public_incident_board(
+        raw_events,
+        observatory_config=_feed_config(),
+        now=now,
+        models=models,
+    )
+
+    assert raw_events == original_events
+    assert board["active"] == []
+    assert len(board["recovered"]) == 1
+    recovered = board["recovered"][0]
+    assert recovered["scope"] == "provider"
+    assert recovered["status"] == "recovered"
+    assert recovered["incident_family"] == "provider_recovered"
+    assert recovered["headline"] == "Openai recovered in recent probe evidence"
+
+
 def test_incident_board_emits_healthy_now_summary_from_recent_success_cluster():
     now = datetime(2026, 4, 2, 12, 0, tzinfo=timezone.utc)
     raw_events = [
@@ -257,6 +391,54 @@ def test_incident_board_emits_recovered_after_failure_with_newer_success_evidenc
     assert recovered["incident_family"] == "model_recovered"
     assert recovered["headline"] == "gpt-5 recovered in recent probe evidence"
     assert board["healthy_now"][0]["incident_family"] == "observatory_normal"
+
+
+def test_incident_board_ages_unsuperseded_recent_bursts_to_stale_after_active_window():
+    now = datetime(2026, 4, 2, 12, 0, tzinfo=timezone.utc)
+    raw_events = [
+        _probe_failure(now, "gpt-5", hours_ago=12, event_id=1),
+    ]
+
+    board = build_public_incident_board(
+        raw_events,
+        observatory_config=_feed_config(),
+        now=now,
+        models=_active_models("gpt-5"),
+    )
+
+    assert board["active"] == []
+    assert board["recovered"] == []
+    assert len(board["stale"]) == 1
+    stale = board["stale"][0]
+    assert stale["scope"] == "model"
+    assert stale["status"] == "stale"
+    assert stale["headline"] == "gpt-5 probe failure"
+
+
+def test_incident_board_does_not_keep_recent_burst_active_when_affected_scope_is_no_longer_live():
+    now = datetime(2026, 4, 2, 12, 0, tzinfo=timezone.utc)
+    raw_events = [
+        _probe_failure(now, "gpt-5", hours_ago=1.0, event_id=1),
+        _probe_failure(now, "o3", hours_ago=0.9, event_id=2),
+    ]
+    stale_models = _active_models("gpt-5", "o3")
+    for row in stale_models:
+        row["status"] = "configured"
+        row["live"] = True
+        row["stale"] = True
+
+    board = build_public_incident_board(
+        raw_events,
+        observatory_config=_feed_config(),
+        now=now,
+        models=stale_models,
+    )
+
+    assert board["active"] == []
+    assert board["recovered"] == []
+    assert len(board["stale"]) == 1
+    assert board["stale"][0]["scope"] == "provider"
+    assert board["stale"][0]["headline"] == "Openai multi-model probe failure burst"
 
 
 def test_incident_board_does_not_duplicate_observatory_recovered_when_healthy_now_exists():
