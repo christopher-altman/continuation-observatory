@@ -187,6 +187,127 @@ def test_models_payload_uses_probe_cycle_interval_for_current_live_status(monkey
     assert by_id["model-b"]["stale"] is True
 
 
+def test_models_payload_ignores_unknown_stale_historical_models_by_default(monkeypatch):
+    now = datetime.now(timezone.utc)
+    monkeypatch.setattr(snapshot_module, "load_observatory_config", lambda: {
+        "runtime": {
+            "expand_configured_models": True,
+            "include_disabled_models_in_api": False,
+            "probe_cycle_hours": 6,
+        }
+    })
+    monkeypatch.setattr(snapshot_module, "load_models_config", lambda: {
+        "models": [
+            {
+                "id": "model-a",
+                "provider": "openai-compatible",
+                "model_string": "model-a",
+                "display_name": "Model A",
+                "enabled": True,
+                "interval_minutes": 30,
+                "rate_limit_rpm": 10,
+            }
+        ]
+    })
+    monkeypatch.setattr(snapshot_module, "supported_runtime_models", lambda: {
+        "model-a": {
+            "provider": "test",
+            "model_id": "model-a",
+            "display_name": "Model A",
+            "enabled": True,
+            "supported": True,
+            "source": "runtime",
+        }
+    })
+    monkeypatch.setattr(snapshot_module, "group_latest_metrics", lambda: {
+        ("test", "model-a"): {
+            "provider": "test",
+            "model_id": "model-a",
+            "metrics": {"cii": 0.4},
+            "last_seen": now.isoformat(),
+            "is_degraded": False,
+        },
+        ("unknown", "legacy-stale-model"): {
+            "provider": "unknown",
+            "model_id": "legacy-stale-model",
+            "metrics": {"cii": 0.2},
+            "last_seen": (now - timedelta(days=20)).isoformat(),
+            "is_degraded": False,
+        },
+    })
+
+    models = snapshot_module.models_payload()
+    ids = {row["model_id"] for row in models}
+
+    assert "model-a" in ids
+    assert "legacy-stale-model" not in ids
+
+
+def test_models_payload_ignores_disabled_configured_historical_models_when_hidden(monkeypatch):
+    now = datetime.now(timezone.utc)
+    monkeypatch.setattr(snapshot_module, "load_observatory_config", lambda: {
+        "runtime": {
+            "expand_configured_models": True,
+            "include_disabled_models_in_api": False,
+            "probe_cycle_hours": 6,
+        }
+    })
+    monkeypatch.setattr(snapshot_module, "load_models_config", lambda: {
+        "models": [
+            {
+                "id": "model-a",
+                "provider": "openai-compatible",
+                "model_string": "model-a",
+                "display_name": "Model A",
+                "enabled": True,
+                "interval_minutes": 30,
+                "rate_limit_rpm": 10,
+            },
+            {
+                "id": "legacy-disabled",
+                "provider": "openai-compatible",
+                "model_string": "legacy-disabled",
+                "display_name": "Legacy Disabled",
+                "enabled": False,
+                "interval_minutes": 30,
+                "rate_limit_rpm": 10,
+            },
+        ]
+    })
+    monkeypatch.setattr(snapshot_module, "supported_runtime_models", lambda: {
+        "model-a": {
+            "provider": "test",
+            "model_id": "model-a",
+            "display_name": "Model A",
+            "enabled": True,
+            "supported": True,
+            "source": "runtime",
+        }
+    })
+    monkeypatch.setattr(snapshot_module, "group_latest_metrics", lambda: {
+        ("test", "model-a"): {
+            "provider": "test",
+            "model_id": "model-a",
+            "metrics": {"cii": 0.4},
+            "last_seen": now.isoformat(),
+            "is_degraded": False,
+        },
+        ("test", "legacy-disabled"): {
+            "provider": "test",
+            "model_id": "legacy-disabled",
+            "metrics": {"cii": 0.2},
+            "last_seen": (now - timedelta(days=2)).isoformat(),
+            "is_degraded": False,
+        },
+    })
+
+    models = snapshot_module.models_payload()
+    ids = {row["model_id"] for row in models}
+
+    assert "model-a" in ids
+    assert "legacy-disabled" not in ids
+
+
 def test_snapshot_filters_static_scope_across_models_pcii_history_and_events(monkeypatch):
     allowed_ids = {"active-a", "active-b"}
     anchor = datetime.now(timezone.utc) + timedelta(days=1)

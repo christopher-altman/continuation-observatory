@@ -169,6 +169,7 @@ def models_payload(allowed_model_ids: set[str] | None = None) -> list[dict[str, 
     runtime = supported_runtime_models()
     latest = group_latest_metrics()
     merged: dict[str, dict[str, Any]] = {}
+    surfaced_configured_model_ids: set[str] = set()
     include_disabled = observatory_config.get("runtime", {}).get("include_disabled_models_in_api", True)
     probe_cycle_minutes = get_probe_cycle_interval_minutes(observatory_config)
 
@@ -180,6 +181,7 @@ def models_payload(allowed_model_ids: set[str] | None = None) -> list[dict[str, 
                 continue
         elif not include_disabled and not spec.get("enabled", False):
             continue
+        surfaced_configured_model_ids.add(model_id)
         merged[model_id] = {
             "provider": resolved["effective_provider"],
             "model_id": model_id,
@@ -209,6 +211,12 @@ def models_payload(allowed_model_ids: set[str] | None = None) -> list[dict[str, 
             }
 
     for (provider, model_id), latest_entry in latest.items():
+        if (
+            model_id not in merged
+            and model_id not in runtime
+            and model_id not in surfaced_configured_model_ids
+        ):
+            continue
         if allowed_model_ids is not None and model_id not in allowed_model_ids:
             continue
         record = merged.setdefault(

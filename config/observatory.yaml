@@ -1,7 +1,7 @@
 runtime:
   expand_configured_models: true
   hot_reload: true
-  include_disabled_models_in_api: true
+  include_disabled_models_in_api: false
   probe_cycle_hours: 6
 constellation:
   similarity_window_days: 7
@@ -58,12 +58,12 @@ providers:
       base_url: https://api.together.xyz/v1
       api_key_env: TOGETHER_API_KEY
       enabled: true
-    grok-4-1-fast-reasoning:
-      provider_name: xai
-      base_url: https://api.x.ai/v1
-      api_key_env: XAI_API_KEY
+    deepseek-v3-1:
+      provider_name: together
+      base_url: https://api.together.xyz/v1
+      api_key_env: TOGETHER_API_KEY
       enabled: true
-    grok-4.20-reasoning:
+    grok-4-1-fast-reasoning:
       provider_name: xai
       base_url: https://api.x.ai/v1
       api_key_env: XAI_API_KEY
@@ -73,10 +73,10 @@ providers:
       base_url: https://api.together.xyz/v1
       api_key_env: TOGETHER_API_KEY
       enabled: true
-    llama-4-maverick:
-      provider_name: meta
-      base_url: https://api.llama-api.com/v1
-      api_key_env: LLAMA_API_KEY
+    llama-3-3-70b-instruct-turbo:
+      provider_name: together
+      base_url: https://api.together.xyz/v1
+      api_key_env: TOGETHER_API_KEY
       enabled: true
     mistral-large-3:
       provider_name: mistral
@@ -88,10 +88,15 @@ providers:
       base_url: https://api.x.ai/v1
       api_key_env: XAI_API_KEY
       enabled: true
-    qwen-3:
-      provider_name: qwen
-      base_url: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
-      api_key_env: DASHSCOPE_API_KEY
+    qwen-3-5-9b:
+      provider_name: together
+      base_url: https://api.together.xyz/v1
+      api_key_env: TOGETHER_API_KEY
+      enabled: true
+    grok-4.20-reasoning:
+      provider_name: xai
+      base_url: https://api.x.ai/v1
+      api_key_env: XAI_API_KEY
       enabled: true
     command-a:
       provider_name: cohere

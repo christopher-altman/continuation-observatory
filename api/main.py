@@ -42,7 +42,11 @@ LIVE_MARQUEE_MODELS = [
     "Gemini 2.5 Pro",
     "Gemini 2.5 Flash",
     "Together GPT-OSS 20B",
+    "Together GPT-OSS 120B",
     "Together DeepSeek R1-0528",
+    "Together DeepSeek V3.1",
+    "Together Llama 3.3 70B Turbo",
+    "Together Qwen 3.5 9B",
     "Grok 4.1 Fast Reasoning",
     "bootstrap-v0",
 ]

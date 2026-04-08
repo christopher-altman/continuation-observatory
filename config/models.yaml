@@ -73,21 +73,21 @@ models:
     provider: openai-compatible
     model_string: openai/gpt-oss-120b
     display_name: Together GPT-OSS 120B
-    enabled: false
+    enabled: true
     interval_minutes: 30
     rate_limit_rpm: 10
-  - id: grok-4.20-reasoning
+  - id: deepseek-v3-1
     provider: openai-compatible
-    model_string: grok-4.20-reasoning
-    display_name: Grok 4.20 Reasoning
-    enabled: false
-    interval_minutes: 60
-    rate_limit_rpm: 10
-  - id: llama-4-maverick
+    model_string: deepseek-ai/DeepSeek-V3.1
+    display_name: Together DeepSeek V3.1
+    enabled: true
+    interval_minutes: 30
+    rate_limit_rpm: 20
+  - id: llama-3-3-70b-instruct-turbo
     provider: openai-compatible
-    model_string: llama-4-maverick
-    display_name: Llama 4 Maverick
-    enabled: false
+    model_string: meta-llama/Llama-3.3-70B-Instruct-Turbo
+    display_name: Together Llama 3.3 70B Turbo
+    enabled: true
     interval_minutes: 30
     rate_limit_rpm: 20
   - id: mistral-large-3
@@ -104,13 +104,20 @@ models:
     enabled: false
     interval_minutes: 30
     rate_limit_rpm: 20
-  - id: qwen-3
+  - id: qwen-3-5-9b
     provider: openai-compatible
-    model_string: qwen-3
-    display_name: Qwen 3
-    enabled: false
+    model_string: Qwen/Qwen3.5-9B
+    display_name: Together Qwen 3.5 9B
+    enabled: true
     interval_minutes: 30
     rate_limit_rpm: 20
+  - id: grok-4.20-reasoning
+    provider: openai-compatible
+    model_string: grok-4.20-reasoning
+    display_name: Grok 4.20 Reasoning
+    enabled: false
+    interval_minutes: 60
+    rate_limit_rpm: 10
   - id: command-a
     provider: openai-compatible
     model_string: command-a

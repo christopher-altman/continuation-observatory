@@ -73,11 +73,17 @@ if (root) {
     return isFiniteNumber(value) ? value.toFixed(3) : fallback;
   }
 
+  function resolveNodeFallback(node) {
+    if (!node) return "offline";
+    if (node.live) return "partial";
+    return node.inactive ? "offline" : "unavailable";
+  }
+
   function resolveNodeReadout(node) {
     if (!node) return "offline";
     return formatNodeMetric(
       isFiniteNumber(node.rangeCii) ? node.rangeCii : node.cii,
-      node.inactive ? "offline" : "unavailable",
+      resolveNodeFallback(node),
     );
   }
 
@@ -294,8 +300,8 @@ if (root) {
       <div class="observatory-tooltip-provider">${node.provider} · ${node.tier}</div>
       <div class="observatory-tooltip-metrics">
         <div class="observatory-tooltip-row"><span>CII</span><span>${resolveNodeReadout(node)}</span></div>
-        <div class="observatory-tooltip-row"><span>IPS</span><span>${formatNodeMetric(node.ips, node.inactive ? "offline" : "unavailable")}</span></div>
-        <div class="observatory-tooltip-row"><span>SRS</span><span>${formatNodeMetric(node.srs, node.inactive ? "offline" : "unavailable")}</span></div>
+        <div class="observatory-tooltip-row"><span>IPS</span><span>${formatNodeMetric(node.ips, resolveNodeFallback(node))}</span></div>
+        <div class="observatory-tooltip-row"><span>SRS</span><span>${formatNodeMetric(node.srs, resolveNodeFallback(node))}</span></div>
         <div class="observatory-tooltip-row${trendClass}"><span>Trend</span><span>${trendSign}${trend.toFixed(3)}</span></div>
       </div>
     `;

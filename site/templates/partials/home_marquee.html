@@ -1,6 +1,7 @@
 {% set names = marquee_models if marquee_models is defined and marquee_models else [
   "Claude Haiku 4.5", "GPT-5", "OpenAI o3", "Gemini 2.5 Pro", "Gemini 2.5 Flash", "Together GPT-OSS 20B",
-  "Together DeepSeek R1-0528", "Grok 4.1 Fast Reasoning", "bootstrap-v0"
+  "Together GPT-OSS 120B", "Together DeepSeek R1-0528", "Together DeepSeek V3.1",
+  "Together Llama 3.3 70B Turbo", "Together Qwen 3.5 9B", "Grok 4.1 Fast Reasoning", "bootstrap-v0"
 ] %}
 {% set row_a = names %}
 {% set row_b = names[3:] + names[:3] %}
