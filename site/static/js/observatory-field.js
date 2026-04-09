@@ -201,20 +201,20 @@ if (root) {
       const rankNorm = sorted.length > 1 ? index / (sorted.length - 1) : 0;
       const providerBand = providerToBand.get(node.provider) || 0;
       const providerMid = (providers.length - 1) / 2;
-      const bandBias = (providerBand - providerMid) * 0.52;
-      const tierRadius = node.inactive ? 6.5 : tier === "flagship" ? 1.65 : tier === "secondary" ? 3.35 : 5.15;
-      const radius = tierRadius + rankNorm * 0.65 + (1 - scoreNorm) * 0.45 + (((baseHash * 7.13) % 1) - 0.5) * (node.inactive ? 0.8 : 0.42);
+      const bandBias = (providerBand - providerMid) * 0.36;
+      const tierRadius = node.inactive ? 5.2 : tier === "flagship" ? 1.15 : tier === "secondary" ? 2.35 : 3.45;
+      const radius = tierRadius + rankNorm * 0.42 + (1 - scoreNorm) * 0.28 + (((baseHash * 7.13) % 1) - 0.5) * (node.inactive ? 0.58 : 0.32);
       const angle = (baseHash * Math.PI * 2) + (index * 0.97) + providerBand * 0.18;
       const x = Math.cos(angle) * radius;
       const y = bandBias + Math.sin(angle * 1.18) * (tier === "flagship" ? 0.42 : tier === "secondary" ? 0.56 : 0.68) + (((baseHash * 13.1) % 1) - 0.5) * (node.inactive ? 0.35 : 0.18);
       const z = (node.inactive ? 1.8 : tier === "flagship" ? -1.2 : tier === "secondary" ? 0.1 : 1.2) + (node.rangeTrend || 0) * 2.1 + (((baseHash * 11.37) % 1) - 0.5) * (node.inactive ? 2.5 : tier === "outer" ? 1.5 : 0.95);
-      const inactiveScale = node.inactive ? 0.72 : 1;
+      const inactiveScale = node.inactive ? 0.76 : 1;
       return {
         ...node,
         tier,
-        size: (tier === "flagship" ? 0.44 + scoreNorm * 0.34 : tier === "secondary" ? 0.30 + scoreNorm * 0.22 : 0.19 + scoreNorm * 0.14) * inactiveScale,
-        haloScale: tier === "flagship" ? 2.85 : tier === "secondary" ? 2.15 : 1.56,
-        glow: tier === "flagship" ? 1 : tier === "secondary" ? 0.78 : 0.52,
+        size: (tier === "flagship" ? 0.62 + scoreNorm * 0.42 : tier === "secondary" ? 0.44 + scoreNorm * 0.28 : 0.30 + scoreNorm * 0.18) * inactiveScale,
+        haloScale: tier === "flagship" ? 2.24 : tier === "secondary" ? 1.76 : 1.28,
+        glow: tier === "flagship" ? 0.84 : tier === "secondary" ? 0.62 : 0.4,
         orbitPhase: baseHash * Math.PI * 2,
         driftSpeed: (0.4 + (((baseHash * 17.11) % 1) * 0.36)) * (node.inactive ? 0.3 : 1),
         trailEligible: !node.inactive && node.historyDepth >= 3,
@@ -461,17 +461,16 @@ if (root) {
         cy,
         rx: outerRadiusX * 1.22,
         ry: outerRadiusY * 1.18,
-        fill: "rgba(78, 120, 198, 0.035)",
+        fill: "rgba(78, 120, 198, 0.052)",
         stroke: "none",
       });
-
       const sectorLeft = createSvgElement("path", {
         d: [
           `M ${cx} ${cy}`,
           describeArc(cx, cy, outerRadiusX * 0.94, outerRadiusY * 0.94, 212, 302),
           "Z",
         ].join(" "),
-        fill: "rgba(112, 173, 234, 0.05)",
+        fill: "rgba(112, 173, 234, 0.038)",
         stroke: "none",
       });
       const sectorRight = createSvgElement("path", {
@@ -480,9 +479,10 @@ if (root) {
           describeArc(cx, cy, outerRadiusX * 0.82, outerRadiusY * 0.82, 34, 108),
           "Z",
         ].join(" "),
-        fill: "rgba(160, 198, 244, 0.035)",
+        fill: "rgba(160, 198, 244, 0.03)",
         stroke: "none",
       });
+
       const outerEllipse = createSvgElement("ellipse", {
         cx,
         cy,
@@ -552,9 +552,10 @@ if (root) {
       );
 
       [
-        { rx: outerRadiusX * 1.18, ry: outerRadiusY * 1.12, start: 192, end: 346, width: "0.82", opacity: "0.44" },
-        { rx: outerRadiusX * 1.26, ry: outerRadiusY * 1.2, start: 206, end: 332, width: "0.78", opacity: "0.32" },
-        { rx: outerRadiusX * 0.72, ry: outerRadiusY * 0.72, start: 26, end: 156, width: "0.76", opacity: "0.28" },
+        { rx: outerRadiusX * 1.12, ry: outerRadiusY * 1.05, start: 196, end: 346, width: "0.92", opacity: "0.42" },
+        { rx: outerRadiusX * 1.22, ry: outerRadiusY * 1.14, start: 204, end: 336, width: "0.8", opacity: "0.28" },
+        { rx: outerRadiusX * 0.76, ry: outerRadiusY * 0.76, start: 26, end: 158, width: "0.76", opacity: "0.22" },
+        { rx: outerRadiusX * 0.56, ry: outerRadiusY * 0.56, start: 18, end: 148, width: "0.68", opacity: "0.14" },
       ].forEach((band) => {
         this.staticGroup.append(createSvgElement("path", {
           d: describeArc(cx, cy, band.rx, band.ry, band.start, band.end),
@@ -564,7 +565,7 @@ if (root) {
         }));
       });
 
-      [-62, -38, -18, 18, 38, 62].forEach((angle) => {
+      [-60, -36, -18, 18, 36, 60].forEach((angle) => {
         const start = polarPoint(cx, cy, midRadiusX * 0.96, midRadiusY * 0.96, angle);
         const end = polarPoint(cx, cy, outerRadiusX * 1.06, outerRadiusY * 1.06, angle);
         this.staticGroup.append(createSvgElement("line", {
@@ -572,53 +573,59 @@ if (root) {
           y1: start.y,
           x2: end.x,
           y2: end.y,
-          "stroke-width": "0.8",
-          opacity: angle === -18 || angle === 18 ? "0.82" : "0.54",
+          "stroke-width": angle === -18 || angle === 18 ? "0.84" : "0.7",
+          opacity: angle === -18 || angle === 18 ? "0.56" : "0.34",
         }));
       });
 
-      for (let index = 0; index < 16; index += 1) {
+      for (let index = 0; index < 14; index += 1) {
         const angle = 196 + (index * 10);
-        const start = polarPoint(cx, cy, outerRadiusX * 1.03, outerRadiusY * 1.03, angle);
-        const end = polarPoint(cx, cy, outerRadiusX * (index % 4 === 0 ? 1.13 : 1.08), outerRadiusY * (index % 4 === 0 ? 1.13 : 1.08), angle);
+        const start = polarPoint(cx, cy, outerRadiusX * 1.02, outerRadiusY * 1.02, angle);
+        const end = polarPoint(
+          cx,
+          cy,
+          outerRadiusX * (index % 4 === 0 ? 1.13 : 1.08),
+          outerRadiusY * (index % 4 === 0 ? 1.13 : 1.08),
+          angle,
+        );
         this.staticGroup.append(createSvgElement("line", {
           x1: start.x,
           y1: start.y,
           x2: end.x,
           y2: end.y,
-          "stroke-width": index % 4 === 0 ? "1.2" : "0.72",
-          opacity: index % 4 === 0 ? "0.74" : "0.46",
+          "stroke-width": index % 4 === 0 ? "1.04" : "0.68",
+          opacity: index % 4 === 0 ? "0.52" : "0.3",
         }));
       }
 
-      [0.22, 0.33, 0.44, 0.55, 0.66, 0.77].forEach((ratio) => {
+      [0.26, 0.38, 0.5, 0.62, 0.74].forEach((ratio) => {
         const y = this.height * ratio;
         this.staticGroup.append(createSvgElement("line", {
           x1: this.width * 0.08,
           y1: y,
           x2: this.width * 0.16,
           y2: y,
-          "stroke-width": "0.7",
-          opacity: "0.36",
+          "stroke-width": "0.64",
+          opacity: "0.24",
         }));
         this.staticGroup.append(createSvgElement("line", {
           x1: this.width * 0.84,
           y1: y,
           x2: this.width * 0.92,
           y2: y,
-          "stroke-width": "0.7",
-          opacity: "0.36",
+          "stroke-width": "0.64",
+          opacity: "0.24",
         }));
       });
 
-      [0.68, 0.74, 0.8, 0.86].forEach((ratio) => {
+      [0.7, 0.76, 0.82, 0.88].forEach((ratio) => {
         this.staticGroup.append(createSvgElement("line", {
-          x1: this.width * 0.12,
+          x1: this.width * 0.14,
           y1: this.height * ratio,
-          x2: this.width * 0.88,
+          x2: this.width * 0.86,
           y2: this.height * ratio,
           "stroke-width": "0.6",
-          opacity: ratio === 0.8 ? "0.42" : "0.22",
+          opacity: ratio === 0.82 ? "0.34" : "0.2",
         }));
       });
 
@@ -649,13 +656,13 @@ if (root) {
       const progress = this.reducedMotion
         ? 1
         : clamp((time - this.focusChangedAt) / 760, 0, 1);
-      const settleRadius = target.radius || 72;
-      const radiusX = settleRadius * (0.98 + (1 - progress) * 0.22);
-      const radiusY = settleRadius * (0.76 + (1 - progress) * 0.16);
+      const settleRadius = (target.radius || 72) * 1.08;
+      const radiusX = settleRadius * (1.08 + (1 - progress) * 0.24);
+      const radiusY = settleRadius * (0.84 + (1 - progress) * 0.18);
       const rotation = this.reducedMotion ? 26 : (progress * 28) + ((time * 0.018) % 360);
       const counterRotation = this.reducedMotion ? -18 : (-progress * 36) - ((time * 0.022) % 360);
-      const bracketOffset = (settleRadius * 0.82) + (1 - progress) * 18;
-      const bracketLength = 10 + progress * 14;
+      const bracketOffset = (settleRadius * 0.92) + (1 - progress) * 20;
+      const bracketLength = 12 + progress * 18;
       const scanProgress = this.reducedMotion ? 0.88 : Math.min(1, progress * 1.45);
       const scanCenter = target.x - radiusX - 30 + ((radiusX * 2) + 60) * scanProgress;
       const annotationLabel = (meta.labelPrimary || meta.label || "").toUpperCase();
@@ -667,11 +674,11 @@ if (root) {
       ].filter(Boolean).join(" · ");
       const annotationWidth = clamp(
         Math.max(206 + (annotationLabel.length * 5.8), 180 + (annotationMetaText.length * 3.2)),
-        236,
-        340,
+        244,
+        352,
       );
-      const annotationX = Math.min(this.width - annotationWidth - 18, target.x + radiusX + 30);
-      const annotationY = Math.max(52, target.y - radiusY - 54);
+      const annotationX = Math.min(this.width - annotationWidth - 18, target.x + radiusX + 34);
+      const annotationY = Math.max(48, target.y - radiusY - 60);
 
       this.focusGroup.setAttribute("opacity", "1");
 
@@ -679,8 +686,8 @@ if (root) {
 
       this.focusEcho.setAttribute("cx", target.x);
       this.focusEcho.setAttribute("cy", target.y);
-      this.focusEcho.setAttribute("rx", radiusX * 1.04);
-      this.focusEcho.setAttribute("ry", radiusY * 1.04);
+      this.focusEcho.setAttribute("rx", radiusX * 1.08);
+      this.focusEcho.setAttribute("ry", radiusY * 1.08);
 
       this.focusRing.setAttribute("cx", target.x);
       this.focusRing.setAttribute("cy", target.y);
@@ -689,21 +696,21 @@ if (root) {
 
       this.counterRingA.setAttribute("cx", target.x);
       this.counterRingA.setAttribute("cy", target.y);
-      this.counterRingA.setAttribute("rx", radiusX * 0.84);
-      this.counterRingA.setAttribute("ry", radiusY * 0.84);
+      this.counterRingA.setAttribute("rx", radiusX * 0.88);
+      this.counterRingA.setAttribute("ry", radiusY * 0.88);
       this.counterRingA.setAttribute("transform", `rotate(${rotation} ${target.x} ${target.y})`);
 
       this.counterRingB.setAttribute("cx", target.x);
       this.counterRingB.setAttribute("cy", target.y);
-      this.counterRingB.setAttribute("rx", radiusX * 1.1);
-      this.counterRingB.setAttribute("ry", radiusY * 1.1);
+      this.counterRingB.setAttribute("rx", radiusX * 1.16);
+      this.counterRingB.setAttribute("ry", radiusY * 1.16);
       this.counterRingB.setAttribute("transform", `rotate(${counterRotation} ${target.x} ${target.y})`);
 
       this.focusSweep.setAttribute(
         "d",
-        describeArc(target.x, target.y, radiusX * 1.16, radiusY * 1.16, 18, 18 + (progress * 292)),
+        describeArc(target.x, target.y, radiusX * 1.22, radiusY * 1.22, 14, 14 + (progress * 314)),
       );
-      this.focusSweep.setAttribute("opacity", `${0.62 + (progress * 0.3)}`);
+      this.focusSweep.setAttribute("opacity", `${0.68 + (progress * 0.28)}`);
 
       this.bracketNorthWest.setAttribute("d", `M ${target.x - bracketOffset} ${target.y - bracketOffset * 0.84} h ${bracketLength} M ${target.x - bracketOffset} ${target.y - bracketOffset * 0.84} v ${bracketLength}`);
       this.bracketNorthEast.setAttribute("d", `M ${target.x + bracketOffset} ${target.y - bracketOffset * 0.84} h -${bracketLength} M ${target.x + bracketOffset} ${target.y - bracketOffset * 0.84} v ${bracketLength}`);
@@ -889,7 +896,7 @@ if (root) {
         const ringMaterial = new THREE.LineDashedMaterial({
           color: index === 0 ? 0xd6ebff : 0x79abff,
           transparent: true,
-          opacity: index === 0 ? 0.28 : 0.2 - ((index - 1) * 0.02),
+          opacity: index === 0 ? 0.34 : 0.24 - ((index - 1) * 0.025),
           dashSize: index === 0 ? 0.12 : 0.28,
           gapSize: index === 0 ? 0.08 : 0.16,
           depthWrite: false,
@@ -1829,9 +1836,9 @@ if (root) {
       group.visible = false;
       const focusTilt = 0.05;
 
-      const sphereRadius = node.size * 1.76;
-      const bezelRadius = sphereRadius * 1.26;
-      const tickRadius = bezelRadius * 1.08;
+      const sphereRadius = node.size * 1.92;
+      const bezelRadius = sphereRadius * 1.28;
+      const tickRadius = bezelRadius * 1.1;
 
       const sphere = new THREE.Mesh(
         new THREE.SphereGeometry(sphereRadius, 40, 40),
@@ -2229,6 +2236,7 @@ if (root) {
         { aspectX: 0.98, aspectY: 0.74, primaryFreq: 2.8, secondaryFreq: 4.2, radialAmplitude: 0.06, secondaryAmplitude: 0.03, depthFreq: 2.0, depthAmplitude: 0.2, phase: node.orbitPhase + 0.34, rotationX: 0.98, rotationY: 0.18, rotationZ: -0.22, opacity: 0.78, speed: 0.12, wobbleSpeed: 0.52, scaleAmplitude: 0.035, emissiveBias: 0.18 },
         { aspectX: 0.88, aspectY: 0.58, primaryFreq: 3.2, secondaryFreq: 5.1, radialAmplitude: 0.08, secondaryAmplitude: 0.04, depthFreq: 1.6, depthAmplitude: 0.24, phase: node.orbitPhase + 1.18, rotationX: 0.46, rotationY: 0.82, rotationZ: 0.24, opacity: 0.62, speed: -0.09, wobbleSpeed: 0.44, scaleAmplitude: 0.03, emissiveBias: 0.08 },
         { aspectX: 0.78, aspectY: 0.66, primaryFreq: 2.1, secondaryFreq: 4.6, radialAmplitude: 0.05, secondaryAmplitude: 0.028, depthFreq: 2.8, depthAmplitude: 0.16, phase: node.orbitPhase + 2.12, rotationX: 1.32, rotationY: 0.24, rotationZ: -0.58, opacity: 0.48, speed: 0.07, wobbleSpeed: 0.36, scaleAmplitude: 0.024, emissiveBias: -0.04 },
+        { aspectX: 0.66, aspectY: 0.48, primaryFreq: 3.6, secondaryFreq: 5.6, radialAmplitude: 0.04, secondaryAmplitude: 0.026, depthFreq: 2.4, depthAmplitude: 0.14, phase: node.orbitPhase + 2.86, rotationX: 0.72, rotationY: 1.08, rotationZ: 0.12, opacity: 0.36, speed: -0.06, wobbleSpeed: 0.58, scaleAmplitude: 0.02, emissiveBias: 0.12 },
       ];
       const contourBands = contourConfigs.map((config) => {
         const line = this.createFocusedContour(
@@ -2471,6 +2479,41 @@ if (root) {
       siriRim3.rotation.set(0.18, 1.12, -0.32);
       group.add(siriRim3);
 
+      /* ── Lock-local telemetry arcs — near-center acquisition grammar ── */
+      const telemetryArcConfigs = [
+        { radius: sphereRadius * 0.54, startAngle: 0.22, sweepAngle: 0.58, segments: 18, opacity: 0.16, speed: 0.018, color: palette.tick },
+        { radius: sphereRadius * 0.6, startAngle: 1.52, sweepAngle: 0.48, segments: 16, opacity: 0.12, speed: -0.015, color: palette.tickSoft },
+        { radius: sphereRadius * 0.48, startAngle: 3.1, sweepAngle: 0.64, segments: 20, opacity: 0.14, speed: 0.02, color: palette.metalLight },
+        { radius: sphereRadius * 0.66, startAngle: 4.74, sweepAngle: 0.42, segments: 14, opacity: 0.1, speed: -0.012, color: palette.tick },
+      ];
+      const telemetryArcs = telemetryArcConfigs.map((config) => {
+        const points = [];
+        for (let i = 0; i <= config.segments; i += 1) {
+          const angle = config.startAngle + (i / config.segments) * config.sweepAngle;
+          points.push(new THREE.Vector3(
+            Math.cos(angle) * config.radius,
+            Math.sin(angle) * config.radius,
+            0,
+          ));
+        }
+        const line = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(points),
+          new THREE.LineBasicMaterial({
+            color: config.color,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+          }),
+        );
+        line.rotation.x = bezel.rotation.x;
+        group.add(line);
+        return {
+          line,
+          baseOpacity: config.opacity,
+          speed: config.speed,
+        };
+      });
+
       /* ── JARVIS-inspired chassis arcs — segmented precision decoration ── */
       const chassisArcConfigs = [
         { radius: bezelRadius * 1.14, startAngle: 0.4, sweepAngle: 1.8, segments: 48, opacity: 0.18, speed: -0.02, color: palette.tickSoft },
@@ -2533,6 +2576,7 @@ if (root) {
         irisBlades,
         irisGlowRing,
         irisOuterGlowRing,
+        telemetryArcs,
         siriRibbons,
         siriGlowSphere,
         siriCenter,
@@ -2553,14 +2597,14 @@ if (root) {
       const palette = this.buildOrbPalette(node);
       const isInactive = Boolean(node.inactive);
 
-      /* ── Hero-style wireframe sphere cage (primary visual element) ── */
+      /* ── Wireframe sphere cage — supporting contour, not the primary read ── */
       const tierDetail = node.tier === "flagship" ? 2 : 1;
       const icoGeo = new THREE.IcosahedronGeometry(node.size * 1.0, tierDetail);
       const edgesGeo = new THREE.EdgesGeometry(icoGeo, 1);
 
       const wireOpacity = isInactive
-        ? (node.tier === "flagship" ? 0.24 : node.tier === "secondary" ? 0.18 : 0.12)
-        : (node.tier === "flagship" ? 0.54 : node.tier === "secondary" ? 0.42 : 0.28);
+        ? (node.tier === "flagship" ? 0.14 : node.tier === "secondary" ? 0.11 : 0.08)
+        : (node.tier === "flagship" ? 0.22 : node.tier === "secondary" ? 0.17 : 0.12);
       const wireframe = new THREE.LineSegments(
         edgesGeo,
         new THREE.LineBasicMaterial({
@@ -2573,18 +2617,18 @@ if (root) {
       wireframe.userData.modelId = node.id;
       group.add(wireframe);
 
-      /* ── Shell sphere — faint dark fill for silhouette/depth ── */
+      /* ── Shell sphere — primary body mass for idle readability ── */
       const shellOpacity = isInactive
-        ? (node.tier === "flagship" ? 0.12 : 0.07)
-        : (node.tier === "flagship" ? 0.22 : node.tier === "secondary" ? 0.17 : 0.11);
+        ? (node.tier === "flagship" ? 0.26 : 0.18)
+        : (node.tier === "flagship" ? 0.5 : node.tier === "secondary" ? 0.38 : 0.28);
       const shell = new THREE.Mesh(
-        new THREE.IcosahedronGeometry(node.size * 0.98, tierDetail),
+        new THREE.SphereGeometry(node.size * 0.94, 24, 24),
         new THREE.MeshBasicMaterial({
           color: palette.shell,
           transparent: true,
           opacity: shellOpacity,
           depthWrite: false,
-          side: THREE.BackSide,
+          side: THREE.DoubleSide,
         }),
       );
       group.add(shell);
@@ -2598,8 +2642,8 @@ if (root) {
       group.add(hitSphere);
 
       /* ── Ghost sphere — subtle additive glow, tightly scaled ── */
-      const ghostOpacity = isInactive ? 0.02
-        : (node.tier === "flagship" ? 0.07 : node.tier === "secondary" ? 0.05 : 0.03);
+      const ghostOpacity = isInactive ? 0.012
+        : (node.tier === "flagship" ? 0.036 : node.tier === "secondary" ? 0.028 : 0.018);
       const ghost = new THREE.Mesh(
         new THREE.IcosahedronGeometry(node.size * 1.02, tierDetail),
         new THREE.MeshBasicMaterial({
@@ -2654,11 +2698,11 @@ if (root) {
 
       /* ── Center node — bright core point (hero centerNode style) ── */
       const centerNode = new THREE.Mesh(
-        new THREE.SphereGeometry(node.size * 0.12, 12, 12),
+        new THREE.SphereGeometry(node.size * 0.2, 12, 12),
         new THREE.MeshBasicMaterial({
           color: palette.nucleus,
           transparent: true,
-          opacity: isInactive ? 0.26 : 0.56,
+          opacity: isInactive ? 0.38 : 0.84,
           depthWrite: false,
         }),
       );
@@ -2677,7 +2721,7 @@ if (root) {
           new THREE.MeshBasicMaterial({
             color: palette.ring,
             transparent: true,
-            opacity: node.tier === "flagship" ? 0.25 : node.tier === "secondary" ? 0.20 : 0.14,
+            opacity: node.tier === "flagship" ? 0.062 : node.tier === "secondary" ? 0.046 : 0.028,
             depthWrite: false,
           }),
         );
@@ -2694,11 +2738,11 @@ if (root) {
           new THREE.MeshStandardMaterial({
             color: 0x000000,
             emissive: palette.ring,
-            emissiveIntensity: node.tier === "flagship" ? 0.62 : node.tier === "secondary" ? 0.42 : 0.16,
+            emissiveIntensity: node.tier === "flagship" ? 0.52 : node.tier === "secondary" ? 0.34 : 0.16,
             roughness: 0.4,
             metalness: 0.0,
             transparent: true,
-            opacity: node.tier === "flagship" ? 0.33 : node.tier === "secondary" ? 0.21 : 0.06,
+            opacity: node.tier === "flagship" ? 0.052 : node.tier === "secondary" ? 0.034 : 0.016,
           }),
         );
         accentRing.rotation.x = 1.0;
@@ -2714,7 +2758,7 @@ if (root) {
           new THREE.MeshBasicMaterial({
             color: palette.lobes[1],
             transparent: true,
-            opacity: 0.16,
+            opacity: 0.038,
           }),
         );
         orbitRing.rotation.x = 1.38;
@@ -2726,7 +2770,7 @@ if (root) {
       let focusRing = null;
       if (!isInactive && (node.tier !== "outer" || this.nodes.length <= 20)) {
         focusRing = new THREE.Mesh(
-          new THREE.TorusGeometry(node.size * 3.2, node.size * 0.02, 6, 48),
+          new THREE.TorusGeometry(node.size * 3.7, node.size * 0.022, 6, 56),
           new THREE.MeshBasicMaterial({
             color: palette.ring,
             transparent: true,
@@ -2750,7 +2794,7 @@ if (root) {
       ];
       const metricBands = (node.ringMetrics || []).map((metric, index) => {
         const band = this.createMetricBand(
-          node.size * (3.58 + index * 0.42),
+          node.size * (3.82 + index * 0.46),
           metricBandColors[index % metricBandColors.length].getHex(),
           0.08 - index * 0.01,
         );
@@ -2840,7 +2884,7 @@ if (root) {
       this.shell.classList.toggle("is-compare-mode", Boolean(this.modes.compare));
       this.shell.classList.toggle("is-threshold-muted", !this.modes.threshold);
       this.measurementRings.forEach((ring, index) => {
-        ring.material.opacity = this.modes.threshold ? (0.22 - index * 0.03) : 0.05;
+        ring.material.opacity = this.modes.threshold ? (0.2 - index * 0.03) : 0.05;
       });
       this.renderLabels();
     }
@@ -2854,8 +2898,8 @@ if (root) {
 
       let selectedEdges = [];
       if (this.focusId) {
-        selectedEdges = topNeighbors(this.payload, this.focusId, 3).map((neighborId) => {
-          return { source: this.focusId, target: neighborId, passive: false };
+        selectedEdges = topNeighbors(this.payload, this.focusId, 4).map((neighborId) => {
+          return { source: this.focusId, target: neighborId, passive: false, opacityBase: 0.2 };
         });
       } else if (this.modes.compare) {
         const limit = this.nodeLookup.size > 18 ? 8 : 12;
@@ -2864,7 +2908,16 @@ if (root) {
           .sort(function (left, right) { return right.similarity - left.similarity; })
           .slice(0, limit)
           .map(function (edge) {
-            return { source: edge.source, target: edge.target, passive: true };
+            return { source: edge.source, target: edge.target, passive: true, opacityBase: 0.08 };
+          });
+      } else {
+        const limit = this.nodeLookup.size > 18 ? 4 : 6;
+        selectedEdges = edges
+          .slice()
+          .sort(function (left, right) { return right.similarity - left.similarity; })
+          .slice(0, limit)
+          .map(function (edge) {
+            return { source: edge.source, target: edge.target, passive: true, opacityBase: 0.05 };
           });
       }
 
@@ -2893,6 +2946,7 @@ if (root) {
           fromId: edge.source,
           toId: edge.target,
           passive: edge.passive,
+          opacityBase: edge.opacityBase,
           line: guideLine,
         });
       });
@@ -2908,9 +2962,9 @@ if (root) {
       });
       if (!eligibleNodes.length) return;
 
-      const maxTrailNodes = this.nodeLookup.size > 18 ? (this.focusId ? 4 : 0) : this.focusId ? 4 : 8;
+      const maxTrailNodes = this.nodeLookup.size > 18 ? (this.focusId ? 5 : 4) : this.focusId ? 5 : 9;
       const trailNodes = this.focusId
-        ? eligibleNodes.filter((node) => node.id === this.focusId || topNeighbors(this.payload, this.focusId, 3).includes(node.id)).slice(0, maxTrailNodes)
+        ? eligibleNodes.filter((node) => node.id === this.focusId || topNeighbors(this.payload, this.focusId, 4).includes(node.id)).slice(0, maxTrailNodes)
         : eligibleNodes.slice(0, maxTrailNodes);
 
       trailNodes.forEach((node) => {
@@ -2942,7 +2996,7 @@ if (root) {
       this.lastInteractionAt = performance.now();
       this._clientX = event.clientX;
       this._clientY = event.clientY;
-      this.updateHover();
+      this.updateHover(event.clientX, event.clientY);
     }
 
     onPointerLeave() {
@@ -2955,15 +3009,17 @@ if (root) {
       this.tooltip.style.display = "none";
     }
 
-    onPointerDown() {
+    onPointerDown(event) {
       this.shell.focus({ preventScroll: true });
       this.lastInteractionAt = performance.now();
-      if (!this.hoverId) {
+      const pickedNode = this.pickNodeAtClientPoint(event.clientX, event.clientY);
+      this.hoverId = pickedNode ? pickedNode.modelId : null;
+      if (!pickedNode) {
         window.dispatchEvent(new CustomEvent("observatory:clear-focus"));
         return;
       }
       window.dispatchEvent(new CustomEvent("observatory:focus-model", {
-        detail: { modelId: this.focusId === this.hoverId ? null : this.hoverId },
+        detail: { modelId: this.focusId === pickedNode.modelId ? null : pickedNode.modelId },
       }));
     }
 
@@ -2977,14 +3033,12 @@ if (root) {
       if (event.key === "ArrowDown") this.keyVelocity.y = clamp(this.keyVelocity.y - 0.011, -0.06, 0.06);
     }
 
-    updateHover() {
-      this.raycaster.setFromCamera(this.mouse, this.camera);
-      const intersections = this.raycaster.intersectObjects(
-        Array.from(this.nodeLookup.values()).map((entry) => entry.hitSphere),
-        false,
-      );
+    updateHover(clientX = this._clientX, clientY = this._clientY) {
       const prevHover = this.hoverId;
-      this.hoverId = intersections.length ? intersections[0].object.userData.modelId : null;
+      const pickedNode = typeof clientX === "number" && typeof clientY === "number"
+        ? this.pickNodeAtClientPoint(clientX, clientY)
+        : null;
+      this.hoverId = pickedNode ? pickedNode.modelId : null;
 
       /* Cursor change */
       this.renderer.domElement.style.cursor = this.hoverId ? "pointer" : "";
@@ -3055,7 +3109,7 @@ if (root) {
         const breathe = 1.0 + Math.sin(slowTime * breatheRate + entry.node.orbitPhase) * breatheAmp;
 
         const dimScale = isInactive ? 0.65 : 0.78;
-        const targetScale = (focused ? 1.72 : hovered ? 1.22 : dimmed ? dimScale : 1) * breathe;
+        const targetScale = (focused ? 1.74 : hovered ? 1.24 : dimmed ? dimScale : 1) * breathe;
         entry.group.scale.setScalar(lerp(entry.group.scale.x, targetScale, 0.12));
 
         /* ── Wireframe sphere rotation ── */
@@ -3066,37 +3120,37 @@ if (root) {
 
         /* ── Wireframe opacity ── */
         if (entry.wireframe) {
-          const wireTarget = focused ? (isInactive ? 0.06 + focusLevel * 0.025 : 0.16 + focusLevel * 0.06)
-            : hovered ? entry.baseWireOpacity * 1.5
-            : dimmed ? entry.baseWireOpacity * (isInactive ? 0.28 : 0.52)
-            : entry.baseWireOpacity;
+          const wireTarget = focused ? (isInactive ? 0.04 + focusLevel * 0.02 : 0.1 + focusLevel * 0.05)
+            : hovered ? entry.baseWireOpacity * 1.2
+            : dimmed ? entry.baseWireOpacity * (isInactive ? 0.24 : 0.32)
+            : entry.baseWireOpacity * 0.6;
           entry.wireframe.material.opacity = lerp(entry.wireframe.material.opacity, wireTarget, 0.1);
         }
 
         /* ── Shell opacity ── */
         if (entry.shell) {
-          const shellTarget = focused ? entry.baseShellOpacity * (isInactive ? 0.34 : 0.96)
-            : hovered ? entry.baseShellOpacity * 1.8
-            : dimmed ? entry.baseShellOpacity * (isInactive ? 0.28 : 0.42)
-            : entry.baseShellOpacity;
+          const shellTarget = focused ? entry.baseShellOpacity * (isInactive ? 0.72 : 1.26)
+            : hovered ? entry.baseShellOpacity * 1.48
+            : dimmed ? entry.baseShellOpacity * (isInactive ? 0.36 : 0.58)
+            : entry.baseShellOpacity * 1.2;
           entry.shell.material.opacity = lerp(entry.shell.material.opacity, shellTarget, 0.08);
         }
 
         /* ── Ghost opacity ── */
         if (entry.ghost) {
           const ghostTarget = focused ? 0
-            : hovered ? entry.baseGhostOpacity * 1.6
+            : hovered ? entry.baseGhostOpacity * 1.18
             : dimmed ? 0
-            : entry.baseGhostOpacity;
+            : entry.baseGhostOpacity * 0.56;
           entry.ghost.material.opacity = lerp(entry.ghost.material.opacity, ghostTarget, 0.1);
         }
 
         /* ── Center node ── */
         if (entry.centerNode) {
-          const centerTarget = focused ? 0.16
-            : hovered ? entry.baseCenterOpacity * 1.4
-            : dimmed ? entry.baseCenterOpacity * 0.48
-            : entry.baseCenterOpacity;
+          const centerTarget = focused ? 0.24
+            : hovered ? entry.baseCenterOpacity * 1.28
+            : dimmed ? entry.baseCenterOpacity * 0.54
+            : entry.baseCenterOpacity * 1.18;
           entry.centerNode.material.opacity = lerp(entry.centerNode.material.opacity, centerTarget, 0.12);
         }
 
@@ -3105,7 +3159,10 @@ if (root) {
           entry.nodeContours.forEach((contour) => {
             contour.line.material.opacity = lerp(
               contour.line.material.opacity,
-              focused ? 0.02 : hovered ? contour.baseOpacity * 1.4 : dimmed ? contour.baseOpacity * 0.30 : contour.baseOpacity,
+              focused ? contour.baseOpacity * 1.02
+                : hovered ? contour.baseOpacity * 1.42
+                : dimmed ? contour.baseOpacity * 0.24
+                : contour.baseOpacity * 0.98,
               0.1,
             );
             if (!reducedMotion) {
@@ -3119,8 +3176,10 @@ if (root) {
         if (entry.guideRing) {
           entry.guideRing.material.opacity = lerp(
             entry.guideRing.material.opacity,
-            focused ? 0.04 : hovered ? 0.18 : dimmed ? 0.015 :
-              entry.node.tier === "flagship" ? 0.18 : entry.node.tier === "secondary" ? 0.14 : 0.1,
+            focused ? 0.22 + focusLevel * 0.1
+              : hovered ? 0.18
+              : dimmed ? 0.012
+              : entry.node.tier === "flagship" ? 0.1 : entry.node.tier === "secondary" ? 0.078 : 0.048,
             0.09,
           );
           entry.guideRing.rotation.y += focused ? 0.014 : 0.006;
@@ -3131,7 +3190,7 @@ if (root) {
         if (entry.focusRing) {
           entry.focusRing.material.opacity = lerp(
             entry.focusRing.material.opacity,
-            focused ? 0.02 : 0,
+            focused ? 0.3 + focusLevel * 0.12 : hovered ? 0.05 : 0,
             0.06,
           );
           if (focused) entry.focusRing.rotation.z -= 0.008;
@@ -3139,7 +3198,7 @@ if (root) {
 
         /* ── Metric bands ── */
         if (entry.metricBands && entry.metricBandGroup) {
-          const revealTarget = focused ? focusReveal : 0;
+          const revealTarget = focused ? focusReveal : hovered ? 0.22 : 0;
           entry.metricBandGroup.visible = revealTarget > 0.01 || entry.metricBands.some(function (band) {
             return band.reveal > 0.01;
           });
@@ -3155,12 +3214,12 @@ if (root) {
             );
             band.track.material.opacity = lerp(
               band.track.material.opacity,
-              focused ? Math.max(0.1, 0.14 - index * 0.015) : 0,
+              focused ? Math.max(0.14, 0.18 - index * 0.016) : hovered ? Math.max(0.03, 0.06 - index * 0.008) : 0,
               0.12,
             );
             band.active.material.opacity = lerp(
               band.active.material.opacity,
-              focused ? Math.max(0.18, 0.5 - index * 0.055) * band.reveal : 0,
+              focused ? Math.max(0.24, 0.62 - index * 0.06) * band.reveal : hovered ? Math.max(0.05, 0.12 - index * 0.012) * band.reveal : 0,
               0.12,
             );
           });
@@ -3170,8 +3229,10 @@ if (root) {
         if (entry.accentRing) {
           entry.accentRing.material.opacity = lerp(
             entry.accentRing.material.opacity,
-            focused ? 0.018 : hovered ? 0.28 : dimmed ? 0.02 :
-              entry.node.tier === "flagship" ? 0.22 : entry.node.tier === "secondary" ? 0.14 : 0.04,
+            focused ? 0.26 + focusLevel * 0.1
+              : hovered ? 0.2
+              : dimmed ? 0.012
+              : entry.node.tier === "flagship" ? 0.12 : entry.node.tier === "secondary" ? 0.08 : 0.035,
             0.1,
           );
           const ringSpeed = entry.node.tier === "flagship" ? 0.15 : 0.08;
@@ -3183,8 +3244,10 @@ if (root) {
         if (entry.orbitRing) {
           entry.orbitRing.material.opacity = lerp(
             entry.orbitRing.material.opacity,
-            focused ? 0.012 : hovered ? 0.18 : dimmed ? 0.02 :
-              entry.node.tier === "flagship" ? 0.16 : 0.08,
+            focused ? 0.2 + focusLevel * 0.08
+              : hovered ? 0.15
+              : dimmed ? 0.012
+              : entry.node.tier === "flagship" ? 0.09 : 0.045,
             0.08,
           );
           const orbitSpeed = entry.node.tier === "flagship" ? 0.028 : 0.018;
@@ -3194,15 +3257,15 @@ if (root) {
 
         /* ── Focused core apparatus ── */
         if (entry.focusedCore) {
-          const focusCoreActive = focused || entry.focusedCore.sphere.material.opacity > 0.01;
+          const focusCoreActive = focused || hovered || entry.focusedCore.sphere.material.opacity > 0.01;
           entry.focusedCore.group.visible = focusCoreActive;
-          const focusScaleTarget = focused ? 0.9 + focusLevel * 0.04 : 0.9;
+          const focusScaleTarget = focused ? 1.04 + focusLevel * 0.1 : hovered ? 0.94 : 0.86;
           entry.focusedCore.group.scale.setScalar(lerp(entry.focusedCore.group.scale.x || 1, focusScaleTarget, 0.12));
 
           entry.focusedCore.sphere.material.opacity = lerp(
             entry.focusedCore.sphere.material.opacity,
-            focused ? 0.36 + focusLevel * 0.024 : 0,
-            focused ? 0.14 : 0.12,
+            focused ? 0.4 + focusLevel * 0.1 : hovered ? 0.12 : 0,
+            focused || hovered ? 0.14 : 0.12,
           );
           entry.focusedCore.sphere.material.emissiveIntensity = lerp(
             entry.focusedCore.sphere.material.emissiveIntensity,
@@ -3211,18 +3274,18 @@ if (root) {
           );
           entry.focusedCore.innerShell.material.opacity = lerp(
             entry.focusedCore.innerShell.material.opacity,
-            focused ? 0.04 + focusLevel * 0.016 : 0,
+            focused ? 0.07 + focusLevel * 0.028 : hovered ? 0.028 : 0,
             0.12,
           );
           entry.focusedCore.sphereRim.material.opacity = lerp(
             entry.focusedCore.sphereRim.material.opacity,
-            focused ? 0.26 + focusLevel * 0.08 : 0,
+            focused ? 0.34 + focusLevel * 0.12 : hovered ? 0.08 : 0,
             0.12,
           );
           /* ── Flat disc plane — primary instrument face authority ── */
           entry.focusedCore.discPlane.material.opacity = lerp(
             entry.focusedCore.discPlane.material.opacity,
-            focused ? 0.11 + focusLevel * 0.016 : 0,
+            focused ? 0.16 + focusLevel * 0.05 : hovered ? 0.04 : 0,
             0.14,
           );
           entry.focusedCore.bezel.material.opacity = lerp(
@@ -3242,27 +3305,27 @@ if (root) {
           );
           entry.focusedCore.chapterRing.material.opacity = lerp(
             entry.focusedCore.chapterRing.material.opacity,
-            focused ? 0.4 : 0,
+            focused ? 0.62 : hovered ? 0.06 : 0,
             0.1,
           );
           entry.focusedCore.tickGlowRing.material.opacity = lerp(
             entry.focusedCore.tickGlowRing.material.opacity,
-            focused ? 0.16 + focusLevel * 0.05 : 0,
+            focused ? 0.28 + focusLevel * 0.1 : hovered ? 0.04 : 0,
             0.1,
           );
           entry.focusedCore.tickDiffuseRing.material.opacity = lerp(
             entry.focusedCore.tickDiffuseRing.material.opacity,
-            focused ? 0.09 + focusLevel * 0.04 : 0,
+            focused ? 0.18 + focusLevel * 0.07 : hovered ? 0.028 : 0,
             0.08,
           );
           entry.focusedCore.ticks.minor.material.opacity = lerp(
             entry.focusedCore.ticks.minor.material.opacity,
-            focused ? 0.88 + focusLevel * 0.08 : 0,
+            focused ? 0.98 + focusLevel * 0.08 : hovered ? 0.08 : 0,
             0.12,
           );
           entry.focusedCore.ticks.major.material.opacity = lerp(
             entry.focusedCore.ticks.major.material.opacity,
-            focused ? 1 : 0,
+            focused ? 1 : hovered ? 0.1 : 0,
             0.12,
           );
           entry.focusedCore.tickGlowRing.rotation.z += reducedMotion ? 0 : 0.001;
@@ -3283,7 +3346,7 @@ if (root) {
             const bandScale = 1 + wobble * band.scaleAmplitude;
             band.line.material.opacity = lerp(
               band.line.material.opacity,
-              focused ? band.baseOpacity * (0.74 + focusLevel * 0.18) : 0,
+              focused ? band.baseOpacity * (0.98 + focusLevel * 0.28) : hovered ? band.baseOpacity * 0.12 : 0,
               0.12,
             );
             band.line.rotation.x = band.baseRotationX + (reducedMotion ? 0 : wobble * 0.08);
@@ -3296,7 +3359,7 @@ if (root) {
           entry.focusedCore.highlights.forEach((highlight) => {
             highlight.sprite.material.opacity = lerp(
               highlight.sprite.material.opacity,
-              focused ? highlight.baseOpacity * (0.19 + focusLevel * 0.13) : 0,
+              focused ? highlight.baseOpacity * (0.32 + focusLevel * 0.22) : hovered ? highlight.baseOpacity * 0.08 : 0,
               0.12,
             );
           });
@@ -3305,7 +3368,7 @@ if (root) {
           if (entry.focusedCore.wireframeSphere) {
             entry.focusedCore.wireframeSphere.material.opacity = lerp(
               entry.focusedCore.wireframeSphere.material.opacity,
-              focused ? 0.10 + focusLevel * 0.04 : 0,
+              focused ? 0.18 + focusLevel * 0.06 : hovered ? 0.03 : 0,
               0.1,
             );
             if (!reducedMotion) {
@@ -3318,7 +3381,7 @@ if (root) {
           entry.focusedCore.cageLines.forEach((cage) => {
             cage.line.material.opacity = lerp(
               cage.line.material.opacity,
-              focused ? cage.baseOpacity * (0.92 + focusLevel * 0.18) : 0,
+              focused ? cage.baseOpacity * (1.08 + focusLevel * 0.24) : hovered ? cage.baseOpacity * 0.12 : 0,
               0.1,
             );
             cage.line.rotation.x = cage.baseRotationX;
@@ -3412,7 +3475,7 @@ if (root) {
             entry.focusedCore.irisBlades.forEach((blade, bIdx) => {
               blade.line.material.opacity = lerp(
                 blade.line.material.opacity,
-                focused ? blade.baseOpacity * 0.32 * focusLevel : 0,
+                focused ? blade.baseOpacity * 0.52 * focusLevel : hovered ? blade.baseOpacity * 0.07 : 0,
                 0.1,
               );
             });
@@ -3428,7 +3491,7 @@ if (root) {
           if (entry.focusedCore.irisGlowRing) {
             entry.focusedCore.irisGlowRing.material.opacity = lerp(
               entry.focusedCore.irisGlowRing.material.opacity,
-              focused ? 0.08 * focusLevel : 0,
+              focused ? 0.16 * focusLevel : hovered ? 0.02 : 0,
               0.1,
             );
             if (!reducedMotion) entry.focusedCore.irisGlowRing.rotation.z -= 0.0008;
@@ -3436,7 +3499,7 @@ if (root) {
           if (entry.focusedCore.irisOuterGlowRing) {
             entry.focusedCore.irisOuterGlowRing.material.opacity = lerp(
               entry.focusedCore.irisOuterGlowRing.material.opacity,
-              focused ? 0.04 * focusLevel : 0,
+              focused ? 0.1 * focusLevel : hovered ? 0.014 : 0,
               0.1,
             );
             if (!reducedMotion) entry.focusedCore.irisOuterGlowRing.rotation.z += 0.0006;
@@ -3445,14 +3508,14 @@ if (root) {
           /* ── JARVIS inner concentric rings ── */
           if (entry.focusedCore.innerRings) {
             entry.focusedCore.innerRings.forEach((ir) => {
-              ir.ring.material.opacity = lerp(ir.ring.material.opacity, focused ? ir.baseOpacity * 0.74 * focusLevel : 0, 0.1);
+              ir.ring.material.opacity = lerp(ir.ring.material.opacity, focused ? ir.baseOpacity * 0.96 * focusLevel : hovered ? ir.baseOpacity * 0.07 : 0, 0.1);
             });
           }
 
           /* ── JARVIS outer decorative rings ── */
           if (entry.focusedCore.outerRings) {
             entry.focusedCore.outerRings.forEach((or) => {
-              or.material.opacity = lerp(or.material.opacity, focused ? or.baseOpacity * 0.96 * focusLevel : 0, 0.08);
+              or.material.opacity = lerp(or.material.opacity, focused ? or.baseOpacity * 1.16 * focusLevel : hovered ? or.baseOpacity * 0.08 : 0, 0.08);
               if (!reducedMotion) {
                 or.ring.rotation.z += or.speed * 0.016;
                 if (or.kind === "detached" && !or.isGroup) {
@@ -3466,14 +3529,28 @@ if (root) {
           /* ── JARVIS clock-position markers ── */
           if (entry.focusedCore.clockMarkers) {
             entry.focusedCore.clockMarkers.forEach((cm) => {
-              cm.line.material.opacity = lerp(cm.line.material.opacity, focused ? cm.baseOpacity * 0.96 * focusLevel : 0, 0.1);
+              cm.line.material.opacity = lerp(cm.line.material.opacity, focused ? cm.baseOpacity * 1.08 * focusLevel : hovered ? cm.baseOpacity * 0.08 : 0, 0.1);
             });
           }
 
           /* ── JARVIS parallelogram ticks ── */
           if (entry.focusedCore.parallelogramTicks) {
             entry.focusedCore.parallelogramTicks.forEach((pt) => {
-              pt.line.material.opacity = lerp(pt.line.material.opacity, focused ? pt.baseOpacity * focusLevel : 0, 0.1);
+              pt.line.material.opacity = lerp(pt.line.material.opacity, focused ? pt.baseOpacity * 1.08 * focusLevel : hovered ? pt.baseOpacity * 0.07 : 0, 0.1);
+            });
+          }
+
+          /* ── Lock-local telemetry arcs ── */
+          if (entry.focusedCore.telemetryArcs) {
+            entry.focusedCore.telemetryArcs.forEach((arc) => {
+              arc.line.material.opacity = lerp(
+                arc.line.material.opacity,
+                focused ? arc.baseOpacity * (0.96 + focusLevel * 0.28) : hovered ? arc.baseOpacity * 0.1 : 0,
+                0.1,
+              );
+              if (!reducedMotion) {
+                arc.line.rotation.z += arc.speed * 0.016;
+              }
             });
           }
 
@@ -3482,7 +3559,7 @@ if (root) {
             entry.focusedCore.chassisArcs.forEach((arc) => {
               arc.line.material.opacity = lerp(
                 arc.line.material.opacity,
-                focused ? arc.baseOpacity * 0.92 * focusLevel : 0,
+                focused ? arc.baseOpacity * 1.12 * focusLevel : hovered ? arc.baseOpacity * 0.08 : 0,
                 0.1,
               );
               if (!reducedMotion) {
@@ -3494,7 +3571,7 @@ if (root) {
           /* ── Focused glow — v2 value ── */
           entry.focusedCore.glow.material.opacity = lerp(
             entry.focusedCore.glow.material.opacity,
-            focused ? 0.016 : 0,
+            focused ? 0.1 + focusLevel * 0.04 : hovered ? 0.028 : 0,
             0.08,
           );
         }
@@ -3817,8 +3894,8 @@ if (root) {
         }
         ring.rotation.y += 0.0006 * (index + 1);
         /* 22s-cycle opacity breathing */
-        const baseOpacity = this.modes.threshold ? 0.26 - index * 0.04 : 0.035;
-        ring.material.opacity = baseOpacity + Math.sin(t * 0.285 + index * 1.2) * 0.03;
+        const baseOpacity = this.modes.threshold ? 0.22 - index * 0.032 : 0.04;
+        ring.material.opacity = baseOpacity + Math.sin(t * 0.285 + index * 1.2) * 0.028;
       });
     }
 
@@ -3836,7 +3913,9 @@ if (root) {
         guide.line.geometry.setFromPoints(pts);
         guide.line.computeLineDistances();
         if (guide.line.material.opacity != null) {
-          guide.line.material.opacity = guide.passive ? (this.modes.compare ? 0.08 : 0.03) : (this.focusId ? 0.18 : 0.16);
+          guide.line.material.opacity = guide.passive
+            ? guide.opacityBase
+            : (this.focusId ? guide.opacityBase || 0.2 : 0.12);
         }
 
         /* ── Animated dash offset for flowing effect (faster when focused) ── */
@@ -3870,10 +3949,10 @@ if (root) {
         trail.line.material.opacity = this.focusId && this.focusId !== trail.id
           ? 0.03
           : this.hoverId === trail.id || this.focusId === trail.id
-          ? 0.12
+          ? 0.16
           : entry.node.tier === "flagship"
-          ? 0.18
-          : 0.1;
+          ? 0.14
+          : 0.08;
       });
     }
 
@@ -4097,6 +4176,82 @@ if (root) {
         this.bloomPass.resolution.set(width, height);
       }
       this.renderLabels();
+    }
+
+    resolvePickThreshold(entry) {
+      if (!entry || !entry.node) return 16;
+      if (entry.node.tier === "flagship") return 20;
+      if (entry.node.tier === "secondary") return 18;
+      return 16;
+    }
+
+    projectNodeScreenState(entry) {
+      if (!entry || !entry.group) return null;
+      const width = this.target.clientWidth || 700;
+      const height = this.target.clientHeight || 460;
+      const projected = entry.group.position.clone().project(this.camera);
+      const visible = projected.z > -1 && projected.z < 1
+        && projected.x > -1.08 && projected.x < 1.08
+        && projected.y > -1.08 && projected.y < 1.08;
+
+      return {
+        entry,
+        visible,
+        projected,
+        x: ((projected.x + 1) / 2) * width,
+        y: ((-projected.y + 1) / 2) * height,
+        depth: projected.z,
+        threshold: this.resolvePickThreshold(entry),
+      };
+    }
+
+    pickNodeAtClientPoint(clientX, clientY) {
+      const rect = this.renderer.domElement.getBoundingClientRect();
+      const localX = clientX - rect.left;
+      const localY = clientY - rect.top;
+      const candidates = [];
+
+      this.nodeLookup.forEach((entry) => {
+        const projected = this.projectNodeScreenState(entry);
+        if (!projected || !projected.visible) return;
+        const distance = Math.hypot(projected.x - localX, projected.y - localY);
+        if (distance <= projected.threshold) {
+          candidates.push({
+            modelId: entry.node.id,
+            entry,
+            distance,
+            depth: projected.depth,
+            via: "screen-space",
+          });
+        }
+      });
+
+      candidates.sort(function (left, right) {
+        return left.distance - right.distance || left.depth - right.depth;
+      });
+      if (candidates.length) {
+        return candidates[0];
+      }
+
+      const pickMouse = new this.THREE.Vector2(
+        ((clientX - rect.left) / rect.width) * 2 - 1,
+        -(((clientY - rect.top) / rect.height) * 2 - 1),
+      );
+      this.raycaster.setFromCamera(pickMouse, this.camera);
+      const intersections = this.raycaster.intersectObjects(
+        Array.from(this.nodeLookup.values()).map((entry) => entry.hitSphere),
+        false,
+      );
+      if (!intersections.length) return null;
+
+      const modelId = intersections[0].object.userData.modelId;
+      return modelId ? {
+        modelId,
+        entry: this.nodeLookup.get(modelId) || null,
+        distance: Infinity,
+        depth: intersections[0].distance,
+        via: "raycast-fallback",
+      } : null;
     }
 
     updateGlints(time) {
@@ -4401,7 +4556,7 @@ if (root) {
         if (node.tier !== "flagship" && this.focusId !== node.id) element.classList.add("is-label-suppressed");
         element.style.left = `${normalizedX * 100}%`;
         element.style.top = `${normalizedY * 100}%`;
-        element.style.setProperty("--node-size", `${40 + node.size * 100}px`);
+        element.style.setProperty("--node-size", `${52 + node.size * 116}px`);
         element.innerHTML = `
           <span class="observatory-fallback-target-shell">
             ${this.focusId === node.id ? buildFallbackRingMarkup(node) : ""}
