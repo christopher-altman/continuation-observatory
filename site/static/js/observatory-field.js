@@ -224,16 +224,85 @@ if (root) {
   }
 
   function topNeighbors(payload, modelId, limit = 3) {
-    return (payload.constellation.edges || [])
+    const threshold = payload && payload.constellation && isFiniteNumber(payload.constellation.threshold)
+      ? payload.constellation.threshold
+      : 0;
+    return uniqueStableEdges(payload.constellation.edges || [])
       .filter(function (edge) {
-        return edge.source === modelId || edge.target === modelId;
-      })
-      .sort(function (left, right) {
-        return right.similarity - left.similarity;
+        return (edge.source === modelId || edge.target === modelId)
+          && (edge.similarity || 0) >= threshold;
       })
       .slice(0, limit)
       .map(function (edge) {
         return edge.source === modelId ? edge.target : edge.source;
+      });
+  }
+
+  function canonicalEdgePair(edge) {
+    const source = String(edge && edge.source != null ? edge.source : "");
+    const target = String(edge && edge.target != null ? edge.target : "");
+    return source < target ? `${source}::${target}` : `${target}::${source}`;
+  }
+
+  function compareEdgesStable(left, right) {
+    const similarityDelta = (right.similarity || 0) - (left.similarity || 0);
+    if (Math.abs(similarityDelta) > 1e-9) {
+      return similarityDelta;
+    }
+    return canonicalEdgePair(left).localeCompare(canonicalEdgePair(right));
+  }
+
+  function uniqueStableEdges(edges) {
+    const seen = new Set();
+    return (edges || []).slice().sort(compareEdgesStable).filter(function (edge) {
+      const key = canonicalEdgePair(edge);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function selectGuideEdges(payload, focusId, hoverId, compareMode, nodeCount) {
+    const stableEdges = uniqueStableEdges((payload && payload.constellation && payload.constellation.edges) || []);
+    if (!stableEdges.length) return [];
+
+    const threshold = payload && payload.constellation && isFiniteNumber(payload.constellation.threshold)
+      ? payload.constellation.threshold
+      : 0;
+    const selectedId = focusId || hoverId || null;
+    if (selectedId) {
+      return stableEdges
+        .filter(function (edge) {
+          return (edge.similarity || 0) >= threshold
+            && (edge.source === selectedId || edge.target === selectedId);
+        })
+        .slice(0, focusId ? 4 : 3)
+        .map(function (edge) {
+          return {
+            source: edge.source,
+            target: edge.target,
+            passive: !focusId,
+            opacityBase: focusId ? 0.2 : 0.065,
+          };
+        });
+    }
+
+    const limit = compareMode
+      ? (nodeCount > 18 ? 8 : 12)
+      : (nodeCount > 18 ? 4 : 6);
+
+    return stableEdges
+      .filter(function (edge) {
+        return (edge.similarity || 0) >= threshold;
+      })
+      .slice(0, limit)
+      .map(function (edge) {
+        return {
+          source: edge.source,
+          target: edge.target,
+          passive: true,
+          opacityBase: compareMode ? 0.08 : 0.05,
+        };
       });
   }
 
@@ -2893,33 +2962,14 @@ if (root) {
     rebuildGuides() {
       this.guides.forEach((guide) => this.scene.remove(guide.line));
       this.guides = [];
-      const edges = this.payload.constellation.edges || [];
-      if (!edges.length) return;
-
-      let selectedEdges = [];
-      if (this.focusId) {
-        selectedEdges = topNeighbors(this.payload, this.focusId, 4).map((neighborId) => {
-          return { source: this.focusId, target: neighborId, passive: false, opacityBase: 0.2 };
-        });
-      } else if (this.modes.compare) {
-        const limit = this.nodeLookup.size > 18 ? 8 : 12;
-        selectedEdges = edges
-          .slice()
-          .sort(function (left, right) { return right.similarity - left.similarity; })
-          .slice(0, limit)
-          .map(function (edge) {
-            return { source: edge.source, target: edge.target, passive: true, opacityBase: 0.08 };
-          });
-      } else {
-        const limit = this.nodeLookup.size > 18 ? 4 : 6;
-        selectedEdges = edges
-          .slice()
-          .sort(function (left, right) { return right.similarity - left.similarity; })
-          .slice(0, limit)
-          .map(function (edge) {
-            return { source: edge.source, target: edge.target, passive: true, opacityBase: 0.05 };
-          });
-      }
+      const selectedEdges = selectGuideEdges(
+        this.payload,
+        this.focusId,
+        this.hoverId,
+        Boolean(this.modes.compare),
+        this.nodeLookup.size,
+      );
+      if (!selectedEdges.length) return;
 
       selectedEdges.forEach((edge) => {
         const source = this.nodeLookup.get(edge.source);
@@ -3007,6 +3057,9 @@ if (root) {
       this.hoverId = null;
       this.renderer.domElement.style.cursor = "";
       this.tooltip.style.display = "none";
+      if (!this.focusId) {
+        this.rebuildGuides();
+      }
     }
 
     onPointerDown(event) {
@@ -3039,6 +3092,9 @@ if (root) {
         ? this.pickNodeAtClientPoint(clientX, clientY)
         : null;
       this.hoverId = pickedNode ? pickedNode.modelId : null;
+      if (prevHover !== this.hoverId && !this.focusId) {
+        this.rebuildGuides();
+      }
 
       /* Cursor change */
       this.renderer.domElement.style.cursor = this.hoverId ? "pointer" : "";

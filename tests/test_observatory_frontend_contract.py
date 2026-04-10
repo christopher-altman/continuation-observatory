@@ -20,11 +20,22 @@ def test_observatory_frontend_keeps_pcII_timeline_bounded_and_overlay_dash_free(
     assert "pickNodeAtClientPoint(clientX, clientY)" in field_source
     assert "this.updateHover(event.clientX, event.clientY);" in field_source
     assert "? this.pickNodeAtClientPoint(clientX, clientY)" in field_source
+    assert "function canonicalEdgePair(edge)" in field_source
+    assert "function uniqueStableEdges(edges)" in field_source
+    assert "function selectGuideEdges(payload, focusId, hoverId, compareMode, nodeCount)" in field_source
 
     pointerdown_block = field_source.split("onPointerDown(event) {", 1)[1].split("onKeyDown(event) {", 1)[0]
     assert "const pickedNode = this.pickNodeAtClientPoint(event.clientX, event.clientY);" in pointerdown_block
     assert "window.dispatchEvent(new CustomEvent(\"observatory:clear-focus\"));" in pointerdown_block
     assert pointerdown_block.index("const pickedNode = this.pickNodeAtClientPoint(event.clientX, event.clientY);") < pointerdown_block.index("window.dispatchEvent(new CustomEvent(\"observatory:clear-focus\"));")
+
+    pointerleave_block = field_source.split("onPointerLeave() {", 1)[1].split("onPointerDown(event) {", 1)[0]
+    assert "if (!this.focusId) {" in pointerleave_block
+    assert "this.rebuildGuides();" in pointerleave_block
+
+    updatehover_block = field_source.split("updateHover(clientX = this._clientX, clientY = this._clientY) {", 1)[1].split("updateTooltipPosition() {", 1)[0]
+    assert "if (prevHover !== this.hoverId && !this.focusId) {" in updatehover_block
+    assert "this.rebuildGuides();" in updatehover_block
 
     assert "/* ── Shell sphere — primary body mass for idle readability ── */" in field_source
     assert "/* ── Center node — bright core point (hero centerNode style) ── */" in field_source
