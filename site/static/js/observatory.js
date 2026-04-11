@@ -325,6 +325,22 @@
     if (note) note.hidden = state !== "preview";
   }
 
+  function updateTimelineReadout(values) {
+    const windowNode = qs("#observatory-timeline-window");
+    const observationsNode = qs("#observatory-timeline-observations");
+    const updatedNode = qs("#observatory-timeline-updated");
+    const count = values.length;
+    const latest = count ? values[count - 1] : null;
+
+    if (windowNode) windowNode.textContent = formatRangeLabel(observatoryState.range);
+    if (observationsNode) {
+      observationsNode.textContent = `${count} observation${count === 1 ? "" : "s"}`;
+    }
+    if (updatedNode) {
+      updatedNode.textContent = latest ? `updated ${ageLabel(latest.timestamp)}` : "awaiting telemetry";
+    }
+  }
+
   function scheduleHistoryPanelRender() {
     if (historyPanelState.resizeTimer) window.clearTimeout(historyPanelState.resizeTimer);
     historyPanelState.resizeTimer = window.setTimeout(function () {
@@ -1183,26 +1199,9 @@
       .filter(function (row) {
         return row.t instanceof Date && !Number.isNaN(row.t.getTime()) && Number.isFinite(row.v);
       });
+    updateTimelineReadout(realValues);
 
-    let aggregateSeries = null;
-    if (realValues.length >= 2) {
-      aggregateSeries = {
-        values: realValues,
-        isPreview: false,
-        label: "Aggregate signal telemetry",
-      };
-    } else {
-      const placeholderAggregate = buildPlaceholderAggregateSeries(observatoryState.view.models, observatoryState.range);
-      if (placeholderAggregate) {
-        aggregateSeries = placeholderAggregate;
-      }
-    }
-
-    if (aggregateSeries && aggregateSeries.isPreview) {
-      if (timelineShell) timelineShell.classList.add("is-preview");
-    }
-
-    if (!aggregateSeries || typeof d3 === "undefined") {
+    if (!realValues.length || typeof d3 === "undefined") {
       setPanelState({
         panel: panel,
         mount: target,
@@ -1217,50 +1216,24 @@
       mount: target,
       empty: emptyState,
       note: modeNote,
-      state: aggregateSeries.isPreview ? "preview" : "real",
+      state: "real",
     });
 
     const width = target.clientWidth || 980;
     const height = 250;
     const padding = { top: 18, right: 18, bottom: 28, left: 42 };
     const svg = d3.select(target).append("svg").attr("viewBox", `0 0 ${width} ${height}`);
-    const sourceValues = aggregateSeries.values;
-    const smoothingRadius = aggregateSeries.isPreview
-      ? 0
-      : Math.min(10, Math.max(3, Math.floor(sourceValues.length / 32)));
-    const values = smoothingRadius
-      ? sourceValues.map(function (entry, index, rows) {
-          let weightedValue = 0;
-          let weightedMin = 0;
-          let weightedMax = 0;
-          let weightTotal = 0;
-          for (let offset = -smoothingRadius; offset <= smoothingRadius; offset += 1) {
-            const neighbor = rows[index + offset];
-            if (!neighbor) continue;
-            const weight = smoothingRadius + 1 - Math.abs(offset);
-            weightedValue += neighbor.v * weight;
-            weightedMin += (neighbor.min != null ? neighbor.min : neighbor.v) * weight;
-            weightedMax += (neighbor.max != null ? neighbor.max : neighbor.v) * weight;
-            weightTotal += weight;
-          }
-          return {
-            ...entry,
-            v: weightedValue / weightTotal,
-            min: weightedMin / weightTotal,
-            max: weightedMax / weightTotal,
-          };
-        })
-      : sourceValues;
-    const x = d3.scaleTime().domain(d3.extent(sourceValues, function (d) { return d.t; })).range([padding.left, width - padding.right]);
-    const timelineMin = d3.min(sourceValues, function (entry) {
-      return entry.min != null ? entry.min : entry.v;
-    });
-    const timelineMax = d3.max(sourceValues, function (entry) {
-      return entry.max != null ? entry.max : entry.v;
-    });
+    const sourceValues = realValues;
+    const values = sourceValues;
+    const rangeWindowMs = RANGE_TO_MS[observatoryState.range] || RANGE_TO_MS["24h"];
+    const rangeEnd = new Date();
+    const rangeStart = new Date(rangeEnd.getTime() - rangeWindowMs);
+    const x = d3.scaleTime().domain([rangeStart, rangeEnd]).range([padding.left, width - padding.right]);
+    const timelineMin = d3.min(sourceValues, function (entry) { return entry.v; });
+    const timelineMax = d3.max(sourceValues, function (entry) { return entry.v; });
     const timelineDomain = resolveBoundedValueDomain(timelineMin, timelineMax, {
-      minimumSpan: aggregateSeries.isPreview ? 0.08 : 0.035,
-      paddingRatio: aggregateSeries.isPreview ? 0.16 : 0.22,
+      minimumSpan: 0.035,
+      paddingRatio: 0.22,
     });
     const y = d3.scaleLinear()
       .domain(timelineDomain)
@@ -1270,16 +1243,11 @@
       .x(function (d) { return x(d.t); })
       .y0(height - padding.bottom)
       .y1(function (d) { return y(d.v); })
-      .curve(d3.curveMonotoneX);
-    const band = d3.area()
-      .x(function (d) { return x(d.t); })
-      .y0(function (d) { return y(d.min != null ? d.min : d.v); })
-      .y1(function (d) { return y(d.max != null ? d.max : d.v); })
-      .curve(d3.curveMonotoneX);
+      .curve(d3.curveStepAfter);
     const line = d3.line()
       .x(function (d) { return x(d.t); })
       .y(function (d) { return y(d.v); })
-      .curve(d3.curveMonotoneX);
+      .curve(d3.curveStepAfter);
 
     svg.append("defs")
       .append("linearGradient")
@@ -1307,7 +1275,7 @@
       .attr("y2", "100%")
       .selectAll("stop")
       .data([
-        { offset: "0%", color: aggregateSeries.isPreview ? "rgba(241, 190, 99, 0.12)" : "rgba(126, 199, 255, 0.08)" },
+        { offset: "0%", color: "rgba(126, 199, 255, 0.08)" },
         { offset: "100%", color: "rgba(126, 199, 255, 0.01)" },
       ])
       .enter()
@@ -1318,19 +1286,11 @@
     svg.append("g")
       .attr("transform", `translate(0,${height - padding.bottom})`)
       .call(d3.axisBottom(x).ticks(6).tickSizeOuter(0))
-      .attr("class", "axis");
+      .attr("class", "observatory-history-axis");
     svg.append("g")
       .attr("transform", `translate(${padding.left},0)`)
       .call(d3.axisLeft(y).ticks(5).tickSizeOuter(0).tickFormat(d3.format(".3f")))
-      .attr("class", "axis");
-    if (values.some(function (entry) {
-      return entry.min != null && entry.max != null && entry.max !== entry.min;
-    })) {
-      svg.append("path")
-        .datum(values)
-        .attr("fill", "url(#observatoryTimelineBandGradient)")
-        .attr("d", band);
-    }
+      .attr("class", "observatory-history-axis");
     svg.append("path")
       .datum(values)
       .attr("fill", "url(#observatoryTimelineGradient)")
@@ -1338,17 +1298,24 @@
     svg.append("path")
       .datum(values)
       .attr("fill", "none")
-      .attr("stroke", aggregateSeries.isPreview ? "var(--amber)" : "var(--cyan)")
+      .attr("stroke", "var(--cyan)")
       .attr("stroke-width", 2.05)
       .attr("d", line);
-    svg.selectAll("circle")
-      .data(values.slice(-1))
+    svg.selectAll(".observatory-timeline-sample")
+      .data(values)
       .enter()
       .append("circle")
+      .attr("class", function (_, index) {
+        return index === values.length - 1
+          ? "observatory-timeline-sample observatory-timeline-sample--latest"
+          : "observatory-timeline-sample";
+      })
       .attr("cx", function (d) { return x(d.t); })
       .attr("cy", function (d) { return y(d.v); })
-      .attr("r", 2.8)
-      .attr("fill", aggregateSeries.isPreview ? "var(--amber)" : "var(--accent)");
+      .attr("r", function (_, index) { return index === values.length - 1 ? 3.8 : 2.3; })
+      .attr("fill", function (_, index) {
+        return index === values.length - 1 ? "var(--accent-strong)" : "var(--accent)";
+      });
   }
 
   function renderHeatmap() {

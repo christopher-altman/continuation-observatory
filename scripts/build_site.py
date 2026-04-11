@@ -10,15 +10,16 @@ import csv
 import json
 import shutil
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
-from observatory.config import load_active_model_catalog
+from observatory.config import get_probe_cycle_interval_minutes, load_active_model_catalog
 from observatory.observatory_snapshot import build_observatory_snapshot
+from observatory.probes.registry import discover_probes
 from observatory.results_paths import RESULTS_DIR_ENV_VAR, resolve_results_paths
 
 # ---------------------------------------------------------------------------
@@ -358,6 +359,9 @@ def generate_falsification(experiments: list) -> dict:
 
 def generate_models(experiments: list, active_models: list[dict]) -> dict:
     """Ordered active model catalog merged with observed probe coverage."""
+    probe_cycle_minutes = get_probe_cycle_interval_minutes()
+    probe_coverage_total = len(discover_probes())
+    now = datetime.now(timezone.utc)
     models_map: dict[str, dict] = {}
     for spec in active_models:
         model_id = spec.get("model_id") or spec.get("model_string") or ""
@@ -406,10 +410,121 @@ def generate_models(experiments: list, active_models: list[dict]) -> dict:
             if figures:
                 entry["figure"] = f"{e['manifest']['name']}/{Path(figures[0]).name}"
 
+    models = []
+    for entry in models_map.values():
+        timestamp = entry.get("timestamp")
+        entropy_delta = entry.get("entropy_delta")
+        probes = entry.get("probes") or []
+        is_current = _is_current_model_sample(
+            timestamp=timestamp,
+            entropy_delta=entropy_delta,
+            interval_minutes=entry.get("interval_minutes"),
+            probe_cycle_minutes=probe_cycle_minutes,
+            now=now,
+        )
+        telemetry_state = _derive_model_telemetry_state(
+            is_current=is_current,
+            timestamp=timestamp,
+            probes=probes,
+            entropy_delta=entropy_delta,
+        )
+        models.append(
+            {
+                **entry,
+                "telemetry_state": telemetry_state,
+                "telemetry_label": _telemetry_label(telemetry_state),
+                "probe_coverage_count": len(probes),
+                "probe_coverage_total": probe_coverage_total,
+                "entropy_interpretation": _entropy_interpretation(
+                    entropy_delta,
+                    telemetry_state=telemetry_state,
+                ),
+            }
+        )
+
+    models.sort(key=_model_sort_key)
+
     return {
         "generated_at": _now_iso(),
-        "models": list(models_map.values()),
+        "models": models,
     }
+
+
+def _parse_iso_timestamp(timestamp: str | None) -> datetime | None:
+    if not timestamp:
+        return None
+    try:
+        parsed = datetime.fromisoformat(timestamp)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def _is_current_model_sample(
+    *,
+    timestamp: str | None,
+    entropy_delta: float | None,
+    interval_minutes: int | None,
+    probe_cycle_minutes: int,
+    now: datetime,
+) -> bool:
+    """Mirror observatory_snapshot.models_payload cadence semantics for static grouping."""
+    if entropy_delta is None:
+        return False
+    last_seen = _parse_iso_timestamp(timestamp)
+    if last_seen is None:
+        return False
+    freshness_minutes = max(int(interval_minutes or 0), probe_cycle_minutes)
+    return (now - last_seen) <= timedelta(minutes=freshness_minutes)
+
+
+def _derive_model_telemetry_state(
+    *,
+    is_current: bool,
+    timestamp: str | None,
+    probes: list[str],
+    entropy_delta: float | None,
+) -> str:
+    if is_current:
+        return "current"
+    if timestamp or probes or entropy_delta is not None:
+        return "partial"
+    return "unavailable"
+
+
+def _telemetry_label(telemetry_state: str) -> str:
+    return {
+        "current": "Current reading",
+        "partial": "Partial / recent evidence",
+        "unavailable": "No current sample",
+    }.get(telemetry_state, "No current sample")
+
+
+def _entropy_interpretation(entropy_delta: float | None, *, telemetry_state: str) -> str:
+    if entropy_delta is None:
+        return "Insufficient sample" if telemetry_state == "partial" else "No current sample"
+    if entropy_delta > 0.05:
+        return "Increased"
+    if entropy_delta < -0.05:
+        return "Decreased"
+    return "Stable"
+
+
+def _model_sort_key(entry: dict) -> tuple:
+    section_priority = {"current": 0, "partial": 1, "unavailable": 2}
+    timestamp = _parse_iso_timestamp(entry.get("timestamp"))
+    timestamp_sort = (
+        -timestamp.timestamp()
+        if timestamp is not None and entry.get("telemetry_state") != "unavailable"
+        else float("inf")
+    )
+    return (
+        section_priority.get(entry.get("telemetry_state"), 99),
+        timestamp_sort,
+        str(entry.get("display_name") or entry.get("model_id") or "").lower(),
+    )
 
 
 def generate_exports(experiments: list) -> tuple[str, list]:

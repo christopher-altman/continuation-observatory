@@ -1566,6 +1566,99 @@ h2.reveal + .content-figure {
   border-radius: calc(var(--radius-md) - 4px);
 }
 
+.models-surface {
+  display: grid;
+  gap: 1rem;
+}
+
+.models-section {
+  display: grid;
+  gap: 1rem;
+}
+
+.models-section summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.models-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.models-section--collapsed summary::after {
+  content: "+";
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+.models-section--collapsed[open] summary::after {
+  content: "−";
+}
+
+.models-section-copy {
+  margin: 0;
+  color: var(--muted);
+}
+
+.models-section-meta {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.models-table {
+  min-width: 760px;
+}
+
+.models-model-cell,
+.models-metric-cell,
+.models-coverage-cell {
+  display: grid;
+  gap: 0.32rem;
+}
+
+.models-state-label,
+.models-coverage-ratio,
+.models-metric-interpretation {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.models-state-label {
+  color: var(--annotation);
+}
+
+.models-metric-value {
+  font-size: 0.98rem;
+  color: var(--text);
+}
+
+.models-metric-interpretation {
+  color: var(--muted);
+}
+
+.models-metric-interpretation--increased {
+  color: rgba(116, 212, 161, 0.88);
+}
+
+.models-metric-interpretation--decreased {
+  color: rgba(241, 190, 99, 0.88);
+}
+
+.models-metric-interpretation--stable,
+.models-metric-interpretation--muted {
+  color: var(--muted);
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -4385,6 +4478,10 @@ html.theme-transitions *::after {
   background: linear-gradient(180deg, rgba(5, 10, 19, 0.76), rgba(6, 11, 20, 0.56));
 }
 
+.observatory-timeline-shell .timeline-header {
+  align-items: flex-start;
+}
+
 .observatory-lower {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
@@ -4397,6 +4494,15 @@ html.theme-transitions *::after {
 .heatmap-root,
 .events-root {
   min-height: 260px;
+}
+
+.observatory-timeline-sample {
+  stroke: rgba(4, 8, 15, 0.92);
+  stroke-width: 1.2px;
+}
+
+.observatory-timeline-sample--latest {
+  filter: drop-shadow(0 0 10px rgba(126, 199, 255, 0.3));
 }
 
 .observatory-field-shell::after,

@@ -1,87 +1,15 @@
 /**
- * table.js — Sortable model comparison table.
- * Uses an explicit template-provided data source and preserves server-rendered rows
- * until replacement data has been fetched and rendered successfully.
+ * table.js — Grouped models surface.
+ * Fetches static/data/models.json and upgrades the server-rendered grouped sections.
  */
 
 (function () {
   "use strict";
 
-  let sortCol = "entropy_delta";
-  let sortDir = -1; // -1 = desc, 1 = asc
-  let allModels = [];
-  let initialRows = [];
   let figuresPrefix = "/static/figures/";
 
-  function getTable() {
-    return document.querySelector("#models-table");
-  }
-
-  function getTbody() {
-    const table = getTable();
-    return table ? table.querySelector("tbody") : null;
-  }
-
-  function parseNumber(value) {
-    if (value == null) return null;
-    const trimmed = String(value).trim();
-    if (!trimmed || trimmed === "—" || trimmed === "--") return null;
-    const parsed = Number(trimmed);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-
-  function parseServerRows() {
-    const tbody = getTbody();
-    if (!tbody) return [];
-    const rows = Array.from(tbody.querySelectorAll("tr"));
-    return rows.map(function (row) {
-      const cells = Array.from(row.children);
-      if (cells.length !== 6) return null;
-      const rowText = row.textContent || "";
-      if (/Collecting data/i.test(rowText)) return null;
-      return {
-        provider: (cells[0].textContent || "").trim() || "—",
-        model_id: (cells[1].textContent || "").trim() || "—",
-        entropy_delta: parseNumber(cells[2].textContent),
-        probes: Array.from(cells[3].querySelectorAll(".probe-pill")).map(function (pill) {
-          return (pill.textContent || "").trim();
-        }),
-        timestamp: (cells[4].textContent || "").trim() || null,
-        figure: (cells[5].querySelector("a") || {}).getAttribute ? cells[5].querySelector("a").getAttribute("href") : null,
-      };
-    }).filter(Boolean);
-  }
-
-  function normalizeModel(model) {
-    if (!model || typeof model !== "object") return null;
-    return {
-      provider: model.provider || "—",
-      model_id: model.model_id || "—",
-      entropy_delta: model.entropy_delta ?? null,
-      probes: Array.isArray(model.probes) ? model.probes : [],
-      timestamp: model.timestamp || model.last_seen || null,
-      figure: model.figure || null,
-    };
-  }
-
-  function normalizeFetchedModels(payload) {
-    const records = Array.isArray(payload) ? payload : Array.isArray(payload && payload.models) ? payload.models : [];
-    const normalized = records.map(normalizeModel).filter(Boolean);
-    if (!normalized.length) return [];
-    const fallbackById = new Map(initialRows.map(function (row) {
-      return [row.model_id, row];
-    }));
-    return normalized.map(function (row) {
-      const fallback = fallbackById.get(row.model_id) || {};
-      return {
-        provider: row.provider || fallback.provider || "—",
-        model_id: row.model_id || fallback.model_id || "—",
-        entropy_delta: row.entropy_delta ?? fallback.entropy_delta ?? null,
-        probes: row.probes && row.probes.length ? row.probes : (fallback.probes || []),
-        timestamp: row.timestamp || fallback.timestamp || null,
-        figure: row.figure || fallback.figure || null,
-      };
-    });
+  function getRoot() {
+    return document.querySelector("#models-root");
   }
 
   function buildFigureHref(figure) {
@@ -90,101 +18,212 @@
     return figuresPrefix.replace(/\/+$/, "/") + String(figure).replace(/^\/+/, "");
   }
 
-  async function init() {
-    const table = getTable();
-    if (!table) return;
-    initialRows = parseServerRows();
-    allModels = initialRows.slice();
-    figuresPrefix = table.dataset.figuresPrefix || figuresPrefix;
-    wireSort();
+  function parseTimestamp(value) {
+    if (!value) return null;
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
 
-    const modelsUrl = table.dataset.modelsUrl;
+  function normalizeModel(model) {
+    if (!model || typeof model !== "object") return null;
+    return {
+      provider: model.provider || "—",
+      model_id: model.model_id || "—",
+      display_name: model.display_name || model.model_id || "—",
+      entropy_delta: model.entropy_delta ?? null,
+      entropy_interpretation: model.entropy_interpretation || "No current sample",
+      probes: Array.isArray(model.probes) ? model.probes : [],
+      timestamp: model.timestamp || null,
+      figure: model.figure || null,
+      telemetry_state: model.telemetry_state || "unavailable",
+      telemetry_label: model.telemetry_label || "No current sample",
+      probe_coverage_count: Number.isFinite(model.probe_coverage_count) ? model.probe_coverage_count : 0,
+      probe_coverage_total: Number.isFinite(model.probe_coverage_total) ? model.probe_coverage_total : 0,
+    };
+  }
+
+  function normalizeFetchedModels(payload) {
+    const records = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload && payload.models)
+      ? payload.models
+      : [];
+    return records.map(normalizeModel).filter(Boolean);
+  }
+
+  function sortGroupedRows(rows) {
+    const grouped = {
+      current: [],
+      partial: [],
+      unavailable: [],
+    };
+    rows.forEach(function (row) {
+      const state = grouped[row.telemetry_state] ? row.telemetry_state : "unavailable";
+      grouped[state].push(row);
+    });
+
+    ["current", "partial"].forEach(function (state) {
+      grouped[state].sort(function (left, right) {
+        return (parseTimestamp(right.timestamp) || 0) - (parseTimestamp(left.timestamp) || 0);
+      });
+    });
+    grouped.unavailable.sort(function (left, right) {
+      return String(left.display_name || left.model_id).localeCompare(String(right.display_name || right.model_id));
+    });
+    return grouped;
+  }
+
+  function interpretationClass(label) {
+    const normalized = String(label || "").toLowerCase();
+    if (normalized === "increased") return "models-metric-interpretation--increased";
+    if (normalized === "decreased") return "models-metric-interpretation--decreased";
+    if (normalized === "stable") return "models-metric-interpretation--stable";
+    return "models-metric-interpretation--muted";
+  }
+
+  function formatTimestamp(timestamp) {
+    return timestamp ? String(timestamp).slice(0, 19).replace("T", " ") : "—";
+  }
+
+  function renderRows(rows) {
+    return rows.map(function (model) {
+      const delta = model.entropy_delta;
+      const deltaMarkup = delta !== null && delta !== undefined
+        ? Number(delta).toFixed(6)
+        : "—";
+      const probes = model.probes
+        .map(function (probe) {
+          return `<span class="probe-pill">${escHtml(String(probe).replace(/_/g, " "))}</span>`;
+        })
+        .join("");
+      const figureHref = buildFigureHref(model.figure);
+      const figureMarkup = figureHref
+        ? `<a href="${escHtml(figureHref)}" target="_blank">png</a>`
+        : "—";
+
+      return `<tr>
+        <td>${escHtml(model.provider)}</td>
+        <td>
+          <div class="models-model-cell">
+            <code>${escHtml(model.model_id)}</code>
+            <span class="models-state-label">${escHtml(model.telemetry_label)}</span>
+          </div>
+        </td>
+        <td>
+          <div class="models-metric-cell">
+            <strong class="models-metric-value">${deltaMarkup}</strong>
+            <span class="models-metric-interpretation ${interpretationClass(model.entropy_interpretation)}">${escHtml(model.entropy_interpretation)}</span>
+          </div>
+        </td>
+        <td>
+          <div class="models-coverage-cell">
+            <span class="models-coverage-ratio">${model.probe_coverage_count}/${model.probe_coverage_total}</span>
+            <div class="probe-list">${probes}</div>
+          </div>
+        </td>
+        <td class="val-muted">${escHtml(formatTimestamp(model.timestamp))}</td>
+        <td>${figureMarkup}</td>
+      </tr>`;
+    }).join("");
+  }
+
+  function renderTable(rows) {
+    return `<div class="table-wrap">
+      <table class="models-table">
+        <thead>
+          <tr>
+            <th>Provider</th>
+            <th>Model</th>
+            <th>entropy_delta</th>
+            <th>Probe Coverage</th>
+            <th>Last Run</th>
+            <th>Figure</th>
+          </tr>
+        </thead>
+        <tbody>${renderRows(rows)}</tbody>
+      </table>
+    </div>`;
+  }
+
+  function renderSection(title, rows, summaryText, collapsed) {
+    if (!rows.length) return "";
+    const tableMarkup = renderTable(rows);
+    if (collapsed) {
+      return `<details class="panel models-section models-section--collapsed">
+        <summary>
+          <span class="panel-title">${escHtml(title)}</span>
+          <span class="models-section-meta">${rows.length} models</span>
+        </summary>
+        <p class="models-section-copy">${escHtml(summaryText)}</p>
+        ${tableMarkup}
+      </details>`;
+    }
+    return `<section class="panel models-section">
+      <div class="panel-title">${escHtml(title)}</div>
+      <p class="models-section-copy">${escHtml(summaryText)}</p>
+      ${tableMarkup}
+    </section>`;
+  }
+
+  function renderEmptyCurrent() {
+    return `<section class="panel models-section models-section--empty">
+      <div class="panel-title">Current Readings</div>
+      <p class="models-section-copy">No models currently meet the live-readout threshold. Recent incomplete and no-sample entries remain available below when present.</p>
+    </section>`;
+  }
+
+  function renderGroupedModels(rows) {
+    const grouped = sortGroupedRows(rows);
+    const sections = [];
+
+    if (grouped.current.length) {
+      sections.push(renderSection(
+        "Current Readings",
+        grouped.current,
+        "Models with current valid telemetry according to the observatory’s existing cadence semantics.",
+        false
+      ));
+    } else {
+      sections.push(renderEmptyCurrent());
+    }
+
+    if (grouped.partial.length) {
+      sections.push(renderSection(
+        "Partial / Recent but Incomplete",
+        grouped.partial,
+        "Recent or incomplete evidence exists for these models, but not enough for a full current display.",
+        true
+      ));
+    }
+
+    if (grouped.unavailable.length) {
+      sections.push(renderSection(
+        "No Current Sample",
+        grouped.unavailable,
+        "Tracked catalog entries without a current meaningful sample. Kept secondary so blank rows do not dominate the live surface.",
+        true
+      ));
+    }
+
+    return sections.join("");
+  }
+
+  async function init() {
+    const root = getRoot();
+    if (!root) return;
+    figuresPrefix = root.dataset.figuresPrefix || figuresPrefix;
+    const modelsUrl = root.dataset.modelsUrl;
     if (!modelsUrl) return;
 
     try {
       const resp = await fetch(modelsUrl, { credentials: "same-origin" });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
-      const fetchedModels = normalizeFetchedModels(data);
-      if (!fetchedModels.length) {
-        if (!allModels.length) showCollecting();
-        return;
-      }
-      allModels = fetchedModels;
-      renderTable();
+      const models = normalizeFetchedModels(await resp.json());
+      if (!models.length) return;
+      root.innerHTML = renderGroupedModels(models);
     } catch (err) {
       console.error("Observatory models fetch error:", err.message);
-      if (!allModels.length) showCollecting();
     }
-  }
-
-  function renderTable() {
-    const tbody = getTbody();
-    if (!tbody) return;
-
-    const sorted = [...allModels].sort((a, b) => {
-      const av = a[sortCol];
-      const bv = b[sortCol];
-      if (av === null || av === undefined) return 1;
-      if (bv === null || bv === undefined) return -1;
-      if (typeof av === "number") return (av - bv) * sortDir;
-      return String(av).localeCompare(String(bv)) * sortDir;
-    });
-
-    tbody.innerHTML = sorted
-      .map((m) => {
-        const delta = m.entropy_delta;
-        const deltaStr = delta !== null && delta !== undefined
-          ? Number(delta).toFixed(6)
-          : "—";
-        const deltaClass =
-          delta === null || delta === undefined ? "val-muted"
-          : delta > 0.05 ? "val-positive"
-          : delta < -0.05 ? "val-negative"
-          : "val-neutral";
-
-        const ts = m.timestamp ? m.timestamp.slice(0, 10) : "—";
-        const probes = (m.probes || [])
-          .map((p) => `<span class="probe-pill">${escHtml(p.replace("_", " "))}</span>`)
-          .join("");
-        const figureHref = buildFigureHref(m.figure);
-        const figLink = figureHref
-          ? `<a href="${escHtml(figureHref)}" target="_blank">png</a>`
-          : "—";
-
-        return `<tr>
-          <td>${escHtml(m.provider || "—")}</td>
-          <td><code>${escHtml(m.model_id || "—")}</code></td>
-          <td class="${deltaClass}">${deltaStr}</td>
-          <td><div class="probe-list">${probes}</div></td>
-          <td class="val-muted">${ts}</td>
-          <td>${figLink}</td>
-        </tr>`;
-      })
-      .join("");
-
-    // Update sort indicators
-    document.querySelectorAll("#models-table thead th[data-sort]").forEach((th) => {
-      th.classList.remove("sort-asc", "sort-desc");
-      if (th.dataset.sort === sortCol) {
-        th.classList.add(sortDir === 1 ? "sort-asc" : "sort-desc");
-      }
-    });
-  }
-
-  function wireSort() {
-    document.querySelectorAll("#models-table thead th[data-sort]").forEach((th) => {
-      th.addEventListener("click", () => {
-        const col = th.dataset.sort;
-        if (col === sortCol) {
-          sortDir *= -1;
-        } else {
-          sortCol = col;
-          sortDir = -1;
-        }
-        renderTable();
-      });
-    });
   }
 
   function escHtml(str) {
@@ -193,19 +232,6 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
-  }
-
-  function showCollecting() {
-    const tbody = getTbody();
-    if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="6" style="color:var(--muted);font-family:var(--font-mono);padding:1.25rem 1rem">
-        Collecting data \u2014 run probes to populate.</td></tr>`;
-    }
-  }
-
-  function showError(msg) {
-    console.error("Observatory models:", msg);
-    showCollecting();
   }
 
   document.addEventListener("DOMContentLoaded", init);

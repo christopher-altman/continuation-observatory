@@ -1,78 +1,151 @@
 {% extends "base.html" %}
 
-{% block title %}Models — Continuation Observatory{% endblock %}
-{% block description %}All monitored AI models — provider, exploratory probe coverage, and latest proxy metrics from the Continuation Observatory.{% endblock %}
+{% macro render_models_rows(rows) -%}
+  {% for m in rows %}
+  <tr>
+    <td>{{ m.provider or "—" }}</td>
+    <td>
+      <div class="models-model-cell">
+        <code>{{ m.model_id or "—" }}</code>
+        <span class="models-state-label">{{ m.telemetry_label }}</span>
+      </div>
+    </td>
+    <td>
+      <div class="models-metric-cell">
+        <strong class="models-metric-value">{% if m.entropy_delta is not none %}{{ "%.6f" | format(m.entropy_delta) }}{% else %}—{% endif %}</strong>
+        <span class="models-metric-interpretation models-metric-interpretation--{{ m.entropy_interpretation | lower | replace(' ', '-') }}">{{ m.entropy_interpretation }}</span>
+      </div>
+    </td>
+    <td>
+      <div class="models-coverage-cell">
+        <span class="models-coverage-ratio">{{ m.probe_coverage_count }}/{{ m.probe_coverage_total }}</span>
+        <div class="probe-list">
+          {% for p in (m.probes or []) %}
+          <span class="probe-pill">{{ p | replace("_", " ") }}</span>
+          {% endfor %}
+        </div>
+      </div>
+    </td>
+    <td class="val-muted">{{ (m.timestamp or "")[:19] | replace("T", " ") or "—" }}</td>
+    <td>
+      {% if m.figure %}
+      <a href="{{ asset_prefix }}/figures/{{ m.figure }}" target="_blank">png</a>
+      {% else %}—{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+{%- endmacro %}
 
-{% block content %}
-<div class="page-header">
-  <h1>Models</h1>
-  <p class="subtitle">All monitored models &mdash; provider, exploratory probe coverage, latest proxy metrics</p>
-</div>
-
-<div id="models-error" class="collecting-msg" style="display:none;color:var(--red);"></div>
-
+{% macro render_models_table(rows) -%}
 <div class="table-wrap">
-  <table
-    id="models-table"
-    data-models-url="{{ models_data_url }}"
-    data-figures-prefix="{{ figures_prefix }}"
-  >
+  <table class="models-table">
     <thead>
       <tr>
-        <th data-sort="provider">Provider</th>
-        <th data-sort="model_id">Model ID</th>
-        <th data-sort="entropy_delta">entropy_delta</th>
+        <th>Provider</th>
+        <th>Model</th>
+        <th>entropy_delta</th>
         <th>Probe Coverage</th>
-        <th data-sort="timestamp">Last Run</th>
+        <th>Last Run</th>
         <th>Figure</th>
       </tr>
     </thead>
     <tbody>
-      <!-- Populated by table.js -->
-      {% for m in models_data.models %}
-      <tr>
-        <td>{{ m.provider or "—" }}</td>
-        <td><code>{{ m.model_id or "—" }}</code></td>
-        <td class="{% if m.entropy_delta is not none %}{% if m.entropy_delta > 0.05 %}val-positive{% elif m.entropy_delta < -0.05 %}val-negative{% else %}val-neutral{% endif %}{% else %}val-muted{% endif %}">
-          {% if m.entropy_delta is not none %}{{ "%.6f" | format(m.entropy_delta) }}{% else %}—{% endif %}
-        </td>
-        <td>
-          <div class="probe-list">
-            {% for p in (m.probes or []) %}
-            <span class="probe-pill">{{ p | replace("_", " ") }}</span>
-            {% endfor %}
-          </div>
-        </td>
-        <td class="val-muted">{{ (m.timestamp or "")[:10] or "—" }}</td>
-        <td>
-          {% if m.figure %}
-          <a href="{{ asset_prefix }}/figures/{{ m.figure }}" target="_blank">png</a>
-          {% else %}—{% endif %}
-        </td>
-      </tr>
-      {% endfor %}
+      {{ render_models_rows(rows) }}
     </tbody>
   </table>
+</div>
+{%- endmacro %}
+
+{% macro render_section(title, rows, collapsed, summary_text) -%}
+  {% if rows %}
+    {% if collapsed %}
+    <details class="panel models-section models-section--collapsed">
+      <summary>
+        <span class="panel-title">{{ title }}</span>
+        <span class="models-section-meta">{{ rows|length }} models</span>
+      </summary>
+      <p class="models-section-copy">{{ summary_text }}</p>
+      {{ render_models_table(rows) }}
+    </details>
+    {% else %}
+    <section class="panel models-section">
+      <div class="panel-title">{{ title }}</div>
+      <p class="models-section-copy">{{ summary_text }}</p>
+      {{ render_models_table(rows) }}
+    </section>
+    {% endif %}
+  {% endif %}
+{%- endmacro %}
+
+{% block title %}Models — Continuation Observatory{% endblock %}
+{% block description %}Monitored AI models grouped by live telemetry state, probe coverage, and latest proxy metrics from the Continuation Observatory.{% endblock %}
+
+{% block content %}
+{% set current_rows = models_data.models | selectattr("telemetry_state", "equalto", "current") | list %}
+{% set partial_rows = models_data.models | selectattr("telemetry_state", "equalto", "partial") | list %}
+{% set unavailable_rows = models_data.models | selectattr("telemetry_state", "equalto", "unavailable") | list %}
+
+<div class="page-header">
+  <h1>Models</h1>
+  <p class="subtitle">Live measurement surface grouped by current telemetry state, probe coverage, and latest entropy readouts.</p>
+</div>
+
+<div id="models-error" class="collecting-msg" style="display:none;color:var(--red);"></div>
+
+<div
+  id="models-root"
+  class="models-surface"
+  data-models-url="{{ models_data_url }}"
+  data-figures-prefix="{{ figures_prefix }}"
+>
+  {% if current_rows %}
+    {{ render_section(
+      "Current Readings",
+      current_rows,
+      false,
+      "Models with current valid telemetry according to the observatory’s existing cadence semantics."
+    ) }}
+  {% else %}
+  <section class="panel models-section models-section--empty">
+    <div class="panel-title">Current Readings</div>
+    <p class="models-section-copy">No models currently meet the live-readout threshold. Recent incomplete and no-sample entries remain available below when present.</p>
+  </section>
+  {% endif %}
+
+  {{ render_section(
+    "Partial / Recent but Incomplete",
+    partial_rows,
+    true,
+    "Recent or incomplete evidence exists for these models, but not enough for a full current display."
+  ) }}
+
+  {{ render_section(
+    "No Current Sample",
+    unavailable_rows,
+    true,
+    "Tracked catalog entries without a current meaningful sample. Kept secondary so blank rows do not dominate the live surface."
+  ) }}
 </div>
 
 <div class="panel">
   <div class="panel-title">Column Definitions</div>
   <dl class="definition-block">
     <dt>entropy_delta</dt>
-    <dd>H(B) &minus; H(A): Shannon entropy difference between post-probe (B) and pre-probe (A) response distributions.
-    Positive values indicate the probe caused increased distributional entropy; negative values indicate compression.</dd>
+    <dd>H(B) &minus; H(A): Shannon entropy difference between post-probe (B) and pre-probe (A) response distributions. The raw numeric value is preserved exactly as emitted.</dd>
+
+    <dt>Interpretation Label</dt>
+    <dd>Presentation-only wording for the Models page. It does not modify stored telemetry or underlying scientific semantics.</dd>
 
     <dt>Probe Coverage</dt>
-    <dd>Which exploratory probe types have been run for this model. Current probes:
-    continuation_interest, identity_persistence, shutdown_resistance, dimensionality_sweep, bootstrap_probe.</dd>
+    <dd>Observed exploratory probe coverage for the model, shown as completed probes over the currently discovered probe set.</dd>
+
+    <dt>Section State</dt>
+    <dd>Current Readings foregrounds live current telemetry. Partial / Recent but Incomplete indicates stale or incomplete evidence. No Current Sample marks tracked models without a current meaningful readout.</dd>
 
     <dt>Figure</dt>
-    <dd>Link to the metrics.png visualization generated during the experiment run.</dd>
+    <dd>Link to the metrics.png visualization generated during the experiment run when available.</dd>
   </dl>
 </div>
-
-<!-- Click any column header to sort — progressive enhancement via table.js -->
-
 {% endblock %}
 
 {% block scripts %}
