@@ -186,7 +186,9 @@ def page_context(page_name: str) -> dict[str, Any]:
         "route_links": "/links/",
         "asset_prefix": "/static",
         "asset_version": _latest_static_asset_version(),
-        "models_data_url": "/api/observatory/models",
+        # Keep the live Models page on the same bundled data surface as the
+        # static mirror so grouped telemetry state does not diverge at runtime.
+        "models_data_url": "/static/data/models.json" if page_name == "models" else "/api/observatory/models",
         "figures_prefix": "/static/figures/",
         "marquee_models": LIVE_MARQUEE_MODELS,
         "home_signal_score": 0.0,

@@ -108,6 +108,10 @@ def test_observatory_pages_render():
     assert methodology.status_code == 200
     _assert_compact_header(methodology.text)
 
+    models_page = client.get("/models")
+    assert models_page.status_code == 200
+    assert 'data-models-url="/static/data/models.json"' in models_page.text
+
     for route in (
         "/research/",
         "/ucip/",
