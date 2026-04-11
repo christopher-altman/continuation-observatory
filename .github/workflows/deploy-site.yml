@@ -33,7 +33,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install jinja2 pyyaml
+        run: pip install -e .
 
       - name: Build site
         run: python scripts/build_site.py --output site/output/
