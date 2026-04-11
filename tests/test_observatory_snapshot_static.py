@@ -64,6 +64,7 @@ def test_build_writes_observatory_snapshot_and_page(tmp_path, monkeypatch):
     assert "observatory-timeline-empty" in observatory_html
     assert "Research Directions" in research_html
     assert "Coherence-Thesis.png" in research_html
+    assert "Unified Continuation-Interest Protocol (UCIP)" in home_html
     assert "Read the UCIP explainer" in home_html
     assert "Institutional map" in home_html
     assert "Independent evaluators and safety nonprofits" in links_html

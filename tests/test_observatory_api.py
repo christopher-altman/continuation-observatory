@@ -82,6 +82,7 @@ def test_observatory_pages_render():
     resp = client.get("/")
     assert resp.status_code == 200
     assert b"Continuation Observatory" in resp.content
+    assert b"Unified Continuation-Interest Protocol (UCIP)" in resp.content
     assert b"Read the UCIP explainer" in resp.content
     assert b"Institutional map" in resp.content
     assert b"Links" in resp.content
@@ -98,7 +99,7 @@ def test_observatory_pages_render():
         assert page.status_code == 200
 
     assert b"Research Directions" in client.get("/research/").content
-    assert b"UCIP Explainer" in client.get("/ucip/").content
+    assert b"Unified Continuation-Interest Protocol (UCIP) Explainer" in client.get("/ucip/").content
     assert b"full filing text is not yet public" in client.get("/ucip/patent/").content
     assert b"Independent evaluators and safety nonprofits" in client.get("/links/").content
 
