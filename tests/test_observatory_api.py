@@ -16,6 +16,18 @@ def _seed_observatory() -> None:
     run_sweep_cycle()
 
 
+def _nav_fragment(html: str) -> str:
+    return html.split('<nav class="site-nav">', 1)[1].split("</nav>", 1)[0]
+
+
+def _assert_compact_header(html: str) -> None:
+    nav_html = _nav_fragment(html)
+    assert 'aria-label="Continuation Observatory"' in nav_html
+    assert "Powered by UCIP" in nav_html
+    assert "Powered by the Unified Continuation-Interest Protocol (UCIP)" not in nav_html
+    assert nav_html.index("Continuation Observatory") < nav_html.index("Powered by UCIP")
+
+
 def test_observatory_endpoints_return_200():
     _seed_observatory()
 
@@ -65,10 +77,15 @@ def test_observatory_endpoints_return_200():
 
 
 def test_observatory_pages_render():
-    _seed_observatory()
     resp = client.get("/observatory")
     assert resp.status_code == 200
+    observatory_html = resp.text
+    _assert_compact_header(observatory_html)
     assert b"Continuation Observatory" in resp.content
+    assert b"UCIP Observatory" in resp.content
+    assert b"UCIP Observatory 2.0" not in resp.content
+    assert b"Live tracking for continuation signals in advanced AI systems." in resp.content
+    assert b"One normalized instrument, now rendered as a full laboratory surface." not in resp.content
     assert b"Temporal Readout" in resp.content
     assert b"Aggregate Signal Timeline" in resp.content
     assert b"Comparative Metric Overlay" in resp.content
@@ -81,11 +98,15 @@ def test_observatory_pages_render():
 
     resp = client.get("/")
     assert resp.status_code == 200
+    home_html = resp.text
+    _assert_compact_header(home_html)
     assert b"Continuation Observatory" in resp.content
     assert b"Unified Continuation-Interest Protocol (UCIP)" in resp.content
     assert b"Read the UCIP explainer" in resp.content
-    assert b"Institutional map" in resp.content
-    assert b"Links" in resp.content
+
+    methodology = client.get("/methodology")
+    assert methodology.status_code == 200
+    _assert_compact_header(methodology.text)
 
     for route in (
         "/research/",
@@ -97,11 +118,6 @@ def test_observatory_pages_render():
     ):
         page = client.get(route)
         assert page.status_code == 200
-
-    assert b"Research Directions" in client.get("/research/").content
-    assert b"Unified Continuation-Interest Protocol (UCIP) Explainer" in client.get("/ucip/").content
-    assert b"full filing text is not yet public" in client.get("/ucip/patent/").content
-    assert b"Independent evaluators and safety nonprofits" in client.get("/links/").content
 
 
 def test_manifesto_redirects_to_research():

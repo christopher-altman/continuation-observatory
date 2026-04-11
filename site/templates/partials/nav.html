@@ -1,28 +1,33 @@
 <header class="site-nav-shell">
   <nav class="site-nav">
-    <a class="site-mark" href="{{ route_home }}">
-      <span class="site-mark-kicker">Powered by the Unified Continuation-Interest Protocol (UCIP)</span>
-      <span class="site-mark-title site-mark-title-full">
-        <span class="wordmark-continuation">Continuation</span>
-        <span class="wordmark-observatory">Observatory</span>
+    <a class="site-mark" href="{{ route_home }}" aria-label="Continuation Observatory">
+      <span class="site-mark-brand">
+        <span class="site-mark-title site-mark-title-full">
+          <span class="wordmark-continuation">Continuation</span>
+          <span class="wordmark-observatory">Observatory</span>
+        </span>
+        <span class="site-mark-title site-mark-title-short">
+          <span class="wordmark-continuation">Continuation</span>
+          <span class="wordmark-observatory">Obs.</span>
+        </span>
       </span>
-      <span class="site-mark-title site-mark-title-short">
-        <span class="wordmark-continuation">Continuation</span>
-        <span class="wordmark-observatory">Obs.</span>
+      <span class="site-mark-attribution">
+        <span class="site-mark-divider" aria-hidden="true"></span>
+        <span class="site-mark-kicker">Powered by UCIP</span>
       </span>
     </a>
     <button class="nav-menu-toggle" id="nav-menu-toggle" type="button" aria-expanded="false" aria-controls="nav-panel">
       Open navigation menu
     </button>
     <div class="nav-panel" id="nav-panel">
-      <a href="{{ route_observatory }}">Observatory</a>
-      <a href="{{ route_models }}">Models</a>
-      <a href="{{ route_methodology }}">Methodology</a>
-      <a href="{{ route_research }}">Research</a>
-      <a href="{{ route_links }}">Links</a>
-      <a href="{{ route_context }}">Context</a>
-      <a href="{{ route_data }}">Data</a>
-      <a href="{{ route_falsification }}">Falsification</a>
+      <a href="{{ route_observatory }}"{% if page_name == 'observatory' %} aria-current="page"{% endif %}>Observatory</a>
+      <a href="{{ route_models }}"{% if page_name == 'models' %} aria-current="page"{% endif %}>Models</a>
+      <a href="{{ route_methodology }}"{% if page_name == 'methodology' %} aria-current="page"{% endif %}>Methodology</a>
+      <a href="{{ route_research }}"{% if page_name == 'research' %} aria-current="page"{% endif %}>Research</a>
+      <a href="{{ route_links }}"{% if page_name == 'links' %} aria-current="page"{% endif %}>Links</a>
+      <a href="{{ route_context }}"{% if page_name == 'context' %} aria-current="page"{% endif %}>Context</a>
+      <a href="{{ route_data }}"{% if page_name == 'data' %} aria-current="page"{% endif %}>Data</a>
+      <a href="{{ route_falsification }}"{% if page_name == 'falsification' %} aria-current="page"{% endif %}>Falsification</a>
       <a href="{{ github_href }}" target="_blank" rel="noopener">GitHub</a>
     </div>
   </nav>

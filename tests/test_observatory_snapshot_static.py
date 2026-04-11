@@ -17,6 +17,18 @@ def _seed_observatory() -> None:
     run_sweep_cycle()
 
 
+def _nav_fragment(html: str) -> str:
+    return html.split('<nav class="site-nav">', 1)[1].split("</nav>", 1)[0]
+
+
+def _assert_compact_header(html: str) -> None:
+    nav_html = _nav_fragment(html)
+    assert 'aria-label="Continuation Observatory"' in nav_html
+    assert "Powered by UCIP" in nav_html
+    assert "Powered by the Unified Continuation-Interest Protocol (UCIP)" not in nav_html
+    assert nav_html.index("Continuation Observatory") < nav_html.index("Powered by UCIP")
+
+
 def test_build_writes_observatory_snapshot_and_page(tmp_path, monkeypatch):
     monkeypatch.setenv(RESULTS_DIR_ENV_VAR, str(tmp_path / "results"))
     _seed_observatory()
@@ -49,8 +61,12 @@ def test_build_writes_observatory_snapshot_and_page(tmp_path, monkeypatch):
     observatory_html = observatory_page.read_text(encoding="utf-8")
     research_html = research_page.read_text(encoding="utf-8")
     home_html = (output_dir / "index.html").read_text(encoding="utf-8")
+    methodology_html = (output_dir / "methodology.html").read_text(encoding="utf-8")
     links_html = links_page.read_text(encoding="utf-8")
+    ucip_html = ucip_page.read_text(encoding="utf-8")
     sitemap_xml = sitemap_path.read_text(encoding="utf-8")
+    for html in (observatory_html, home_html, methodology_html, research_html, ucip_html):
+        _assert_compact_header(html)
     assert "Temporal Readout" in observatory_html
     assert "Aggregate Signal Timeline" in observatory_html
     assert "Comparative Metric Overlay" in observatory_html
@@ -62,6 +78,10 @@ def test_build_writes_observatory_snapshot_and_page(tmp_path, monkeypatch):
     assert "timeline-root" in observatory_html
     assert "observatory-timeline-shell" in observatory_html
     assert "observatory-timeline-empty" in observatory_html
+    assert "UCIP Observatory" in observatory_html
+    assert "UCIP Observatory 2.0" not in observatory_html
+    assert "Bundled observatory snapshot rendered with the same field grammar and dossier view as the live instrument." in observatory_html
+    assert "One normalized instrument, now rendered as a full laboratory surface." not in observatory_html
     assert "Research Directions" in research_html
     assert "Coherence-Thesis.png" in research_html
     assert "Unified Continuation-Interest Protocol (UCIP)" in home_html
