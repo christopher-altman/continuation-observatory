@@ -47,6 +47,10 @@ if (root) {
     return (hash >>> 0) / 4294967295;
   }
 
+  function pointerSupportsHover(pointerType) {
+    return pointerType !== "touch";
+  }
+
   function hasWebGL() {
     try {
       const canvas = document.createElement("canvas");
@@ -60,6 +64,72 @@ if (root) {
   const FOCUS_RING_START_ANGLE = 216;
   const FOCUS_RING_MAX_SWEEP = 324;
   const LABEL_QUALIFIER_SUFFIXES = ["Fast Reasoning", "Reasoning"];
+  const ORB_PALETTE_FAMILIES = [
+    {
+      weight: 0.34,
+      coreHue: 0.578,
+      emissiveHue: 0.572,
+      haloHue: 0.598,
+      auraHue: 0.588,
+      shellHue: 0.592,
+      ringHue: 0.562,
+      metalHue: 0.582,
+      tickHue: 0.558,
+      focusGlowHue: 0.558,
+      lobeHues: [0.554, 0.58, 0.612, 0.668],
+    },
+    {
+      weight: 0.3,
+      coreHue: 0.592,
+      emissiveHue: 0.586,
+      haloHue: 0.616,
+      auraHue: 0.606,
+      shellHue: 0.61,
+      ringHue: 0.58,
+      metalHue: 0.592,
+      tickHue: 0.576,
+      focusGlowHue: 0.572,
+      lobeHues: [0.568, 0.594, 0.626, 0.676],
+    },
+    {
+      weight: 0.24,
+      coreHue: 0.606,
+      emissiveHue: 0.6,
+      haloHue: 0.63,
+      auraHue: 0.62,
+      shellHue: 0.624,
+      ringHue: 0.594,
+      metalHue: 0.604,
+      tickHue: 0.59,
+      focusGlowHue: 0.586,
+      lobeHues: [0.582, 0.608, 0.638, 0.684],
+    },
+    {
+      weight: 0.12,
+      coreHue: 0.618,
+      emissiveHue: 0.612,
+      haloHue: 0.648,
+      auraHue: 0.636,
+      shellHue: 0.64,
+      ringHue: 0.604,
+      metalHue: 0.61,
+      tickHue: 0.598,
+      focusGlowHue: 0.594,
+      lobeHues: [0.59, 0.618, 0.652, 0.692],
+    },
+  ];
+
+  function selectOrbPaletteFamily(seed) {
+    let cursor = seed;
+    for (let index = 0; index < ORB_PALETTE_FAMILIES.length; index += 1) {
+      const family = ORB_PALETTE_FAMILIES[index];
+      if (cursor <= family.weight || index === ORB_PALETTE_FAMILIES.length - 1) {
+        return family;
+      }
+      cursor -= family.weight;
+    }
+    return ORB_PALETTE_FAMILIES[0];
+  }
 
   function isFiniteNumber(value) {
     return typeof value === "number" && Number.isFinite(value);
@@ -820,6 +890,7 @@ if (root) {
       this.pointerTarget = { x: 0, y: 0 };
       this.keyTarget = { x: 0, y: 0 };
       this.keyVelocity = { x: 0, y: 0 };
+      this.hoverEnabled = true;
       this.zoomRange = { min: 7.2, max: 16.8 };
       this.zoomTarget = 16.4;
       this.zoomCurrent = 16.4;
@@ -833,6 +904,7 @@ if (root) {
       this.bloomImpulse = 0;
       this.bloomBase = 0.46;
       this.focusChangedAt = performance.now();
+      this.lastPointerSelectionAt = 0;
       this.modes = latestPayload.toggles || { history: true, compare: false, threshold: true };
 
       this.target.innerHTML = `
@@ -918,9 +990,9 @@ if (root) {
 
         this.bloomPass = new addons.UnrealBloomPass(
           new THREE.Vector2(this.target.clientWidth || 700, this.target.clientHeight || 460),
-          0.68,  /* strength — slightly more luminous */
-          0.52,  /* radius  — tighter, more precise spread */
-          0.62   /* threshold — catches more of the node glow */
+          0.76,  /* strength — brighter cores without broad haze */
+          0.38,  /* radius — keep bloom localized around the nucleus */
+          0.72   /* threshold — favor only the hottest highlights */
         );
         this.composer.addPass(this.bloomPass);
       } catch (e) {
@@ -1268,6 +1340,7 @@ if (root) {
       this.onPointerMove = this.onPointerMove.bind(this);
       this.onPointerLeave = this.onPointerLeave.bind(this);
       this.onPointerDown = this.onPointerDown.bind(this);
+      this.onClick = this.onClick.bind(this);
       this.onKeyDown = this.onKeyDown.bind(this);
       this.onFocus = this.onFocus.bind(this);
       this.onBlur = this.onBlur.bind(this);
@@ -1276,6 +1349,7 @@ if (root) {
       this.renderer.domElement.addEventListener("pointermove", this.onPointerMove);
       this.renderer.domElement.addEventListener("pointerleave", this.onPointerLeave);
       this.renderer.domElement.addEventListener("pointerdown", this.onPointerDown);
+      this.renderer.domElement.addEventListener("click", this.onClick);
       this.shell.addEventListener("keydown", this.onKeyDown);
       this.shell.addEventListener("focus", this.onFocus);
       this.shell.addEventListener("blur", this.onBlur);
@@ -1309,16 +1383,15 @@ if (root) {
       canvas.height = 256;
       const context = canvas.getContext("2d");
       const gradient = context.createRadialGradient(128, 128, 0, 128, 128, 128);
-      /* Layered halo: bright nucleus → ice band → blue falloff → silver whisper → transparent */
+      /* Concentrated signal halo: bright nucleus with a fast, cool falloff. */
       gradient.addColorStop(0,    "rgba(255,255,255,1)");
-      gradient.addColorStop(0.06, "rgba(232,250,255,0.97)");
-      gradient.addColorStop(0.14, "rgba(200,238,255,0.88)");
-      gradient.addColorStop(0.24, "rgba(156,222,255,0.72)");
-      gradient.addColorStop(0.36, "rgba(110,185,255,0.48)");
-      gradient.addColorStop(0.50, "rgba(76,145,245,0.28)");
-      gradient.addColorStop(0.64, "rgba(55,105,210,0.14)");
-      gradient.addColorStop(0.78, "rgba(52,72,180,0.06)");
-      gradient.addColorStop(0.90, "rgba(58,48,148,0.02)");
+      gradient.addColorStop(0.035, "rgba(248,252,255,1)");
+      gradient.addColorStop(0.09, "rgba(232,246,255,0.96)");
+      gradient.addColorStop(0.18, "rgba(180,228,255,0.76)");
+      gradient.addColorStop(0.29, "rgba(118,196,255,0.46)");
+      gradient.addColorStop(0.42, "rgba(74,148,246,0.22)");
+      gradient.addColorStop(0.58, "rgba(58,104,220,0.09)");
+      gradient.addColorStop(0.74, "rgba(76,74,192,0.035)");
       gradient.addColorStop(1,    "rgba(0,0,0,0)");
       context.fillStyle = gradient;
       context.fillRect(0, 0, 256, 256);
@@ -1401,12 +1474,12 @@ if (root) {
       canvas.height = 128;
       const context = canvas.getContext("2d");
       const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
-      gradient.addColorStop(0,    "rgba(255,253,248,1)");
-      gradient.addColorStop(0.10, "rgba(255,255,255,0.97)");
-      gradient.addColorStop(0.22, "rgba(235,250,255,0.88)");
-      gradient.addColorStop(0.38, "rgba(180,236,255,0.62)");
-      gradient.addColorStop(0.56, "rgba(130,200,255,0.30)");
-      gradient.addColorStop(0.78, "rgba(90,160,255,0.08)");
+      gradient.addColorStop(0,    "rgba(255,255,255,1)");
+      gradient.addColorStop(0.07, "rgba(249,252,255,1)");
+      gradient.addColorStop(0.16, "rgba(236,248,255,0.94)");
+      gradient.addColorStop(0.28, "rgba(194,232,255,0.7)");
+      gradient.addColorStop(0.42, "rgba(126,194,255,0.36)");
+      gradient.addColorStop(0.60, "rgba(84,148,250,0.14)");
       gradient.addColorStop(1,    "rgba(0,0,0,0)");
       context.fillStyle = gradient;
       context.fillRect(0, 0, 128, 128);
@@ -1688,25 +1761,25 @@ if (root) {
         ],
       );
 
-      /* Ribbon 3: violet-magenta accent */
+      /* Ribbon 3: restrained ultraviolet accent */
       ribbon(
         [[80, 80], [130, 120], [185, 145], [240, 130], [290, 95]],
         13, 5, 0.65,
         [
-          [0, "rgba(180, 120, 255, 0)"],
-          [0.2, "rgba(190, 140, 255, 0.8)"],
-          [0.55, "rgba(210, 160, 255, 0.9)"],
-          [0.8, "rgba(170, 130, 240, 0.7)"],
-          [1, "rgba(140, 100, 220, 0)"],
+          [0, "rgba(144, 132, 255, 0)"],
+          [0.2, "rgba(160, 152, 255, 0.76)"],
+          [0.55, "rgba(188, 182, 255, 0.86)"],
+          [0.8, "rgba(132, 128, 236, 0.64)"],
+          [1, "rgba(108, 102, 214, 0)"],
         ],
       );
 
       /* Soft central glow for depth */
       ctx.globalCompositeOperation = "screen";
       const centerGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 120);
-      centerGlow.addColorStop(0, "rgba(180, 220, 255, 0.18)");
-      centerGlow.addColorStop(0.3, "rgba(120, 180, 255, 0.08)");
-      centerGlow.addColorStop(0.7, "rgba(60, 100, 200, 0.03)");
+      centerGlow.addColorStop(0, "rgba(214, 236, 255, 0.22)");
+      centerGlow.addColorStop(0.22, "rgba(132, 194, 255, 0.1)");
+      centerGlow.addColorStop(0.58, "rgba(72, 112, 214, 0.035)");
       centerGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
       ctx.fillStyle = centerGlow;
       ctx.fillRect(0, 0, 384, 384);
@@ -1730,14 +1803,14 @@ if (root) {
       context.translate(128, 128);
 
       const streaks = [
-        { rotation: -0.72, width: 132, height: 28, alpha: 0.82 },
-        { rotation: 0.34, width: 112, height: 22, alpha: 0.58 },
+        { rotation: -0.72, width: 124, height: 24, alpha: 0.92 },
+        { rotation: 0.34, width: 102, height: 18, alpha: 0.62 },
       ];
       streaks.forEach(function (streak) {
         const gradient = context.createRadialGradient(0, 0, 0, 0, 0, streak.width * 0.5);
         gradient.addColorStop(0, `rgba(255,255,255,${streak.alpha})`);
-        gradient.addColorStop(0.32, `rgba(214,236,255,${streak.alpha * 0.74})`);
-        gradient.addColorStop(0.62, "rgba(128,186,244,0.14)");
+        gradient.addColorStop(0.24, `rgba(224,242,255,${streak.alpha * 0.8})`);
+        gradient.addColorStop(0.52, "rgba(136,198,255,0.18)");
         gradient.addColorStop(1, "rgba(0,0,0,0)");
         context.save();
         context.rotate(streak.rotation);
@@ -1749,10 +1822,10 @@ if (root) {
         context.restore();
       });
 
-      const bloom = context.createRadialGradient(0, 0, 0, 0, 0, 72);
-      bloom.addColorStop(0, "rgba(255,255,255,0.38)");
-      bloom.addColorStop(0.22, "rgba(212,236,255,0.28)");
-      bloom.addColorStop(0.68, "rgba(110,166,236,0.08)");
+      const bloom = context.createRadialGradient(0, 0, 0, 0, 0, 60);
+      bloom.addColorStop(0, "rgba(255,255,255,0.46)");
+      bloom.addColorStop(0.18, "rgba(220,240,255,0.26)");
+      bloom.addColorStop(0.52, "rgba(112,176,244,0.08)");
       bloom.addColorStop(1, "rgba(0,0,0,0)");
       context.fillStyle = bloom;
       context.beginPath();
@@ -1809,24 +1882,24 @@ if (root) {
     buildOrbPalette(node) {
       const { THREE } = this;
       const seed = hashString(`orb:${node.provider}:${node.id}`);
-      const hueDrift = ((seed * 2) - 1) * 0.022;
+      const family = selectOrbPaletteFamily(seed);
+      const hueDrift = ((hashString(`orb:fine:${node.id}`) * 2) - 1) * 0.004;
       const tierBoost = node.tier === "flagship" ? 1 : node.tier === "secondary" ? 0.78 : 0.56;
-      const familyShift = (Math.floor(seed * 4) - 1.5) * 0.012;
-      const core = new THREE.Color().setHSL(0.61 + familyShift + hueDrift * 0.3, 0.84, node.tier === "flagship" ? 0.56 : node.tier === "secondary" ? 0.51 : 0.47);
-      const emissive = new THREE.Color().setHSL(0.59 + familyShift + hueDrift * 0.3, 0.94, 0.58 + tierBoost * 0.04);
-      const halo = new THREE.Color().setHSL(0.64 + familyShift + hueDrift * 0.26, 0.7, 0.54);
-      const aura = new THREE.Color().setHSL(0.62 + familyShift + hueDrift * 0.22, 0.62, 0.5);
-      const shell = new THREE.Color().setHSL(0.63 + familyShift + hueDrift * 0.24, 0.62, 0.54);
-      const ring = new THREE.Color().setHSL(0.58 + familyShift + hueDrift * 0.2, 0.86, 0.68);
-      const nucleus = new THREE.Color().setHSL(0.6 + familyShift + hueDrift * 0.18, 0.18, 0.78);
-      const metalDark = new THREE.Color().setHSL(0.61 + familyShift * 0.3, 0.1, 0.18);
-      const metalMid = new THREE.Color().setHSL(0.59 + familyShift * 0.3, 0.08, 0.3);
-      const metalLight = new THREE.Color().setHSL(0.58 + familyShift * 0.2, 0.12, 0.62);
-      const tick = new THREE.Color().setHSL(0.57 + familyShift * 0.1, 0.72, 0.84);
-      const tickSoft = new THREE.Color().setHSL(0.58 + familyShift * 0.12, 0.48, 0.68);
-      const focusCoreDark = new THREE.Color().setHSL(0.61 + familyShift * 0.18, 0.54, 0.14);
-      const focusCoreMid = new THREE.Color().setHSL(0.59 + familyShift * 0.18, 0.42, 0.28);
-      const focusCoreGlow = new THREE.Color().setHSL(0.57 + familyShift * 0.14, 0.82, 0.82);
+      const core = new THREE.Color().setHSL(family.coreHue + hueDrift * 0.45, 0.78, node.tier === "flagship" ? 0.56 : node.tier === "secondary" ? 0.515 : 0.47);
+      const emissive = new THREE.Color().setHSL(family.emissiveHue + hueDrift * 0.36, 0.9, 0.6 + tierBoost * 0.04);
+      const halo = new THREE.Color().setHSL(family.haloHue + hueDrift * 0.34, 0.72, 0.55);
+      const aura = new THREE.Color().setHSL(family.auraHue + hueDrift * 0.28, 0.58, 0.49);
+      const shell = new THREE.Color().setHSL(family.shellHue + hueDrift * 0.3, 0.56, 0.5);
+      const ring = new THREE.Color().setHSL(family.ringHue + hueDrift * 0.24, 0.9, 0.72);
+      const nucleus = new THREE.Color().setHSL(family.coreHue + hueDrift * 0.12, 0.12, 0.84);
+      const metalDark = new THREE.Color().setHSL(family.metalHue + hueDrift * 0.08, 0.16, 0.16);
+      const metalMid = new THREE.Color().setHSL(family.metalHue + hueDrift * 0.06, 0.12, 0.28);
+      const metalLight = new THREE.Color().setHSL(family.metalHue + hueDrift * 0.04, 0.16, 0.64);
+      const tick = new THREE.Color().setHSL(family.tickHue + hueDrift * 0.12, 0.74, 0.86);
+      const tickSoft = new THREE.Color().setHSL(family.tickHue + hueDrift * 0.1, 0.42, 0.7);
+      const focusCoreDark = new THREE.Color().setHSL(family.coreHue + hueDrift * 0.08, 0.5, 0.14);
+      const focusCoreMid = new THREE.Color().setHSL(family.emissiveHue + hueDrift * 0.08, 0.34, 0.26);
+      const focusCoreGlow = new THREE.Color().setHSL(family.focusGlowHue + hueDrift * 0.1, 0.82, 0.84);
       return {
         core,
         emissive,
@@ -1843,12 +1916,11 @@ if (root) {
         focusCoreDark,
         focusCoreMid,
         focusCoreGlow,
-        lobes: [
-          new THREE.Color().setHSL(0.56 + familyShift + hueDrift * 0.12, 0.9, 0.63),
-          new THREE.Color().setHSL(0.61 + familyShift + hueDrift * 0.14, 0.82, 0.65),
-          new THREE.Color().setHSL(0.66 + familyShift + hueDrift * 0.14, 0.74, 0.66),
-          new THREE.Color().setHSL(0.63 + familyShift + hueDrift * 0.1, 0.58, 0.72),
-        ],
+        lobes: family.lobeHues.map(function (hue, index) {
+          const saturations = [0.88, 0.8, 0.68, 0.54];
+          const lights = [0.66, 0.68, 0.65, 0.76];
+          return new THREE.Color().setHSL(hue + hueDrift * 0.14, saturations[index], lights[index]);
+        }),
       };
     }
 
@@ -2256,10 +2328,10 @@ if (root) {
       const membraneTexture = this.siriCoreTexture || (this.siriCoreTexture = this.createSiriCoreTexture());
       /* ── Siri membrane tints — centralized for easy dial-back ── */
       const MEMBRANE_TINTS = [
-        new THREE.Color().setHSL(195 / 360, 0.85, 0.70),
-        new THREE.Color().setHSL(240 / 360, 0.78, 0.62),
-        new THREE.Color().setHSL(280 / 360, 0.65, 0.55),
-        new THREE.Color().setHSL(185 / 360, 0.80, 0.65),
+        new THREE.Color().setHSL(202 / 360, 0.76, 0.78),
+        new THREE.Color().setHSL(214 / 360, 0.82, 0.68),
+        new THREE.Color().setHSL(228 / 360, 0.70, 0.60),
+        new THREE.Color().setHSL(246 / 360, 0.52, 0.64),
         palette.focusCoreMid.clone().lerp(new THREE.Color(0x02060c), 0.15),
       ];
       const membraneConfigs = [
@@ -2450,7 +2522,7 @@ if (root) {
       };
 
       /* ── Siri-orb internal ribbons — bold luminous planes filling ~70% of sphere ── */
-      const siriColors = [0x5ef0ff, 0xc488ff, 0xff6eb4, 0x74eea0, 0x88bbff, 0xff99cc];
+      const siriColors = [0x7cecff, 0xb0d8ff, 0x7ca5ff, 0x9b8eff, 0xc8bdff, 0xe8f6ff];
       const siriRibbonConfigs = [
         { scaleW: 1.52, scaleH: 1.24, rotX: 0.8, rotY: 0.3, rotZ: -0.2, opacity: 0.34, speed: 0.22 },
         { scaleW: 1.38, scaleH: 1.44, rotX: -0.4, rotY: 1.1, rotZ: 0.4, opacity: 0.30, speed: -0.18 },
@@ -3038,6 +3110,24 @@ if (root) {
     }
 
     onPointerMove(event) {
+      const pointerType = event.pointerType || "mouse";
+      this.hoverEnabled = pointerSupportsHover(pointerType);
+      this._pointerType = pointerType;
+      if (!this.hoverEnabled) {
+        this.pointerTarget.x = 0;
+        this.pointerTarget.y = 0;
+        this._clientX = undefined;
+        this._clientY = undefined;
+        if (this.hoverId !== null) {
+          this.hoverId = null;
+          this.renderer.domElement.style.cursor = "";
+          this.tooltip.style.display = "none";
+          if (!this.focusId) {
+            this.rebuildGuides();
+          }
+        }
+        return;
+      }
       const rect = this.renderer.domElement.getBoundingClientRect();
       this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       this.mouse.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
@@ -3050,6 +3140,7 @@ if (root) {
     }
 
     onPointerLeave() {
+      this.hoverEnabled = false;
       this.mouse.x = -10;
       this.mouse.y = -10;
       this.pointerTarget.x = 0;
@@ -3062,18 +3153,43 @@ if (root) {
       }
     }
 
-    onPointerDown(event) {
+    handleSelectionAtClientPoint(clientX, clientY, pointerType = this._pointerType || "mouse") {
+      const hoverEnabled = pointerSupportsHover(pointerType);
+      const previousHover = this.hoverId;
+      this.hoverEnabled = hoverEnabled;
+      this._pointerType = pointerType;
       this.shell.focus({ preventScroll: true });
       this.lastInteractionAt = performance.now();
-      const pickedNode = this.pickNodeAtClientPoint(event.clientX, event.clientY);
-      this.hoverId = pickedNode ? pickedNode.modelId : null;
+      const pickedNode = this.pickNodeAtClientPoint(clientX, clientY);
+      this.hoverId = hoverEnabled && pickedNode ? pickedNode.modelId : null;
+      if (!hoverEnabled) {
+        this._clientX = undefined;
+        this._clientY = undefined;
+        this.renderer.domElement.style.cursor = "";
+        this.tooltip.style.display = "none";
+      }
+      if (!this.focusId && previousHover !== this.hoverId) {
+        this.rebuildGuides();
+      }
       if (!pickedNode) {
         window.dispatchEvent(new CustomEvent("observatory:clear-focus"));
-        return;
+        return false;
       }
       window.dispatchEvent(new CustomEvent("observatory:focus-model", {
         detail: { modelId: this.focusId === pickedNode.modelId ? null : pickedNode.modelId },
       }));
+      return true;
+    }
+
+    onPointerDown(event) {
+      this.lastPointerSelectionAt = performance.now();
+      const pointerType = event.pointerType || this._pointerType || "mouse";
+      this.handleSelectionAtClientPoint(event.clientX, event.clientY, pointerType);
+    }
+
+    onClick(event) {
+      if (performance.now() - this.lastPointerSelectionAt < 420) return;
+      this.handleSelectionAtClientPoint(event.clientX, event.clientY, this._pointerType || "touch");
     }
 
     onKeyDown(event) {
@@ -3087,6 +3203,11 @@ if (root) {
     }
 
     updateHover(clientX = this._clientX, clientY = this._clientY) {
+      if (!this.hoverEnabled) {
+        this.renderer.domElement.style.cursor = "";
+        this.tooltip.style.display = "none";
+        return;
+      }
       const prevHover = this.hoverId;
       const pickedNode = typeof clientX === "number" && typeof clientY === "number"
         ? this.pickNodeAtClientPoint(clientX, clientY)
@@ -4469,6 +4590,7 @@ if (root) {
       this.renderer.domElement.removeEventListener("pointermove", this.onPointerMove);
       this.renderer.domElement.removeEventListener("pointerleave", this.onPointerLeave);
       this.renderer.domElement.removeEventListener("pointerdown", this.onPointerDown);
+      this.renderer.domElement.removeEventListener("click", this.onClick);
       if (this.composer) this.composer.dispose();
       this.renderer.dispose();
       this.target.innerHTML = "";
@@ -4493,6 +4615,7 @@ if (root) {
       this.nodeElements = new Map();
       this.fieldNodes = [];
       this.focusChangedAt = 0;
+      this.lastPointerSelectionAt = 0;
 
       this.target.innerHTML = `
         <div class="observatory-fallback-field ${reducedMotion ? "is-reduced" : ""}" tabindex="0" role="application" aria-label="Interactive observatory field">
@@ -4565,6 +4688,11 @@ if (root) {
     }
 
     onPointerMove(event) {
+      if (!pointerSupportsHover(event.pointerType || "mouse")) {
+        this.pointer.x = 0;
+        this.pointer.y = 0;
+        return;
+      }
       const rect = this.shell.getBoundingClientRect();
       this.pointer.x = ((event.clientX - rect.left) / rect.width) - 0.5;
       this.pointer.y = ((event.clientY - rect.top) / rect.height) - 0.5;
@@ -4599,6 +4727,11 @@ if (root) {
         layer.innerHTML = "";
       });
       this.nodeElements.clear();
+      const dispatchNodeFocus = (modelId) => {
+        window.dispatchEvent(new CustomEvent("observatory:focus-model", {
+          detail: { modelId: this.focusId === modelId ? null : modelId },
+        }));
+      };
       this.fieldNodes.forEach((node) => {
         const normalizedX = clamp((node.anchor.x + 5.9) / 11.8, 0.09, 0.91);
         const normalizedY = clamp((node.anchor.y + 3.35) / 6.7, 0.12, 0.88);
@@ -4629,10 +4762,16 @@ if (root) {
             <span class="observatory-fallback-label-meta">${node.provider} · ${resolveNodeReadout(node)}</span>
           </span>
         `;
-        element.addEventListener("click", () => {
-          window.dispatchEvent(new CustomEvent("observatory:focus-model", {
-            detail: { modelId: this.focusId === node.id ? null : node.id },
-          }));
+        element.addEventListener("pointerdown", (event) => {
+          if ((event.pointerType || "mouse") === "mouse" && event.button !== 0) return;
+          event.preventDefault();
+          this.lastPointerSelectionAt = performance.now();
+          dispatchNodeFocus(node.id);
+        });
+        element.addEventListener("click", (event) => {
+          if (performance.now() - this.lastPointerSelectionAt < 420) return;
+          event.preventDefault();
+          dispatchNodeFocus(node.id);
         });
         layer.appendChild(element);
         this.nodeElements.set(node.id, element);

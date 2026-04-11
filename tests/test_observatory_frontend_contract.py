@@ -28,19 +28,37 @@ def test_observatory_frontend_keeps_pcII_timeline_bounded_and_overlay_dash_free(
     assert "function canonicalEdgePair(edge)" in field_source
     assert "function uniqueStableEdges(edges)" in field_source
     assert "function selectGuideEdges(payload, focusId, hoverId, compareMode, nodeCount)" in field_source
+    assert "function pointerSupportsHover(pointerType)" in field_source
+    assert 'event.pointerType || "mouse"' in field_source
 
-    pointerdown_block = field_source.split("onPointerDown(event) {", 1)[1].split("onKeyDown(event) {", 1)[0]
-    assert "const pickedNode = this.pickNodeAtClientPoint(event.clientX, event.clientY);" in pointerdown_block
-    assert "window.dispatchEvent(new CustomEvent(\"observatory:clear-focus\"));" in pointerdown_block
-    assert pointerdown_block.index("const pickedNode = this.pickNodeAtClientPoint(event.clientX, event.clientY);") < pointerdown_block.index("window.dispatchEvent(new CustomEvent(\"observatory:clear-focus\"));")
+    selection_block = field_source.split("handleSelectionAtClientPoint(clientX, clientY, pointerType = this._pointerType || \"mouse\") {", 1)[1].split("onPointerDown(event) {", 1)[0]
+    assert "const pickedNode = this.pickNodeAtClientPoint(clientX, clientY);" in selection_block
+    assert "window.dispatchEvent(new CustomEvent(\"observatory:clear-focus\"));" in selection_block
+    assert selection_block.index("const pickedNode = this.pickNodeAtClientPoint(clientX, clientY);") < selection_block.index("window.dispatchEvent(new CustomEvent(\"observatory:clear-focus\"));")
+    assert "const hoverEnabled = pointerSupportsHover(pointerType);" in selection_block
+
+    pointerdown_block = field_source.split("onPointerDown(event) {", 1)[1].split("onClick(event) {", 1)[0]
+    assert "this.lastPointerSelectionAt = performance.now();" in pointerdown_block
+    assert "this.handleSelectionAtClientPoint(event.clientX, event.clientY, pointerType);" in pointerdown_block
+
+    onclick_block = field_source.split("onClick(event) {", 1)[1].split("onKeyDown(event) {", 1)[0]
+    assert "if (performance.now() - this.lastPointerSelectionAt < 420) return;" in onclick_block
+    assert "this.handleSelectionAtClientPoint(event.clientX, event.clientY, this._pointerType || \"touch\");" in onclick_block
 
     pointerleave_block = field_source.split("onPointerLeave() {", 1)[1].split("onPointerDown(event) {", 1)[0]
+    assert "this.hoverEnabled = false;" in pointerleave_block
     assert "if (!this.focusId) {" in pointerleave_block
     assert "this.rebuildGuides();" in pointerleave_block
 
     updatehover_block = field_source.split("updateHover(clientX = this._clientX, clientY = this._clientY) {", 1)[1].split("updateTooltipPosition() {", 1)[0]
+    assert "if (!this.hoverEnabled) {" in updatehover_block
     assert "if (prevHover !== this.hoverId && !this.focusId) {" in updatehover_block
     assert "this.rebuildGuides();" in updatehover_block
+
+    fallback_render_block = field_source.split("render() {", 2)[1].split("resize() {", 1)[0]
+    assert 'element.addEventListener("pointerdown"' in fallback_render_block
+    assert "this.lastPointerSelectionAt = performance.now();" in fallback_render_block
+    assert 'if (performance.now() - this.lastPointerSelectionAt < 420) return;' in fallback_render_block
 
     assert "/* ── Shell sphere — primary body mass for idle readability ── */" in field_source
     assert "/* ── Center node — bright core point (hero centerNode style) ── */" in field_source
