@@ -1,0 +1,20 @@
+<script src="{{ asset_prefix }}/vendor/d3/d3.v7.min.js"></script>
+<script src="{{ asset_prefix }}/vendor/lottie/lottie.min.js"></script>
+<script type="importmap">
+  {
+    "imports": {
+      "three": "{{ asset_prefix }}/vendor/three/build/three.module.js"
+    }
+  }
+</script>
+<script>
+  window.__observatoryMinimalFocus = true;
+  window.__observatoryBootDuration = 3000;
+  window.__observatoryVendorPaths = Object.freeze({
+    threeModule: "{{ asset_prefix }}/vendor/three/build/three.module.js",
+    effectComposer: "{{ asset_prefix }}/vendor/three/examples/jsm/postprocessing/EffectComposer.js",
+    renderPass: "{{ asset_prefix }}/vendor/three/examples/jsm/postprocessing/RenderPass.js",
+    unrealBloomPass: "{{ asset_prefix }}/vendor/three/examples/jsm/postprocessing/UnrealBloomPass.js"
+  });
+  window.__observatoryBootLottie = "{{ asset_prefix }}/lottie/observatory-boot.json";
+</script>

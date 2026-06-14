@@ -1,0 +1,43 @@
+<section class="observatory-catalog" id="observatory-catalog" aria-labelledby="observatory-catalog-title">
+  <div class="observatory-catalog-head">
+    <div>
+      <h2 id="observatory-catalog-title" class="observatory-rigor-title">Measurement Catalog</h2>
+      <p class="observatory-band-note">
+        Current structural metrics for every tracked model. Sort any column; activate a row to focus the instrument.
+      </p>
+    </div>
+    <div class="observatory-history-readout" aria-live="polite">
+      <span class="observatory-history-readout-chip" id="observatory-catalog-window">24H WINDOW</span>
+      <span class="observatory-history-readout-chip" id="observatory-catalog-count">awaiting snapshot</span>
+    </div>
+  </div>
+  <div class="observatory-catalog-scroll">
+    <table class="observatory-catalog-table" id="observatory-catalog-table" hidden>
+      <caption class="observatory-compat-copy">
+        Tracked models with CII, SRS, IPS, MPG, TCI and EDP metrics, range trend, acquisition state, and last-seen time.
+        Sortable columns; activating a row focuses that model in the instrument field.
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col" data-key="display_name" aria-sort="none"><button type="button" class="obs-cat-sort">Model</button></th>
+          <th scope="col" data-key="provider" aria-sort="none"><button type="button" class="obs-cat-sort">Provider</button></th>
+          <th scope="col" data-key="rank" aria-sort="none"><button type="button" class="obs-cat-sort">Band</button></th>
+          <th scope="col" data-key="cii" aria-sort="descending"><button type="button" class="obs-cat-sort">CII</button></th>
+          <th scope="col" data-key="srs" aria-sort="none"><button type="button" class="obs-cat-sort">SRS</button></th>
+          <th scope="col" data-key="ips" aria-sort="none"><button type="button" class="obs-cat-sort">IPS</button></th>
+          <th scope="col" data-key="mpg" aria-sort="none"><button type="button" class="obs-cat-sort">MPG</button></th>
+          <th scope="col" data-key="tci" aria-sort="none"><button type="button" class="obs-cat-sort">TCI</button></th>
+          <th scope="col" data-key="edp" aria-sort="none"><button type="button" class="obs-cat-sort">EDP</button></th>
+          <th scope="col" data-key="trend" aria-sort="none"><button type="button" class="obs-cat-sort">Trend</button></th>
+          <th scope="col" data-key="state" aria-sort="none"><button type="button" class="obs-cat-sort">State</button></th>
+          <th scope="col" data-key="last_seen" aria-sort="none"><button type="button" class="obs-cat-sort">Seen</button></th>
+        </tr>
+      </thead>
+      <tbody id="observatory-catalog-body"></tbody>
+    </table>
+    <div id="observatory-catalog-empty" class="observatory-history-empty">
+      <span class="summary-label">Catalog Unavailable</span>
+      <p class="muted">No model snapshot has loaded yet.</p>
+    </div>
+  </div>
+</section>

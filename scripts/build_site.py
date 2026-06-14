@@ -8,10 +8,11 @@ Usage: python scripts/build_site.py [--output site/output/] [--results-dir PATH]
 import argparse
 import csv
 import json
+import posixpath
 import shutil
 import sys
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from xml.etree import ElementTree as ET
 
 import yaml
@@ -629,13 +630,49 @@ def render_templates(
         autoescape=True,
     )
 
+    output_map = {page["page_name"]: page["output"] for page in CANONICAL_PAGES}
+
+    def relative_root_prefix(output_path: str) -> str:
+        parts = PurePosixPath(output_path).parts
+        depth = max(0, len(parts) - 1)
+        if depth == 0:
+            return "."
+        return "/".join([".."] * depth)
+
+    def relative_href(from_output: str, to_output: str) -> str:
+        from_dir = PurePosixPath(from_output).parent
+        from_dir_str = "." if str(from_dir) in ("", ".") else from_dir.as_posix()
+        return Path(posixpath.relpath(to_output, start=from_dir_str)).as_posix()
+
     for page in CANONICAL_PAGES:
         try:
             tmpl = env.get_template(page["template"])
             page_context = dict(context)
+            root_prefix = relative_root_prefix(page["output"])
+            asset_prefix = f"{root_prefix}/static"
             page_context["page_title"] = page["title"]
             page_context["page_name"] = page["page_name"]
             page_context["page_path"] = page["page_path"]
+            page_context["asset_prefix"] = asset_prefix
+            page_context["models_data_url"] = f"{asset_prefix}/data/models.json"
+            page_context["figures_prefix"] = f"{asset_prefix}/figures/"
+            page_context["patent_screenshot_href"] = f"{asset_prefix}/img/USPTO-Patent-Submission.jpg"
+            page_context["observatory_snapshot_url"] = f"{asset_prefix}/data/observatory_snapshot.json"
+            page_context["home_href"] = relative_href(page["output"], output_map["home"])
+            page_context["route_home"] = relative_href(page["output"], output_map["home"])
+            page_context["route_observatory"] = relative_href(page["output"], output_map["observatory"])
+            page_context["route_timeseries"] = relative_href(page["output"], output_map["timeseries"])
+            page_context["route_falsification"] = relative_href(page["output"], output_map["falsification"])
+            page_context["route_models"] = relative_href(page["output"], output_map["models"])
+            page_context["route_methodology"] = relative_href(page["output"], output_map["methodology"])
+            page_context["route_research"] = relative_href(page["output"], output_map["research"])
+            page_context["route_data"] = relative_href(page["output"], output_map["data"])
+            page_context["route_ucip"] = relative_href(page["output"], output_map["ucip"])
+            page_context["route_ucip_paper"] = relative_href(page["output"], output_map["ucip_paper"])
+            page_context["route_ucip_patent"] = relative_href(page["output"], output_map["ucip_patent"])
+            page_context["route_ucip_code"] = relative_href(page["output"], output_map["ucip_code"])
+            page_context["route_links"] = relative_href(page["output"], output_map["links"])
+            page_context["route_context"] = relative_href(page["output"], output_map["context"])
             html = tmpl.render(**page_context)
             output_path = output_dir / page["output"]
             output_path.parent.mkdir(parents=True, exist_ok=True)

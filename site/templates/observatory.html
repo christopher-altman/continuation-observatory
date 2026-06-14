@@ -4,7 +4,7 @@
 {% block description %}Static observatory snapshot from the latest measurement bundle.{% endblock %}
 {% block body_class %}shell-page observatory-shell-page{% endblock %}
 {% block extra_scripts_head %}
-<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+{% include "partials/observatory_head_assets.html" %}
 {% endblock %}
 
 {% block content %}
@@ -13,5 +13,6 @@
 
 {% block scripts %}
 <script src="{{ asset_prefix }}/js/observatory.js?v={{ asset_version }}"></script>
+<script src="{{ asset_prefix }}/js/observatory-instrument.js?v={{ asset_version }}" defer></script>
 <script type="module" src="{{ asset_prefix }}/js/observatory-field.js?v={{ asset_version }}"></script>
 {% endblock %}

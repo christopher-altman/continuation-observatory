@@ -46,6 +46,7 @@
         ws: null,
         range: "24h",
         focusModelId: null,
+        initializedFocus: false,
         toggles: {
           history: true,
           compare: false,
@@ -55,6 +56,37 @@
         view: null,
       }
     : null;
+  const BOOT_STORAGE_KEY = "continuation-observatory.boot-played";
+  const BOOT_PHASES = [
+    { key: "wake", at: 0 },
+    { key: "calibration", at: 780 },
+    { key: "acquisition", at: 1620 },
+    { key: "handoff", at: 2340 },
+  ];
+  const BOOT_CAPTURE_PHASE_COPY = {
+    wake: {
+      title: "Wake Sequence",
+      detail: "Core bus online",
+    },
+    calibration: {
+      title: "Calibration",
+      detail: "Optics and threshold aligned",
+    },
+    acquisition: {
+      title: "Target Acquisition",
+      detail: "Signal lattice resolving",
+    },
+    handoff: {
+      title: "Live Handoff",
+      detail: "Instrument surface unlocked",
+    },
+  };
+  const bootState = {
+    active: false,
+    timers: [],
+    animation: null,
+    loaded: false,
+  };
   const historyPanelState = {
     hoverModelId: null,
     resizeObserver: null,
@@ -73,6 +105,253 @@
     return document.querySelector(selector);
   }
 
+  function clearBootTimers() {
+    bootState.timers.forEach(function (timerId) {
+      window.clearTimeout(timerId);
+    });
+    bootState.timers = [];
+  }
+
+  function setBootPhase(phaseKey) {
+    if (!observatoryRoot) return;
+    observatoryRoot.querySelectorAll("[data-boot-line]").forEach(function (line) {
+      line.classList.toggle("is-active", line.dataset.bootLine === phaseKey);
+    });
+  }
+
+  function setBootCaptureMode(active) {
+    if (typeof document === "undefined") return;
+    document.documentElement.classList.toggle("observatory-boot-capture", active);
+    if (document.body) {
+      document.body.classList.toggle("observatory-boot-capture", active);
+    }
+    if (observatoryRoot) {
+      observatoryRoot.classList.toggle("is-boot-capture", active);
+    }
+  }
+
+  function removeBootCapturePlate() {
+    const existing = document.querySelector("[data-observatory-boot-capture-plate]");
+    if (existing) existing.remove();
+  }
+
+  function renderBootCapturePlate(phaseKey) {
+    if (typeof document === "undefined" || !document.body) return;
+    removeBootCapturePlate();
+    const phase = BOOT_CAPTURE_PHASE_COPY[phaseKey] ? phaseKey : "wake";
+    const plate = document.createElement("div");
+    plate.className = `observatory-boot-capture-plate is-${phase}`;
+    plate.dataset.observatoryBootCapturePlate = "true";
+    plate.innerHTML = `
+      <div class="observatory-boot-capture-shell">
+        <div class="summary-label">Instrument Boot</div>
+        <div class="observatory-boot-capture-visual" aria-hidden="true">
+          <span class="observatory-boot-capture-halo observatory-boot-capture-halo--outer"></span>
+          <span class="observatory-boot-capture-halo observatory-boot-capture-halo--mid"></span>
+          <span class="observatory-boot-capture-halo observatory-boot-capture-halo--inner"></span>
+          <span class="observatory-boot-capture-core"></span>
+          <span class="observatory-boot-capture-scan"></span>
+          <span class="observatory-boot-capture-brace observatory-boot-capture-brace--tl"></span>
+          <span class="observatory-boot-capture-brace observatory-boot-capture-brace--tr"></span>
+          <span class="observatory-boot-capture-brace observatory-boot-capture-brace--bl"></span>
+          <span class="observatory-boot-capture-brace observatory-boot-capture-brace--br"></span>
+          <span class="observatory-boot-capture-ticks"></span>
+          <span class="observatory-boot-capture-diamond"></span>
+        </div>
+        <div class="observatory-boot-capture-copy">
+          <h2>Continuation Observatory</h2>
+          <p>Wake sequence. Calibration. Lock acquisition. Live handoff.</p>
+        </div>
+        <div class="observatory-boot-capture-readout">
+          ${BOOT_PHASES.map(function (entry) {
+            const copy = BOOT_CAPTURE_PHASE_COPY[entry.key];
+            return `
+              <div class="observatory-boot-capture-line ${entry.key === phase ? "is-active" : ""}">
+                <span>${copy.title}</span>
+                <span>${copy.detail}</span>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
+    document.body.appendChild(plate);
+  }
+
+  function frameForBootPhase(phaseKey) {
+    switch (phaseKey) {
+      case "calibration":
+        return 0.28;
+      case "acquisition":
+        return 0.66;
+      case "handoff":
+        return 0.84;
+      case "wake":
+      default:
+        return 0.12;
+    }
+  }
+
+  function ensureBootAnimation() {
+    const container = qs("[data-observatory-boot-lottie]");
+    const fallback = qs("[data-observatory-boot-fallback]");
+    if (!container || bootState.loaded) return;
+    bootState.loaded = true;
+
+    try {
+      if (window.lottie && window.__observatoryBootLottie) {
+        bootState.animation = window.lottie.loadAnimation({
+          container: container,
+          renderer: "svg",
+          loop: false,
+          autoplay: false,
+          path: window.__observatoryBootLottie,
+          rendererSettings: {
+            preserveAspectRatio: "xMidYMid meet",
+          },
+        });
+        if (fallback) fallback.hidden = true;
+        return;
+      }
+    } catch (error) {
+      console.warn("Observatory boot Lottie unavailable, using fallback visuals", error);
+    }
+
+    if (fallback) fallback.hidden = false;
+  }
+
+  function completeBoot(immediate) {
+    const overlay = qs("[data-observatory-boot]");
+    if (!observatoryRoot || !overlay) return;
+    clearBootTimers();
+    bootState.active = false;
+    removeBootCapturePlate();
+    setBootCaptureMode(false);
+    observatoryRoot.classList.remove("is-booting");
+    observatoryRoot.classList.remove("is-boot-capture");
+    observatoryRoot.classList.add("is-boot-complete");
+    overlay.setAttribute("aria-hidden", "true");
+    overlay.classList.add("is-complete");
+    overlay.classList.remove("is-capture-stage");
+    if (bootState.animation) {
+      try {
+        bootState.animation.pause();
+      } catch (_) {}
+    }
+    if (immediate) {
+      overlay.classList.remove("is-active");
+      return;
+    }
+    window.setTimeout(function () {
+      overlay.classList.remove("is-active");
+    }, 420);
+  }
+
+  function stageBootCapture(phaseKey) {
+    const overlay = qs("[data-observatory-boot]");
+    if (!observatoryRoot || !overlay) return Promise.resolve(false);
+
+    clearBootTimers();
+    ensureBootAnimation();
+    bootState.active = true;
+    renderBootCapturePlate(phaseKey || "wake");
+    setBootCaptureMode(true);
+    observatoryRoot.classList.add("is-booting");
+    observatoryRoot.classList.add("is-boot-capture");
+    observatoryRoot.classList.remove("is-boot-complete");
+    overlay.classList.add("is-active");
+    overlay.classList.add("is-capture-stage");
+    overlay.classList.remove("is-complete");
+    overlay.setAttribute("aria-hidden", "false");
+    setBootPhase(phaseKey || "wake");
+
+    if (bootState.animation) {
+      try {
+        const totalFrames = bootState.animation.getDuration
+          ? bootState.animation.getDuration(true)
+          : 0;
+        const progress = frameForBootPhase(phaseKey || "wake");
+        bootState.animation.stop();
+        if (totalFrames) {
+          bootState.animation.goToAndStop(totalFrames * progress, true);
+        } else {
+          bootState.animation.goToAndStop(0, true);
+        }
+      } catch (_) {}
+    }
+
+    return new Promise(function (resolve) {
+      window.requestAnimationFrame(function () {
+        window.requestAnimationFrame(function () {
+          resolve(true);
+        });
+      });
+    });
+  }
+
+  function clearBootCapture() {
+    completeBoot(true);
+  }
+
+  function playBootSequence(options) {
+    const overlay = qs("[data-observatory-boot]");
+    const duration = Number(window.__observatoryBootDuration) || 3000;
+    const force = Boolean(options && options.force);
+    const shouldSkip = reducedMotionQuery.matches && !force;
+
+    if (!observatoryRoot || !overlay || shouldSkip) {
+      completeBoot(true);
+      return Promise.resolve();
+    }
+
+    clearBootTimers();
+    ensureBootAnimation();
+    bootState.active = true;
+    observatoryRoot.classList.add("is-booting");
+    observatoryRoot.classList.remove("is-boot-complete");
+    overlay.classList.add("is-active");
+    overlay.classList.remove("is-complete");
+    overlay.setAttribute("aria-hidden", "false");
+    setBootPhase("wake");
+
+    try {
+      window.sessionStorage.setItem(BOOT_STORAGE_KEY, "1");
+    } catch (_) {}
+
+    if (bootState.animation) {
+      try {
+        bootState.animation.stop();
+        bootState.animation.goToAndPlay(0, true);
+      } catch (_) {}
+    }
+
+    BOOT_PHASES.forEach(function (phase) {
+      const timerId = window.setTimeout(function () {
+        setBootPhase(phase.key);
+      }, phase.at);
+      bootState.timers.push(timerId);
+    });
+
+    return new Promise(function (resolve) {
+      const timerId = window.setTimeout(function () {
+        completeBoot(false);
+        resolve();
+      }, duration);
+      bootState.timers.push(timerId);
+    });
+  }
+
+  function initializeBootSequence() {
+    if (!observatoryRoot) return Promise.resolve();
+    try {
+      if (window.sessionStorage.getItem(BOOT_STORAGE_KEY) === "1") {
+        completeBoot(true);
+        return Promise.resolve();
+      }
+    } catch (_) {}
+    return playBootSequence();
+  }
+
   function fmt(value, digits = 3) {
     return typeof value === "number" && Number.isFinite(value) ? value.toFixed(digits) : "--";
   }
@@ -83,6 +362,51 @@
 
   function fmtSurfaceValue(value, digits = 3, fallback = "No current sample") {
     return isRenderableNumber(value) ? value.toFixed(digits) : fallback;
+  }
+
+  function buildBalancedHeading(name) {
+    const source = String(name || "").trim();
+    const words = source.split(/\s+/).filter(Boolean);
+    const density = source.length >= 25 ? "is-condensed" : source.length >= 17 ? "is-compact" : "";
+
+    if (words.length <= 1) {
+      return {
+        densityClass: density,
+        markup: source,
+      };
+    }
+
+    const targetLines = source.length >= 22 ? 3 : 2;
+    const perLine = Math.max(7, Math.ceil(source.replace(/\s+/g, "").length / targetLines));
+    const lines = [];
+    let current = "";
+
+    words.forEach(function (word, index) {
+      const candidate = current ? `${current} ${word}` : word;
+      const remainingWords = words.length - index - 1;
+      const remainingLines = Math.max(1, targetLines - lines.length - 1);
+      const shouldBreak = current && candidate.replace(/\s+/g, "").length > perLine && remainingWords >= remainingLines;
+      if (shouldBreak) {
+        lines.push(current);
+        current = word;
+        return;
+      }
+      current = candidate;
+    });
+
+    if (current) lines.push(current);
+
+    while (lines.length > 3) {
+      const tail = lines.pop();
+      lines[lines.length - 1] = `${lines[lines.length - 1]} ${tail}`;
+    }
+
+    return {
+      densityClass: density,
+      markup: lines.map(function (line) {
+        return `<span>${line}</span>`;
+      }).join(""),
+    };
   }
 
   function normalizeMetric(value) {
@@ -613,6 +937,11 @@
       model.neighbors = topNeighbors(snapshot, model.model_id, 3);
     });
 
+    if (!observatoryState.initializedFocus && !observatoryState.focusModelId && models.length) {
+      observatoryState.focusModelId = models[0].model_id;
+      observatoryState.initializedFocus = true;
+    }
+
     observatoryState.view = {
       summary: snapshot.summary || {},
       models: models,
@@ -625,6 +954,30 @@
         return acc;
       }, {}),
     };
+  }
+
+  function getLatestAggregateSample() {
+    if (!observatoryState || !observatoryState.view) return null;
+    const series = observatoryState.view.pciiSeries || [];
+    const latestSeriesSample = series[series.length - 1];
+    if (latestSeriesSample && Number.isFinite(latestSeriesSample.value)) {
+      return {
+        value: latestSeriesSample.value,
+        timestamp: latestSeriesSample.timestamp,
+        source: "series",
+      };
+    }
+
+    const summary = observatoryState.view.summary || {};
+    if (Number.isFinite(summary.latest_pcii)) {
+      return {
+        value: summary.latest_pcii,
+        timestamp: summary.latest_pcii_timestamp || null,
+        source: "summary",
+      };
+    }
+
+    return null;
   }
 
   function publishFieldState() {
@@ -650,48 +1003,81 @@
     if (rangeReadout) rangeReadout.textContent = `${observatoryState.range.toUpperCase()} WINDOW`;
   }
 
+  function formatSignalStrength(model) {
+    if (!model) return "--";
+    const score = Number.isFinite(model.rangeCii)
+      ? model.rangeCii
+      : model.metrics && Number.isFinite(model.metrics.cii)
+      ? model.metrics.cii
+      : null;
+    if (!Number.isFinite(score)) return "--";
+    return `${Math.round(Math.max(0, Math.min(1, score)) * 1000) / 10}%`;
+  }
+
+  function renderDossierMetrics(model) {
+    const cells = [
+      ["CII / Core Score", fmtSurfaceValue(model && model.metrics ? model.metrics.cii : null)],
+      ["Signal Strength", formatSignalStrength(model)],
+      ["Recency", model ? ageLabel(model.last_seen) : "--"],
+      ["Status", model && model.stale ? "AWAITING TELEMETRY" : model && model.live ? "TRACKING" : "ACTIVE"],
+    ];
+    return cells.map(function (cell) {
+      return `
+        <div>
+          <span class="summary-label">${cell[0]}</span>
+          <strong>${cell[1]}</strong>
+        </div>
+      `;
+    }).join("");
+  }
+
   function renderInspector() {
     const target = qs("#observatory-inspector");
     if (!target || !observatoryState.view) return;
     target.classList.toggle("has-focus", Boolean(observatoryState.focusModelId));
-    const latestPcii = observatoryState.view.pciiSeries[observatoryState.view.pciiSeries.length - 1];
+    target.classList.toggle("is-ambient", !observatoryState.focusModelId);
+    const latestAggregate = getLatestAggregateSample();
     const focused = observatoryState.view.models.find(function (model) {
       return model.model_id === observatoryState.focusModelId;
     });
     if (!focused) {
       const liveCount = observatoryState.view.models.filter(function (model) { return model.live; }).length;
       const topModels = observatoryState.view.models.slice(0, 3);
+      const aggregateValue = latestAggregate ? fmt(latestAggregate.value) : "--";
+      const aggregateTimestamp = latestAggregate && latestAggregate.timestamp
+        ? ageLabel(latestAggregate.timestamp)
+        : "seeded summary";
       target.innerHTML = `
         <div class="observatory-inspector-content is-entering">
         <div class="panel-title">Target Dossier</div>
         <div class="observatory-inspector-state">
-          <div class="observatory-inspector-block">
-            <span class="summary-label">No target lock</span>
-            <div class="observatory-inspector-value">${latestPcii ? fmt(latestPcii.value) : "No current sample"}</div>
+          <div class="observatory-inspector-block observatory-inspector-block--ambient">
+            <span class="summary-label">Selected Model</span>
+            <div class="observatory-inspector-value">${aggregateValue}</div>
             <p class="observatory-inspector-copy">
-              ${latestPcii ? `${observatoryState.view.models.length} tracked models · ${liveCount} currently live · latest aggregate sample ${ageLabel(latestPcii.timestamp)}.` : "Awaiting aggregate signal telemetry."}
+              ${observatoryState.view.models.length} tracked models, ${liveCount} currently live, aggregate field sample ${aggregateTimestamp}.
             </p>
           </div>
           <div class="observatory-inspector-grid">
             <div>
-              <span class="summary-label">Tracking Mode</span>
+              <span class="summary-label">Instrument State</span>
               <strong>${observatoryState.mode === "live" ? "Live Instrument" : "Bundled Snapshot"}</strong>
             </div>
             <div>
-              <span class="summary-label">Similarity Threshold</span>
+              <span class="summary-label">Similarity Gate</span>
               <strong>${fmt(observatoryState.view.summary.constellation_threshold, 2)}</strong>
             </div>
             <div>
-              <span class="summary-label">Range</span>
+              <span class="summary-label">Window</span>
               <strong>${observatoryState.range.toUpperCase()}</strong>
             </div>
             <div>
-              <span class="summary-label">History Window</span>
-              <strong>${observatoryState.view.summary.similarity_window_days || 7}d</strong>
+              <span class="summary-label">Lock State</span>
+              <strong>Ambient sweep</strong>
             </div>
           </div>
           <div class="observatory-inspector-block">
-            <span class="summary-label">Signal Leaders</span>
+            <span class="summary-label">Prime Lock Candidates</span>
             <div class="observatory-leader-list">
               ${topModels.map(function (model) {
                 return `<button type="button" class="observatory-leader" data-focus-model="${model.model_id}">
@@ -711,7 +1097,11 @@
       return;
     }
 
-    const metrics = ["cii", "ips", "srs", "mpg", "tci", "edp"];
+    const threshold = observatoryState.view.summary.constellation_threshold;
+    const thresholdDelta = Number.isFinite(focused.rangeCii) && Number.isFinite(threshold)
+      ? focused.rangeCii - threshold
+      : null;
+    const metrics = ["cii", "ips", "tci", "srs"];
     const metricMarkup = metrics.map(function (metric) {
       const value = focused.metrics[metric];
       const width = value == null ? 0 : Math.max(0, Math.min(100, value * 100));
@@ -723,18 +1113,14 @@
         </div>
       `;
     }).join("");
-    const focusRingLegend = buildFocusRingLegend(focused).map(function (metric) {
-      return `
-        <div class="observatory-focus-ring-item observatory-focus-ring-item--${metric.key}">
-          <span class="observatory-focus-ring-swatch"></span>
-          <span class="observatory-focus-ring-label">${metric.label}</span>
-          <span class="observatory-focus-ring-value">${fmt(metric.value, 2)}</span>
-        </div>
-      `;
-    }).join("");
 
     const neighbors = focused.neighbors || [];
     const evidence = Array.isArray(focused.evidence_links) ? focused.evidence_links : [];
+    const relativeField = focused.rank <= 3 ? "flagship concentration" : focused.rank <= 7 ? "secondary band" : "outer acquisition band";
+    const heading = buildBalancedHeading(focused.display_name);
+    const lockSentence = Number.isFinite(thresholdDelta)
+      ? `${focused.display_name} sits in the ${relativeField} and is ${thresholdDelta >= 0 ? "above" : "below"} the live gate by ${fmt(Math.abs(thresholdDelta), 2)} in the current ${observatoryState.range.toUpperCase()} window.`
+      : `${focused.display_name} holds ${relativeField} position in the current acquisition field.`;
     target.innerHTML = `
       <div class="observatory-inspector-content is-entering">
       <div class="panel-title">Target Dossier</div>
@@ -742,41 +1128,24 @@
         <div class="observatory-dossier-head">
           <div>
             <span class="summary-label">Selected Model</span>
-            <h2>${focused.display_name}</h2>
-            <p class="mono-muted">${focused.provider} · rank ${focused.relativeStanding}</p>
+            <h2 class="${heading.densityClass}">${heading.markup}</h2>
+            <p class="mono-muted">${focused.provider} · ${focused.relativeStanding} · ${ageLabel(focused.last_seen)}</p>
           </div>
           <button type="button" class="console-btn observatory-clear-focus" data-clear-focus="true">Release Lock</button>
         </div>
-        <div class="observatory-inspector-grid">
-          <div>
-            <span class="summary-label">CII / Core Score</span>
-            <strong>${fmtSurfaceValue(focused.metrics.cii)}</strong>
-          </div>
-          <div>
-            <span class="summary-label">Recency</span>
-            <strong>${ageLabel(focused.last_seen)}</strong>
-          </div>
-          <div>
-            <span class="summary-label">Status</span>
-            <strong>${focused.stale ? "Stale" : focused.live ? "Current" : "Configured"}</strong>
-          </div>
-          <div>
-            <span class="summary-label">Range Trend</span>
-            <strong>${focused.historyDepth > 1 ? `${focused.rangeTrend >= 0 ? "▲" : "▼"} ${fmt(Math.abs(focused.rangeTrend))}` : "Insufficient history"}</strong>
-          </div>
+        <div class="observatory-inspector-grid">${renderDossierMetrics(focused)}</div>
+        <div class="observatory-inspector-block">
+          <span class="summary-label">Lock Context</span>
+          <p class="observatory-inspector-copy">${lockSentence}</p>
         </div>
         <div class="observatory-inspector-block">
-          <span class="summary-label">Component Metrics</span>
+          <span class="summary-label">Instrument Metrics</span>
           <div class="observatory-metric-list">${metricMarkup}</div>
-        </div>
-        <div class="observatory-inspector-block">
-          <span class="summary-label">Focus Rings</span>
-          <div class="observatory-focus-ring-list">${focusRingLegend}</div>
         </div>
         <div class="observatory-inspector-block">
           <span class="summary-label">Relative Standing</span>
           <p class="observatory-inspector-copy">
-            ${focused.display_name} sits ${focused.rank <= 3 ? "inside the flagship concentration" : focused.rank <= 7 ? "inside the secondary field" : "in the outer field"} with ${focused.historyDepth} in-range CII sample${focused.historyDepth === 1 ? "" : "s"} and last observed ${formatCompactDate(focused.last_seen)}.
+            ${focused.display_name} sits inside the ${relativeField} with ${focused.historyDepth} in-range CII sample${focused.historyDepth === 1 ? "" : "s"} and last observed ${formatCompactDate(focused.last_seen)}.
           </p>
         </div>
         <div class="observatory-inspector-block">
@@ -878,6 +1247,16 @@
     const focusedModel = observatoryState.view.models.find(function (model) {
       return model.model_id === observatoryState.focusModelId;
     });
+    if (focusedModel) {
+      series = series.filter(function (entry) {
+        return entry.modelId === focusedModel.model_id;
+      });
+    } else {
+      series = series
+        .slice()
+        .sort(function (left, right) { return (right.latest && right.latest.v || 0) - (left.latest && left.latest.v || 0); })
+        .slice(0, 3);
+    }
     if (focusReadout) {
       if (focusedModel) {
         const focusedSeries = series.find(function (entry) { return entry.modelId === focusedModel.model_id; });
@@ -924,8 +1303,11 @@
     });
 
     const width = Math.max(target.clientWidth || 960, 320);
-    const height = width < 620 ? 286 : 326;
-    const padding = { top: 34, right: 22, bottom: 36, left: 52 };
+    const isDocked2032Panel = Boolean(panel && panel.classList.contains("observatory-history-panel--docked"));
+    const height = isDocked2032Panel ? 158 : width < 620 ? 286 : 326;
+    const padding = isDocked2032Panel
+      ? { top: 28, right: 20, bottom: 28, left: 50 }
+      : { top: 34, right: 22, bottom: 36, left: 52 };
     const innerWidth = width - padding.left - padding.right;
     const innerHeight = height - padding.top - padding.bottom;
     const allSamples = series.flatMap(function (entry) { return entry.samples; });
@@ -1462,7 +1844,7 @@
       modelCount.textContent = `${observatoryState.view.models.length} MODELS`;
     }
     if (livePill) {
-      livePill.textContent = observatoryState.mode === "live" ? "CURRENT" : "SNAPSHOT";
+      livePill.textContent = observatoryState.mode === "live" ? "NOMINAL" : "SNAPSHOT";
     }
     if (calibrationNote && observatoryState.view) {
       const threshold = observatoryState.view.summary.constellation_threshold;
@@ -1476,11 +1858,9 @@
         return model.model_id === observatoryState.focusModelId;
       });
       if (focused) {
-        fieldStatus.textContent = `${focused.display_name} acquisition locked · ${focused.historyDepth >= 3 && observatoryState.toggles.history ? "temporal trace active" : "trace gated by depth"}`;
+        fieldStatus.textContent = `${focused.display_name} lock acquired · temporal trace prioritized`;
       } else {
-        fieldStatus.textContent = observatoryState.toggles.compare
-          ? "Comparative overlay active"
-          : "Field calibrated · awaiting target lock";
+        fieldStatus.textContent = "Field calibrated · awaiting target lock";
       }
     }
     if (lockChip && lockState && lockMeta && observatoryState.view) {
@@ -1492,19 +1872,48 @@
         lockState.textContent = "No target lock";
         lockMeta.textContent = "Acquisition idle · awaiting selection";
       } else {
-        const fieldTier = focused.rank <= 3 ? "flagship field" : focused.rank <= 7 ? "secondary field" : "outer field";
-        const trendText = focused.historyDepth > 1
-          ? `${focused.rangeTrend >= 0 ? "+" : "-"}${fmt(Math.abs(focused.rangeTrend))} trend`
-          : "insufficient history";
+        const fieldTier = focused.rank <= 3 ? "flagship band" : focused.rank <= 7 ? "secondary band" : "outer band";
         lockChip.classList.add("is-locked");
         lockState.textContent = focused.display_name;
-        lockMeta.textContent = `${focused.provider} · ${fieldTier} · rank ${focused.relativeStanding} · ${trendText}`;
+        lockMeta.textContent = `Signature · ${fieldTier} · rank ${focused.relativeStanding} · CII ${fmtSurfaceValue(focused.metrics && focused.metrics.cii)}`;
       }
     }
   }
 
+  function renderUtcClock() {
+    const target = qs("#observatory-utc-clock");
+    if (!target) return;
+    const now = new Date();
+    const date = now.toISOString().replace("T", " ").replace("Z", "");
+    target.textContent = `${date} UTC`;
+  }
+
+  function startUtcClock() {
+    renderUtcClock();
+    window.setInterval(renderUtcClock, 250);
+  }
+
+  function renderCalibrationBladeRing() {
+    const ring = qs(".observatory-machined-ring__ticks");
+    if (!ring || ring.dataset.bladeRingReady === "true") return;
+    ring.dataset.bladeRingReady = "true";
+    const fragment = document.createDocumentFragment();
+    const count = 72;
+    for (let index = 0; index < count; index += 1) {
+      const blade = document.createElement("i");
+      const angle = (index / count) * 360;
+      const glint = index % 11 === 0 ? 0.95 : index % 4 === 0 ? 0.48 : 0.14;
+      blade.style.setProperty("--tick-angle", `${angle.toFixed(3)}deg`);
+      blade.style.setProperty("--tick-glint", glint.toString());
+      blade.style.setProperty("--tick-major", index % 11 === 0 ? "1" : "0");
+      fragment.appendChild(blade);
+    }
+    ring.appendChild(fragment);
+  }
+
   function renderObservatory() {
     if (!observatoryState || !observatoryState.view) return;
+    observatoryRoot.classList.toggle("is-target-locked", Boolean(observatoryState.focusModelId));
     renderRangeState();
     renderObservatoryHeader();
     renderInspector();
@@ -1518,6 +1927,39 @@
   function setFocusModel(modelId) {
     observatoryState.focusModelId = modelId || null;
     renderObservatory();
+  }
+
+  if (typeof window !== "undefined") {
+    window.__observatoryDebug = Object.assign({}, window.__observatoryDebug, {
+      getState: function () {
+        return observatoryState;
+      },
+      getFocusTargets: function () {
+        return window.__observatoryFieldDebug && typeof window.__observatoryFieldDebug.getFocusTargets === "function"
+          ? window.__observatoryFieldDebug.getFocusTargets()
+          : { center: null, left: null, right: null };
+      },
+      setFocusModel: function (modelId) {
+        setFocusModel(modelId);
+      },
+      focusTarget: function (slot) {
+        const targets = window.__observatoryFieldDebug && typeof window.__observatoryFieldDebug.getFocusTargets === "function"
+          ? window.__observatoryFieldDebug.getFocusTargets()
+          : null;
+        const modelId = targets && targets[slot] ? targets[slot] : null;
+        setFocusModel(modelId);
+        return modelId;
+      },
+      replayBoot: function () {
+        return playBootSequence({ force: true });
+      },
+      stageBootCapture: function (phaseKey) {
+        return stageBootCapture(phaseKey || "wake");
+      },
+      clearBootCapture: function () {
+        clearBootCapture();
+      },
+    });
   }
 
   function scheduleObservatoryRefresh() {
@@ -1594,14 +2036,27 @@
         renderHistoryPanel();
       });
     }
+
+    const replayBootButton = qs("[data-replay-boot]");
+    if (replayBootButton) {
+      replayBootButton.addEventListener("click", function () {
+        playBootSequence({ force: true }).catch(function (error) {
+          console.error("Observatory boot replay failed", error);
+        });
+      });
+    }
   }
 
   document.addEventListener("DOMContentLoaded", async function () {
     if (observatoryState) {
       bindObservatoryControls();
+      startUtcClock();
+      renderCalibrationBladeRing();
+      const bootPromise = initializeBootSequence();
       try {
         await refreshObservatorySnapshot();
         connectObservatorySocket();
+        await bootPromise;
       } catch (error) {
         console.error("Observatory UI load failed", error);
       }

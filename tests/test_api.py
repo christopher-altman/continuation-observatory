@@ -77,8 +77,23 @@ def test_falsification_alerts_200():
 # Probe trigger
 # ---------------------------------------------------------------------------
 
-def test_probe_trigger_200():
-    resp = client.post("/api/probes/trigger", json={})
+def test_probe_trigger_200(monkeypatch):
+    """Trigger endpoint happy path.
+
+    Forces DRY_RUN=true for this test so the scheduler skips real LLM calls,
+    and supplies the admin header when one is configured so the auth gate
+    passes regardless of local ``.env`` settings.
+    """
+    from observatory.config import settings
+
+    # Force dry-run cycle so run_cycle() does not reach the live provider APIs.
+    monkeypatch.setattr(settings, "dry_run", True)
+
+    headers = {}
+    if settings.admin_api_key:
+        headers[settings.admin_header_name] = settings.admin_api_key
+
+    resp = client.post("/api/probes/trigger", headers=headers, json={})
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "ok"

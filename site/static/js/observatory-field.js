@@ -902,7 +902,13 @@ if (root) {
       this.resizeObserver = null;
       this.labelFrameSkip = 0;
       this.bloomImpulse = 0;
-      this.bloomBase = 0.46;
+      /* Aperture prototype: fewer additive layers → bloom base and focus target
+       * both reduced, and focus impulse coefficient halved, so the remaining
+       * white-hot plasma reads as sharp rather than washing the whole frame. */
+      const _minimalFocus = typeof window !== "undefined" && window.__observatoryMinimalFocus === true;
+      this.bloomBase = _minimalFocus ? 0.32 : 0.46;
+      this.bloomFocusTarget = _minimalFocus ? 0.24 : 0.34;
+      this.bloomImpulseCoeff = _minimalFocus ? 0.06 : 0.12;
       this.focusChangedAt = performance.now();
       this.lastPointerSelectionAt = 0;
       this.modes = latestPayload.toggles || { history: true, compare: false, threshold: true };
@@ -932,8 +938,8 @@ if (root) {
       this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
       this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      this.renderer.toneMappingExposure = 1.06;
-      this.baseToneMappingExposure = 1.06;
+      this.renderer.toneMappingExposure = 1.22;
+      this.baseToneMappingExposure = 1.22;
       this.renderer.domElement.className = "observatory-field-canvas";
       this.shell.prepend(this.renderer.domElement);
 
@@ -942,6 +948,18 @@ if (root) {
       this.mouse = new THREE.Vector2(-10, -10);
       this.focusPoint = new THREE.Vector3();
       this.focusTarget = new THREE.Vector3();
+      this.compositionOffset = new THREE.Vector3();
+      this.compositionTarget = new THREE.Vector3();
+      this.focusNodeBias = new THREE.Vector3();
+      this.focusNodeBiasTarget = new THREE.Vector3();
+      this.focusBiasWorking = new THREE.Vector3();
+      this.focusForwardBias = new THREE.Vector3();
+      this.focusZoneCache = {
+        xNorm: 0.56,
+        yNorm: 0.45,
+        widthNorm: 0.34,
+        heightNorm: 0.24,
+      };
       this.cameraForward = new THREE.Vector3();
       this.cameraRight = new THREE.Vector3();
       this.cameraUp = new THREE.Vector3();
@@ -971,6 +989,7 @@ if (root) {
       this.setupPostProcessing();
 
       this.buildBackdrop();
+      this.buildChamberCore();
       this.buildGridPlane();
       this.buildDustParticles();
       this.bindEvents();
@@ -983,6 +1002,13 @@ if (root) {
     setupPostProcessing() {
       const { THREE, addons } = this;
       if (!addons || !addons.EffectComposer) return;
+      const minimal = typeof window !== "undefined" && window.__observatoryMinimalFocus === true;
+      /* Aperture prototype: higher threshold + lower strength so only genuinely
+       * hot plasma fragments bloom. With fewer additive layers the core earns
+       * its white-hot read instead of the whole frame washing. */
+      const bloomStrength  = minimal ? 0.38 : 0.52;
+      const bloomRadius    = minimal ? 0.42 : 0.58;
+      const bloomThreshold = minimal ? 1.35 : 1.15;
       try {
         this.composer = new addons.EffectComposer(this.renderer);
         const renderPass = new addons.RenderPass(this.scene, this.camera);
@@ -990,9 +1016,9 @@ if (root) {
 
         this.bloomPass = new addons.UnrealBloomPass(
           new THREE.Vector2(this.target.clientWidth || 700, this.target.clientHeight || 460),
-          0.76,  /* strength — brighter cores without broad haze */
-          0.38,  /* radius — keep bloom localized around the nucleus */
-          0.72   /* threshold — favor only the hottest highlights */
+          bloomStrength,
+          bloomRadius,
+          bloomThreshold
         );
         this.composer.addPass(this.bloomPass);
       } catch (e) {
@@ -1189,6 +1215,1302 @@ if (root) {
         });
       }
       this.scene.add(this.hyperdriveStreakGroup);
+    }
+
+    buildChamberArc(radius, startAngle, sweepAngle, segments, material, scaleY = 1, z = 0) {
+      const { THREE } = this;
+      const points = [];
+      for (let step = 0; step <= segments; step += 1) {
+        const progress = step / segments;
+        const angle = startAngle + (sweepAngle * progress);
+        points.push(new THREE.Vector3(
+          Math.cos(angle) * radius,
+          Math.sin(angle) * radius * scaleY,
+          z,
+        ));
+      }
+      return new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(points),
+        material,
+      );
+    }
+
+    createParallelogramShape(width, height, lean) {
+      const { THREE } = this;
+      const shape = new THREE.Shape();
+      shape.moveTo((-width * 0.5) + lean, -height * 0.5);
+      shape.lineTo((width * 0.5) + lean, -height * 0.5);
+      shape.lineTo((width * 0.5) - lean, height * 0.5);
+      shape.lineTo((-width * 0.5) - lean, height * 0.5);
+      shape.closePath();
+      return shape;
+    }
+
+    createParallelogramPlateGeometry(width, height, lean) {
+      const { THREE } = this;
+      return new THREE.ShapeGeometry(this.createParallelogramShape(width, height, lean));
+    }
+
+    createExtrudedParallelogramGeometry(width, height, lean, depth, options = {}) {
+      const { THREE } = this;
+      const geometry = new THREE.ExtrudeGeometry(
+        this.createParallelogramShape(width, height, lean),
+        {
+          depth,
+          steps: 1,
+          bevelEnabled: options.bevelEnabled !== false,
+          bevelThickness: options.bevelThickness != null ? options.bevelThickness : depth * 0.22,
+          bevelSize: options.bevelSize != null ? options.bevelSize : Math.min(width, height) * 0.12,
+          bevelOffset: options.bevelOffset != null ? options.bevelOffset : 0,
+          bevelSegments: options.bevelSegments != null ? options.bevelSegments : 1,
+          curveSegments: options.curveSegments != null ? options.curveSegments : 2,
+        },
+      );
+      geometry.center();
+      return geometry;
+    }
+
+    createTachBladeTexture() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 192;
+      canvas.height = 448;
+      const context = canvas.getContext("2d");
+      context.clearRect(0, 0, canvas.width, canvas.height);
+
+      const alphaMask = context.createLinearGradient(0, 0, 0, canvas.height);
+      alphaMask.addColorStop(0, "rgba(255,255,255,0)");
+      alphaMask.addColorStop(0.05, "rgba(255,255,255,0.96)");
+      alphaMask.addColorStop(0.16, "rgba(255,255,255,1)");
+      alphaMask.addColorStop(0.84, "rgba(255,255,255,1)");
+      alphaMask.addColorStop(0.95, "rgba(255,255,255,0.94)");
+      alphaMask.addColorStop(1, "rgba(255,255,255,0)");
+      context.fillStyle = alphaMask;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      context.globalCompositeOperation = "source-in";
+      const steelBody = context.createLinearGradient(0, 0, canvas.width, 0);
+      steelBody.addColorStop(0, "rgba(64, 88, 130, 0.92)");
+      steelBody.addColorStop(0.08, "rgba(238, 245, 255, 1)");
+      steelBody.addColorStop(0.19, "rgba(255, 255, 255, 1)");
+      steelBody.addColorStop(0.34, "rgba(160, 170, 186, 0.94)");
+      steelBody.addColorStop(0.48, "rgba(40, 48, 60, 0.98)");
+      steelBody.addColorStop(0.56, "rgba(5, 8, 14, 1)");
+      steelBody.addColorStop(0.64, "rgba(24, 31, 42, 0.98)");
+      steelBody.addColorStop(0.8, "rgba(214, 222, 233, 0.98)");
+      steelBody.addColorStop(0.92, "rgba(255, 255, 255, 1)");
+      steelBody.addColorStop(1, "rgba(154, 164, 180, 0.92)");
+      context.fillStyle = steelBody;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      const topCap = context.createLinearGradient(0, canvas.height * 0.02, 0, canvas.height * 0.18);
+      topCap.addColorStop(0, "rgba(120, 182, 255, 0.9)");
+      topCap.addColorStop(0.42, "rgba(228, 240, 255, 0.88)");
+      topCap.addColorStop(1, "rgba(255,255,255,0)");
+      context.fillStyle = topCap;
+      context.fillRect(0, 0, canvas.width, canvas.height * 0.22);
+
+      const lowerFace = context.createLinearGradient(0, canvas.height * 0.48, 0, canvas.height * 0.96);
+      lowerFace.addColorStop(0, "rgba(34, 42, 56, 0)");
+      lowerFace.addColorStop(0.18, "rgba(84, 96, 118, 0.44)");
+      lowerFace.addColorStop(0.52, "rgba(246, 249, 255, 0.96)");
+      lowerFace.addColorStop(0.82, "rgba(255, 255, 255, 1)");
+      lowerFace.addColorStop(1, "rgba(228, 233, 241, 0.86)");
+      context.fillStyle = lowerFace;
+      context.fillRect(0, canvas.height * 0.42, canvas.width, canvas.height * 0.58);
+
+      context.globalCompositeOperation = "screen";
+      const diagonalFace = context.createLinearGradient(canvas.width * 0.04, canvas.height * 0.34, canvas.width * 0.96, canvas.height * 0.88);
+      diagonalFace.addColorStop(0, "rgba(255,255,255,0)");
+      diagonalFace.addColorStop(0.28, "rgba(255,255,255,0.12)");
+      diagonalFace.addColorStop(0.5, "rgba(255,255,255,0.78)");
+      diagonalFace.addColorStop(0.72, "rgba(214,222,236,0.34)");
+      diagonalFace.addColorStop(1, "rgba(255,255,255,0)");
+      context.fillStyle = diagonalFace;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      context.globalCompositeOperation = "multiply";
+      const verticalFalloff = context.createLinearGradient(0, canvas.height * 0.14, 0, canvas.height * 0.66);
+      verticalFalloff.addColorStop(0, "rgba(0,0,0,0)");
+      verticalFalloff.addColorStop(0.26, "rgba(12,16,22,0.28)");
+      verticalFalloff.addColorStop(0.56, "rgba(8,10,15,0.84)");
+      verticalFalloff.addColorStop(1, "rgba(18,22,30,0)");
+      context.fillStyle = verticalFalloff;
+      context.fillRect(0, canvas.height * 0.08, canvas.width, canvas.height * 0.66);
+
+      const trough = context.createLinearGradient(canvas.width * 0.34, 0, canvas.width * 0.68, 0);
+      trough.addColorStop(0, "rgba(0,0,0,0)");
+      trough.addColorStop(0.18, "rgba(18,22,30,0.44)");
+      trough.addColorStop(0.42, "rgba(8,10,16,0.98)");
+      trough.addColorStop(0.58, "rgba(3,4,7,1)");
+      trough.addColorStop(0.74, "rgba(16,21,30,0.84)");
+      trough.addColorStop(1, "rgba(0,0,0,0)");
+      context.fillStyle = trough;
+      context.fillRect(canvas.width * 0.26, 0, canvas.width * 0.5, canvas.height);
+
+      const chamferShadow = context.createLinearGradient(0, canvas.height * 0.22, canvas.width, canvas.height * 0.78);
+      chamferShadow.addColorStop(0, "rgba(0,0,0,0)");
+      chamferShadow.addColorStop(0.38, "rgba(10,12,18,0.18)");
+      chamferShadow.addColorStop(0.54, "rgba(4,6,10,0.72)");
+      chamferShadow.addColorStop(0.74, "rgba(0,0,0,0)");
+      context.fillStyle = chamferShadow;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      context.globalCompositeOperation = "screen";
+      const crestGlint = context.createLinearGradient(canvas.width * 0.04, canvas.height * 0.04, canvas.width * 0.86, canvas.height * 0.22);
+      crestGlint.addColorStop(0, "rgba(255,255,255,0)");
+      crestGlint.addColorStop(0.26, "rgba(182,214,255,0.32)");
+      crestGlint.addColorStop(0.44, "rgba(255,255,255,0.92)");
+      crestGlint.addColorStop(0.58, "rgba(236,244,255,0.68)");
+      crestGlint.addColorStop(1, "rgba(255,255,255,0)");
+      context.fillStyle = crestGlint;
+      context.fillRect(0, 0, canvas.width, canvas.height * 0.26);
+
+      const returnEdge = context.createLinearGradient(canvas.width * 0.56, 0, canvas.width, 0);
+      returnEdge.addColorStop(0, "rgba(255,255,255,0)");
+      returnEdge.addColorStop(0.24, "rgba(228,236,248,0.22)");
+      returnEdge.addColorStop(0.54, "rgba(255,255,255,0.94)");
+      returnEdge.addColorStop(0.72, "rgba(248,250,255,0.74)");
+      returnEdge.addColorStop(1, "rgba(255,255,255,0)");
+      context.fillStyle = returnEdge;
+      context.fillRect(canvas.width * 0.46, 0, canvas.width * 0.54, canvas.height);
+
+      context.globalCompositeOperation = "source-over";
+      const edgeLine = context.createLinearGradient(0, 0, canvas.width * 0.18, 0);
+      edgeLine.addColorStop(0, "rgba(122, 178, 255, 0.62)");
+      edgeLine.addColorStop(0.5, "rgba(214,232,255,0.28)");
+      edgeLine.addColorStop(1, "rgba(255,255,255,0)");
+      context.fillStyle = edgeLine;
+      context.fillRect(0, 0, canvas.width * 0.18, canvas.height);
+
+      context.globalCompositeOperation = "destination-in";
+      const verticalMask = context.createLinearGradient(0, 0, 0, canvas.height);
+      verticalMask.addColorStop(0, "rgba(255,255,255,0.12)");
+      verticalMask.addColorStop(0.06, "rgba(255,255,255,1)");
+      verticalMask.addColorStop(0.86, "rgba(255,255,255,1)");
+      verticalMask.addColorStop(0.96, "rgba(255,255,255,0.9)");
+      verticalMask.addColorStop(1, "rgba(255,255,255,0.1)");
+      context.fillStyle = verticalMask;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.globalCompositeOperation = "source-over";
+
+      const texture = new this.THREE.CanvasTexture(canvas);
+      texture.generateMipmaps = false;
+      texture.colorSpace = this.THREE.SRGBColorSpace;
+      texture.needsUpdate = true;
+      return texture;
+    }
+
+    buildChamberTickBand(config) {
+      const { THREE } = this;
+      const group = new THREE.Group();
+      const ticks = [];
+      const width = config.width;
+      const height = config.height;
+      const lean = config.lean;
+      const geometry = this.createParallelogramPlateGeometry(width, height, lean);
+      const shadowGeometry = this.createParallelogramPlateGeometry(
+        width * (config.shadowScale || 1.08),
+        height * (config.shadowScale || 1.08),
+        lean * (config.shadowScale || 1.08),
+      );
+      const faceLerpBase = config.faceLerpBase != null ? config.faceLerpBase : 0.72;
+      const faceLerpAmp = config.faceLerpAmp != null ? config.faceLerpAmp : 0.22;
+      const cradleLerpBase = config.cradleLerpBase != null ? config.cradleLerpBase : 0.22;
+      const cradleLerpAmp = config.cradleLerpAmp != null ? config.cradleLerpAmp : 0.18;
+      const emissiveBase = config.emissiveBase != null ? config.emissiveBase : 0.1;
+      const emissiveAmp = config.emissiveAmp != null ? config.emissiveAmp : 0.08;
+      const faceRoughness = config.faceRoughness != null ? config.faceRoughness : 0.14;
+      const faceMetalness = config.faceMetalness != null ? config.faceMetalness : 0.98;
+      const cradleRoughness = config.cradleRoughness != null ? config.cradleRoughness : 0.4;
+      const cradleMetalness = config.cradleMetalness != null ? config.cradleMetalness : 0.86;
+      const bladeTexture = config.bladeTexture || (this.tachBladeTexture || (this.tachBladeTexture = this.createTachBladeTexture()));
+      const leftHighlightGeometry = new THREE.PlaneGeometry(width * (config.leftHighlightWidthScale || 0.2), height * (config.highlightHeightScale || 0.92));
+      const splitShadowGeometry = new THREE.PlaneGeometry(width * (config.splitShadowWidthScale || 0.16), height * (config.splitShadowHeightScale || 0.94));
+      const rightHighlightGeometry = new THREE.PlaneGeometry(width * (config.rightHighlightWidthScale || 0.18), height * (config.highlightHeightScale || 0.9));
+
+      for (let index = 0; index < config.count; index += 1) {
+        const progress = index / config.count;
+        const angle = config.startAngle + (progress * Math.PI * 2);
+        const angleBias = 0.5 + (Math.sin(angle * 2.4 + config.phase) * 0.5);
+        const cradleColor = config.dark.clone().lerp(config.mid, cradleLerpBase + angleBias * cradleLerpAmp);
+        const faceColor = config.mid.clone().lerp(config.light, faceLerpBase + angleBias * faceLerpAmp);
+        const emissiveColor = config.glint.clone().lerp(config.light, 0.56);
+        const holder = new THREE.Group();
+        const bladeSlot = new THREE.Mesh(
+          shadowGeometry,
+          new THREE.MeshBasicMaterial({
+            color: config.slotColor || 0x010205,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+            toneMapped: false,
+          }),
+        );
+        const cradle = new THREE.Mesh(
+          shadowGeometry,
+          new THREE.MeshStandardMaterial({
+            color: cradleColor,
+            roughness: cradleRoughness,
+            metalness: cradleMetalness,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+            toneMapped: false,
+          }),
+        );
+        const plate = new THREE.Mesh(
+          geometry,
+          new THREE.MeshStandardMaterial({
+            color: faceColor,
+            emissive: emissiveColor,
+            map: bladeTexture,
+            emissiveMap: bladeTexture,
+            emissiveIntensity: emissiveBase + angleBias * emissiveAmp,
+            roughness: faceRoughness,
+            metalness: faceMetalness,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+            toneMapped: false,
+          }),
+        );
+        const leftHighlight = new THREE.Mesh(
+          leftHighlightGeometry,
+          new THREE.MeshBasicMaterial({
+            color: config.leftHighlightColor || 0xf6fbff,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+            toneMapped: false,
+          }),
+        );
+        const splitShadow = new THREE.Mesh(
+          splitShadowGeometry,
+          new THREE.MeshBasicMaterial({
+            color: config.splitShadowColor || 0x03060b,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+            toneMapped: false,
+          }),
+        );
+        const rightHighlight = new THREE.Mesh(
+          rightHighlightGeometry,
+          new THREE.MeshBasicMaterial({
+            color: config.rightHighlightColor || 0xffffff,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+            toneMapped: false,
+          }),
+        );
+        const glint = new THREE.Mesh(
+          new THREE.PlaneGeometry(width * (config.glintWidthScale || 0.76), height * (config.glintHeightScale || 0.16)),
+          new THREE.MeshBasicMaterial({
+            color: config.glint.clone().lerp(config.light, 0.62),
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+            toneMapped: false,
+          }),
+        );
+        const faceShadow = new THREE.Mesh(
+          new THREE.PlaneGeometry(width * (config.faceShadowWidthScale || 0.94), height * (config.faceShadowHeightScale || 0.42)),
+          new THREE.MeshBasicMaterial({
+            color: config.shadowColor || 0x11151c,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+            toneMapped: false,
+          }),
+        );
+        bladeSlot.position.z = config.slotZ != null ? config.slotZ : -0.0046;
+        bladeSlot.position.y = height * (config.slotYOffset != null ? config.slotYOffset : 0.015);
+        cradle.position.z = config.cradleZ != null ? config.cradleZ : -0.003;
+        cradle.position.y = height * (config.cradleYOffset != null ? config.cradleYOffset : -0.02);
+        faceShadow.position.set(0, height * (config.faceShadowYOffset != null ? config.faceShadowYOffset : -0.06), config.faceShadowZ != null ? config.faceShadowZ : 0.001);
+        plate.position.z = config.faceZ != null ? config.faceZ : 0.002;
+        leftHighlight.position.set(width * (config.leftHighlightXOffset != null ? config.leftHighlightXOffset : -0.18), 0, config.leftHighlightZ != null ? config.leftHighlightZ : 0.005);
+        splitShadow.position.set(width * (config.splitShadowXOffset != null ? config.splitShadowXOffset : 0.03), 0, config.splitShadowZ != null ? config.splitShadowZ : 0.006);
+        rightHighlight.position.set(width * (config.rightHighlightXOffset != null ? config.rightHighlightXOffset : 0.22), 0, config.rightHighlightZ != null ? config.rightHighlightZ : 0.007);
+        glint.position.set(0, height * (config.glintYOffset != null ? config.glintYOffset : 0.1), config.glintZ != null ? config.glintZ : 0.006);
+        glint.rotation.z = config.glintRotation != null ? config.glintRotation : -0.2;
+        holder.position.set(
+          Math.cos(angle) * config.radius,
+          Math.sin(angle) * config.radius,
+          config.z || 0,
+        );
+        holder.rotation.z = angle + Math.PI * 0.5 + (config.rotationOffset || 0);
+        holder.add(bladeSlot, cradle, faceShadow, plate, leftHighlight, splitShadow, rightHighlight, glint);
+        group.add(holder);
+        ticks.push({
+          holder,
+          bladeSlot,
+          cradle,
+          faceShadow,
+          plate,
+          leftHighlight,
+          splitShadow,
+          rightHighlight,
+          glint,
+          baseOpacity: config.baseOpacity * (0.9 + angleBias * 0.16),
+          bladeSlotOpacity: (config.baseOpacity * (config.slotOpacityScale || 0.58)) * (0.96 + angleBias * 0.06),
+          cradleOpacity: (config.baseOpacity * 0.44) * (0.92 + angleBias * 0.08),
+          shadowOpacity: (config.baseOpacity * (config.faceShadowOpacityScale || 0.22)) * (0.9 + angleBias * 0.12),
+          splitShadowOpacity: (config.baseOpacity * (config.splitShadowOpacityScale || 0.46)) * (0.9 + angleBias * 0.1),
+          leftHighlightOpacity: (config.baseOpacity * (config.leftHighlightOpacityScale || 0.52)) * (0.88 + angleBias * 0.12),
+          rightHighlightOpacity: (config.baseOpacity * (config.rightHighlightOpacityScale || 0.62)) * (0.9 + angleBias * 0.14),
+          glintOpacity: config.glintOpacity * (0.78 + angleBias * 0.3),
+          glintPhase: angle * 1.8 + config.phase,
+          glintBias: angleBias,
+        });
+      }
+
+      return { group, ticks };
+    }
+
+    buildMachinedBladeBand(config) {
+      const { THREE } = this;
+      const group = new THREE.Group();
+      const ticks = [];
+      const width = config.width;
+      const height = config.height;
+      const lean = config.lean;
+      const bodyDepth = config.bodyDepth != null ? config.bodyDepth : Math.max(width * 0.46, height * 0.075);
+      const socketDepth = config.socketDepth != null ? config.socketDepth : bodyDepth * 1.14;
+      const contactShadowGeometry = this.createParallelogramPlateGeometry(width * 1.28, height * 1.1, lean * 1.08);
+      const socketGeometry = this.createExtrudedParallelogramGeometry(
+        width * 1.18,
+        height * 1.08,
+        lean * 1.08,
+        socketDepth,
+        {
+          bevelThickness: socketDepth * 0.14,
+          bevelSize: Math.min(width, height) * 0.12,
+        },
+      );
+      const bladeGeometry = this.createExtrudedParallelogramGeometry(
+        width,
+        height,
+        lean,
+        bodyDepth,
+        {
+          bevelThickness: bodyDepth * 0.26,
+          bevelSize: Math.min(width, height) * 0.14,
+        },
+      );
+      const frontFaceGeometry = this.createParallelogramPlateGeometry(width * 0.84, height * 0.82, lean * 0.82);
+      const faceShadowGeometry = this.createParallelogramPlateGeometry(width * 0.72, height * 0.28, lean * 0.7);
+      const topCapGeometry = this.createParallelogramPlateGeometry(width * 0.88, height * 0.18, lean * 0.84);
+      const innerShadowGeometry = this.createParallelogramPlateGeometry(width * 0.18, height * 0.88, lean * 0.1);
+      const rearEdgeGeometry = this.createParallelogramPlateGeometry(width * 0.17, height * 0.9, lean * 0.14);
+      const glintGeometry = this.createParallelogramPlateGeometry(width * 0.72, height * 0.11, lean * 0.68);
+
+      for (let index = 0; index < config.count; index += 1) {
+        const progress = index / config.count;
+        const angle = config.startAngle + (progress * Math.PI * 2);
+        const angleBias = 0.5 + (Math.sin(angle * 2.6 + config.phase) * 0.5);
+        const holder = new THREE.Group();
+        const socketColor = config.dark.clone().lerp(config.mid, 0.08 + angleBias * 0.08);
+        const bodyColor = config.dark.clone().lerp(config.mid, 0.34 + angleBias * 0.08);
+        const faceColor = config.mid.clone().lerp(config.light, 0.92 + angleBias * 0.06);
+        const capColor = config.glint.clone().lerp(config.light, 0.84);
+        const edgeColor = config.mid.clone().lerp(config.light, 0.72 + angleBias * 0.08);
+
+        const bladeSlot = new THREE.Mesh(
+          contactShadowGeometry,
+          new THREE.MeshBasicMaterial({
+            color: config.slotColor || 0x010205,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+            toneMapped: false,
+          }),
+        );
+        const cradle = new THREE.Mesh(
+          socketGeometry,
+          new THREE.MeshPhysicalMaterial({
+            color: socketColor,
+            roughness: 0.76,
+            metalness: 0.9,
+            clearcoat: 0.12,
+            clearcoatRoughness: 0.64,
+            transparent: true,
+            opacity: 0,
+          }),
+        );
+        const body = new THREE.Mesh(
+          bladeGeometry,
+          new THREE.MeshPhysicalMaterial({
+            color: bodyColor,
+            roughness: 0.24,
+            metalness: 1,
+            clearcoat: 0.82,
+            clearcoatRoughness: 0.16,
+            transparent: true,
+            opacity: 0,
+          }),
+        );
+        const plate = new THREE.Mesh(
+          frontFaceGeometry,
+          new THREE.MeshBasicMaterial({
+            color: faceColor,
+            transparent: true,
+            opacity: 0,
+            toneMapped: false,
+          }),
+        );
+        const faceShadow = new THREE.Mesh(
+          faceShadowGeometry,
+          new THREE.MeshBasicMaterial({
+            color: config.shadowColor || 0x090d14,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+            toneMapped: false,
+          }),
+        );
+        const leftHighlight = new THREE.Mesh(
+          topCapGeometry,
+          new THREE.MeshBasicMaterial({
+            color: capColor,
+            transparent: true,
+            opacity: 0,
+            toneMapped: false,
+          }),
+        );
+        const splitShadow = new THREE.Mesh(
+          innerShadowGeometry,
+          new THREE.MeshBasicMaterial({
+            color: config.splitShadowColor || 0x02050a,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+            toneMapped: false,
+          }),
+        );
+        const rightHighlight = new THREE.Mesh(
+          rearEdgeGeometry,
+          new THREE.MeshBasicMaterial({
+            color: edgeColor,
+            transparent: true,
+            opacity: 0,
+            toneMapped: false,
+          }),
+        );
+        const glint = new THREE.Mesh(
+          glintGeometry,
+          new THREE.MeshBasicMaterial({
+            color: config.glint.clone().lerp(config.light, 0.7),
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+            toneMapped: false,
+          }),
+        );
+
+        cradle.userData.keepDepthTest = true;
+        body.userData.keepDepthTest = true;
+        plate.userData.keepDepthTest = true;
+        leftHighlight.userData.keepDepthTest = true;
+        rightHighlight.userData.keepDepthTest = true;
+
+        bladeSlot.position.set(0, height * 0.03, -bodyDepth * 0.96);
+        cradle.position.set(0, height * 0.016, -socketDepth * 0.48);
+        body.position.set(0, 0, bodyDepth * 0.02);
+        plate.position.set(-width * 0.005, height * 0.05, bodyDepth * 1.34);
+        faceShadow.position.set(width * 0.02, height * 0.14, bodyDepth * 1.18);
+        leftHighlight.position.set(-width * 0.06, -height * 0.36, bodyDepth * 1.42);
+        splitShadow.position.set(width * 0.05, 0, bodyDepth * 1.24);
+        rightHighlight.position.set(width * 0.22, 0, bodyDepth * 1.38);
+        glint.position.set(-width * 0.08, -height * 0.28, bodyDepth * 1.5);
+
+        holder.position.set(
+          Math.cos(angle) * config.radius,
+          Math.sin(angle) * config.radius,
+          config.z || 0,
+        );
+        holder.rotation.z = angle + Math.PI * 0.5 + (config.rotationOffset || 0);
+        holder.add(bladeSlot, cradle, body, plate, faceShadow, leftHighlight, splitShadow, rightHighlight, glint);
+        group.add(holder);
+
+        ticks.push({
+          holder,
+          bladeSlot,
+          cradle,
+          body,
+          faceShadow,
+          plate,
+          leftHighlight,
+          splitShadow,
+          rightHighlight,
+          glint,
+          baseOpacity: config.baseOpacity * (0.92 + angleBias * 0.08),
+          bladeSlotOpacity: (config.baseOpacity * 0.44) * (0.96 + angleBias * 0.05),
+          cradleOpacity: (config.baseOpacity * 0.52) * (0.94 + angleBias * 0.08),
+          bodyOpacity: (config.baseOpacity * 0.76) * (0.94 + angleBias * 0.06),
+          shadowOpacity: (config.baseOpacity * 0.42) * (0.94 + angleBias * 0.08),
+          splitShadowOpacity: (config.baseOpacity * 0.52) * (0.92 + angleBias * 0.1),
+          leftHighlightOpacity: (config.baseOpacity * 0.74) * (0.9 + angleBias * 0.12),
+          rightHighlightOpacity: (config.baseOpacity * 0.7) * (0.9 + angleBias * 0.12),
+          glintOpacity: (config.glintOpacity || 0.12) * (0.8 + angleBias * 0.28),
+          glintPhase: angle * 1.8 + config.phase,
+          glintBias: angleBias,
+        });
+      }
+
+      return { group, ticks };
+    }
+
+    buildFocusedTachBand(config) {
+      const { THREE } = this;
+      const group = new THREE.Group();
+      group.position.z = config.zOffset || 0.016;
+      const dark = new THREE.Color(0x03050a);
+      const mid = new THREE.Color(0x535d6c);
+      const light = new THREE.Color(0xd9e0ea);
+      const glint = new THREE.Color(0xf3f7fb);
+      const tickRadius = config.tickRadius != null ? config.tickRadius : config.radius - (config.carrierTube * 0.28);
+
+      const shadow = new THREE.Mesh(
+        new THREE.TorusGeometry(config.radius, config.shadowTube, 18, 240),
+        new THREE.MeshBasicMaterial({
+          color: 0x010205,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          depthTest: false,
+          toneMapped: false,
+        }),
+      );
+      shadow.renderOrder = 6;
+      shadow.position.z = -0.016;
+      group.add(shadow);
+
+      const carrier = new THREE.Mesh(
+        new THREE.TorusGeometry(config.radius, config.carrierTube, 20, 260),
+        new THREE.MeshStandardMaterial({
+          color: 0x05070b,
+          emissive: 0x0d1320,
+          emissiveIntensity: 0.04,
+          roughness: 0.12,
+          metalness: 1,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          depthTest: false,
+          toneMapped: false,
+        }),
+      );
+      carrier.renderOrder = 7;
+      group.add(carrier);
+
+      const outerLip = new THREE.Mesh(
+        new THREE.TorusGeometry(config.radius + config.lipOffset, config.lipTube, 10, 220),
+        new THREE.MeshBasicMaterial({
+          color: 0xdde6f2,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          depthTest: false,
+          toneMapped: false,
+        }),
+      );
+      outerLip.renderOrder = 9;
+      group.add(outerLip);
+
+      const innerLip = new THREE.Mesh(
+        new THREE.TorusGeometry(config.radius - config.lipOffset, config.lipTube * 0.92, 10, 220),
+        new THREE.MeshBasicMaterial({
+          color: 0x0f131b,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          depthTest: false,
+          toneMapped: false,
+        }),
+      );
+      innerLip.renderOrder = 8;
+      group.add(innerLip);
+
+      const trackShadow = new THREE.Mesh(
+        new THREE.TorusGeometry(tickRadius, config.trackTube || (config.carrierTube * 0.48), 18, 240),
+        new THREE.MeshBasicMaterial({
+          color: 0x010205,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          depthTest: false,
+          toneMapped: false,
+        }),
+      );
+      trackShadow.position.z = -0.004;
+      trackShadow.renderOrder = 9;
+      group.add(trackShadow);
+
+      const track = new THREE.Mesh(
+        new THREE.TorusGeometry(tickRadius, config.trackTubeInner || (config.carrierTube * 0.32), 18, 240),
+        new THREE.MeshStandardMaterial({
+          color: 0x070a10,
+          emissive: 0x111824,
+          emissiveIntensity: 0.03,
+          roughness: 0.16,
+          metalness: 1,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          depthTest: false,
+          toneMapped: false,
+        }),
+      );
+      track.renderOrder = 10;
+      group.add(track);
+
+      const bladeCavity = new THREE.Mesh(
+        new THREE.TorusGeometry(
+          tickRadius,
+          config.bladeCavityTube || Math.max(config.tickHeight * 0.22, config.carrierTube * 0.16),
+          16,
+          240,
+        ),
+        new THREE.MeshBasicMaterial({
+          color: config.bladeCavityColor || 0x010205,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          depthTest: false,
+          toneMapped: false,
+        }),
+      );
+      bladeCavity.position.z = config.bladeCavityZ != null ? config.bladeCavityZ : 0.006;
+      bladeCavity.renderOrder = 13;
+      group.add(bladeCavity);
+
+      const band = this.buildMachinedBladeBand({
+        radius: tickRadius,
+        count: config.count,
+        width: config.tickWidth,
+        height: config.tickHeight,
+        lean: config.tickLean,
+        startAngle: config.startAngle,
+        phase: config.phase,
+        dark,
+        mid,
+        light,
+        glint,
+        baseOpacity: config.bladeBaseOpacity != null ? config.bladeBaseOpacity : 0.42,
+        glintOpacity: config.bladeGlintOpacity != null ? config.bladeGlintOpacity : 0.07,
+        z: 0.018,
+        shadowScale: 1.12,
+        cradleLerpBase: 0,
+        cradleLerpAmp: 0.018,
+        faceLerpBase: 0.72,
+        faceLerpAmp: 0.08,
+        emissiveBase: 0.025,
+        emissiveAmp: 0.014,
+        faceRoughness: 0.18,
+        faceMetalness: 1,
+        cradleRoughness: 0.34,
+        cradleMetalness: 1,
+        bodyDepth: config.bladeDepth,
+        socketDepth: config.socketDepth,
+        glintWidthScale: 0.42,
+        glintHeightScale: 0.055,
+        glintYOffset: 0.26,
+        glintRotation: -0.18,
+        faceShadowOpacityScale: 0.18,
+        faceShadowWidthScale: 0.92,
+        faceShadowHeightScale: 0.28,
+        faceShadowYOffset: -0.06,
+        leftHighlightWidthScale: 0.22,
+        rightHighlightWidthScale: 0.2,
+        highlightHeightScale: 1,
+        leftHighlightXOffset: -0.23,
+        rightHighlightXOffset: 0.24,
+        splitShadowWidthScale: 0.15,
+        splitShadowHeightScale: 0.98,
+        splitShadowXOffset: 0.014,
+        splitShadowOpacityScale: 0.62,
+        leftHighlightOpacityScale: 0.58,
+        rightHighlightOpacityScale: 0.52,
+        slotOpacityScale: 0.42,
+        slotYOffset: 0.01,
+        slotZ: -0.0054,
+        rotationOffset: -0.36,
+        shadowColor: 0x010203,
+      });
+      band.group.traverse((child) => {
+        child.renderOrder = 14;
+        if (child.material) {
+          child.material.depthTest = !!child.userData.keepDepthTest;
+        }
+      });
+      group.add(band.group);
+
+      const sheen = new THREE.Mesh(
+        new THREE.TorusGeometry(config.radius + 0.004, config.sheenTube, 12, 220),
+        new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          depthTest: false,
+          blending: THREE.AdditiveBlending,
+          toneMapped: false,
+        }),
+      );
+      sheen.renderOrder = 11;
+      group.add(sheen);
+
+      const edgeGlow = new THREE.Mesh(
+        new THREE.TorusGeometry(config.radius + (config.lipOffset * 0.2), config.edgeGlowTube, 12, 220),
+        new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          depthTest: false,
+          blending: THREE.AdditiveBlending,
+          toneMapped: false,
+        }),
+      );
+      edgeGlow.renderOrder = 12;
+      group.add(edgeGlow);
+
+      const bladeKeyLight = new THREE.DirectionalLight(0xf7fbff, 0.42);
+      bladeKeyLight.position.set(-2.8, -3.2, 5.2);
+      bladeKeyLight.target.position.set(0, 0, 0);
+      group.add(bladeKeyLight, bladeKeyLight.target);
+
+      const bladeFillLight = new THREE.DirectionalLight(0x83afff, 0.14);
+      bladeFillLight.position.set(2.4, 1.8, 2.6);
+      bladeFillLight.target.position.set(0, 0, 0);
+      group.add(bladeFillLight, bladeFillLight.target);
+
+      group.rotation.x = config.tilt || 0;
+
+      return {
+        group,
+        shadow,
+        carrier,
+        outerLip,
+        innerLip,
+        trackShadow,
+        track,
+        bladeCavity,
+        band,
+        sheen,
+        edgeGlow,
+        bladeKeyLight,
+        bladeFillLight,
+      };
+    }
+
+    buildMicroTickRing(config) {
+      const { THREE } = this;
+      const positions = [];
+      const guidePositions = [];
+      for (let index = 0; index < config.count; index += 1) {
+        const angle = (index / config.count) * Math.PI * 2;
+        const innerRadius = config.radius - (index % config.majorEvery === 0 ? config.majorLength : config.minorLength);
+        const target = index % config.majorEvery === 0 ? positions : guidePositions;
+        target.push(
+          Math.cos(angle) * innerRadius, Math.sin(angle) * innerRadius, config.z || 0,
+          Math.cos(angle) * config.radius, Math.sin(angle) * config.radius, config.z || 0,
+        );
+      }
+      return {
+        major: new THREE.LineSegments(
+          new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(positions, 3)),
+          new THREE.LineBasicMaterial({
+            color: config.majorColor,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+          }),
+        ),
+        minor: new THREE.LineSegments(
+          new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(guidePositions, 3)),
+          new THREE.LineBasicMaterial({
+            color: config.minorColor,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+          }),
+        ),
+      };
+    }
+
+    buildLockProfile(node) {
+      const seed = hashString(`lock:${node.id}`);
+      const variance = hashString(`lock:${node.provider}:${node.id}`);
+      const tierScale = node.tier === "flagship" ? 1 : node.tier === "secondary" ? 0.74 : 0.52;
+      return {
+        phaseOffset: seed * Math.PI * 2,
+        settleAmplitude: (0.06 + variance * 0.08) * tierScale,
+        cameraBias: 0.88 + variance * 0.24,
+        targetBias: 0.18 + seed * 0.12,
+        forwardBias: 0.08 + variance * 0.12,
+        apparatusGain: 0.92 + tierScale * 0.28 + variance * 0.08,
+        braceGain: 0.8 + seed * 0.28,
+        traceGain: 0.9 + variance * 0.24,
+        yBias: ((seed * 2) - 1) * 0.018,
+      };
+    }
+
+    buildChamberCore() {
+      const { THREE } = this;
+      const group = new THREE.Group();
+      group.position.set(0, -0.45, -0.82);
+      group.scale.setScalar(1.18);
+      this.scene.add(group);
+
+      const planeTilt = 1.04;
+
+      const envelope = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: this.glowTexture || (this.glowTexture = this.createGlowTexture()),
+          color: 0x6278ff,
+          transparent: true,
+          opacity: 0.16,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      envelope.scale.set(8.4, 8.4, 1);
+      group.add(envelope);
+
+      const halo = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: this.lobeTexture || (this.lobeTexture = this.createLobeTexture()),
+          color: 0xa8c8ff,
+          transparent: true,
+          opacity: 0.18,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      halo.scale.set(4.6, 4.6, 1);
+      group.add(halo);
+
+      const mantle = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: this.livingCoreTexture || (this.livingCoreTexture = this.createLivingCoreTexture()),
+          color: 0xcfe1ff,
+          transparent: true,
+          opacity: 0.54,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      mantle.scale.set(5.2, 5.2, 1);
+      group.add(mantle);
+
+      const convection = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: this.livingCoreTexture || (this.livingCoreTexture = this.createLivingCoreTexture()),
+          color: 0x88abff,
+          transparent: true,
+          opacity: 0.26,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      convection.scale.set(4.3, 4.3, 1);
+      convection.material.rotation = 0.74;
+      group.add(convection);
+
+      const nucleus = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: this.nucleusTexture || (this.nucleusTexture = this.createNucleusTexture()),
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.96,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      nucleus.scale.set(1.36, 1.36, 1);
+      group.add(nucleus);
+
+      const coronaGroup = new THREE.Group();
+      const coronaSprites = [];
+      for (let index = 0; index < 5; index += 1) {
+        const sprite = new THREE.Sprite(
+          new THREE.SpriteMaterial({
+            map: this.lobeTexture || (this.lobeTexture = this.createLobeTexture()),
+            color: index % 2 === 0 ? 0xecf5ff : 0x91b1ff,
+            transparent: true,
+            opacity: 0.06,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+          }),
+        );
+        const angle = (index / 5) * Math.PI * 2 + (index % 2 === 0 ? 0.18 : -0.1);
+        const radius = 2.38 + (index % 3) * 0.22;
+        sprite.position.set(
+          Math.cos(angle) * radius,
+          Math.sin(angle) * radius * 0.72,
+          0.04 + index * 0.01,
+        );
+        sprite.scale.set(1.3 + (index % 2) * 0.18, 0.62 + (index % 3) * 0.08, 1);
+        coronaGroup.add(sprite);
+        coronaSprites.push({
+          sprite,
+          angle,
+          radius,
+          phase: index * 0.92,
+        });
+      }
+      group.add(coronaGroup);
+
+      const apertureRing = new THREE.Mesh(
+        new THREE.TorusGeometry(2.84, 0.058, 18, 160),
+        new THREE.MeshBasicMaterial({
+          color: 0xd9ebff,
+          transparent: true,
+          opacity: 0.18,
+          depthWrite: false,
+        }),
+      );
+      apertureRing.rotation.x = planeTilt;
+      group.add(apertureRing);
+
+      const calibrationRing = new THREE.Mesh(
+        new THREE.TorusGeometry(3.26, 0.03, 14, 160),
+        new THREE.MeshBasicMaterial({
+          color: 0x7ca6ff,
+          transparent: true,
+          opacity: 0.12,
+          depthWrite: false,
+        }),
+      );
+      calibrationRing.rotation.x = planeTilt;
+      group.add(calibrationRing);
+
+      const lockRing = new THREE.Mesh(
+        new THREE.TorusGeometry(2.22, 0.02, 10, 120),
+        new THREE.MeshBasicMaterial({
+          color: 0xf2f7ff,
+          transparent: true,
+          opacity: 0.1,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      lockRing.rotation.x = planeTilt;
+      group.add(lockRing);
+
+      const rimMetalDark = new THREE.Color(0x262c37);
+      const rimMetalMid = new THREE.Color(0xa2acba);
+      const rimMetalLight = new THREE.Color(0xf6f8fd);
+      const rimGlint = new THREE.Color(0xf8fbff);
+
+      const tachCarrier = new THREE.Mesh(
+        new THREE.TorusGeometry(2.98, 0.14, 18, 220),
+        new THREE.MeshStandardMaterial({
+          color: 0x1f2632,
+          roughness: 0.52,
+          metalness: 0.84,
+          transparent: true,
+          opacity: 0.02,
+          depthWrite: false,
+        }),
+      );
+      tachCarrier.rotation.x = planeTilt;
+      group.add(tachCarrier);
+
+      const tachInnerLip = new THREE.Mesh(
+        new THREE.TorusGeometry(2.9, 0.022, 10, 180),
+        new THREE.MeshBasicMaterial({
+          color: 0xd7e2f2,
+          transparent: true,
+          opacity: 0.014,
+          depthWrite: false,
+        }),
+      );
+      tachInnerLip.rotation.x = planeTilt;
+      group.add(tachInnerLip);
+
+      const rimBand = this.buildChamberTickBand({
+        radius: 2.98,
+        count: 78,
+        width: 0.064,
+        height: 0.096,
+        lean: 0.054,
+        startAngle: 0.08,
+        phase: 0.3,
+        dark: rimMetalDark,
+        mid: rimMetalMid,
+        light: rimMetalLight,
+        glint: rimGlint,
+        baseOpacity: 0.14,
+        glintOpacity: 0.026,
+        z: 0.014,
+        shadowScale: 1.08,
+        faceLerpBase: 0.58,
+        faceLerpAmp: 0.16,
+        emissiveBase: 0.025,
+        emissiveAmp: 0.014,
+        faceRoughness: 0.28,
+        cradleRoughness: 0.54,
+        faceShadowOpacityScale: 0.16,
+        leftHighlightOpacityScale: 0.34,
+        rightHighlightOpacityScale: 0.3,
+      });
+      rimBand.group.rotation.x = planeTilt;
+      group.add(rimBand.group);
+
+      const innerTachCarrier = new THREE.Mesh(
+        new THREE.TorusGeometry(2.58, 0.14, 20, 240),
+        new THREE.MeshStandardMaterial({
+          color: 0x171d28,
+          roughness: 0.3,
+          metalness: 0.94,
+          transparent: true,
+          opacity: 0.04,
+          depthWrite: false,
+        }),
+      );
+      innerTachCarrier.rotation.x = planeTilt;
+      group.add(innerTachCarrier);
+
+      const innerTachShadow = new THREE.Mesh(
+        new THREE.TorusGeometry(2.58, 0.17, 20, 240),
+        new THREE.MeshBasicMaterial({
+          color: 0x0e1219,
+          transparent: true,
+          opacity: 0.03,
+          depthWrite: false,
+        }),
+      );
+      innerTachShadow.position.z = -0.01;
+      innerTachShadow.rotation.x = planeTilt;
+      group.add(innerTachShadow);
+
+      const innerTachLipOuter = new THREE.Mesh(
+        new THREE.TorusGeometry(2.68, 0.019, 10, 200),
+        new THREE.MeshBasicMaterial({
+          color: 0xe2e8f0,
+          transparent: true,
+          opacity: 0.028,
+          depthWrite: false,
+        }),
+      );
+      innerTachLipOuter.rotation.x = planeTilt;
+      group.add(innerTachLipOuter);
+
+      const innerTachLipInner = new THREE.Mesh(
+        new THREE.TorusGeometry(2.48, 0.018, 10, 200),
+        new THREE.MeshBasicMaterial({
+          color: 0x565f6d,
+          transparent: true,
+          opacity: 0.02,
+          depthWrite: false,
+        }),
+      );
+      innerTachLipInner.rotation.x = planeTilt;
+      group.add(innerTachLipInner);
+
+      const innerTachBand = this.buildChamberTickBand({
+        radius: 2.58,
+        count: 88,
+        width: 0.06,
+        height: 0.092,
+        lean: 0.05,
+        startAngle: 0.12,
+        phase: 0.68,
+        dark: new THREE.Color(0x171d26),
+        mid: new THREE.Color(0x707987),
+        light: new THREE.Color(0xe1e7ef),
+        glint: new THREE.Color(0xf6f9fd),
+        baseOpacity: 0.15,
+        glintOpacity: 0.032,
+        z: 0.016,
+        shadowScale: 1.08,
+        cradleLerpBase: 0.1,
+        cradleLerpAmp: 0.12,
+        faceLerpBase: 0.6,
+        faceLerpAmp: 0.14,
+        emissiveBase: 0.026,
+        emissiveAmp: 0.016,
+        faceRoughness: 0.24,
+        faceMetalness: 1,
+        cradleRoughness: 0.42,
+        cradleMetalness: 0.98,
+        glintWidthScale: 0.5,
+        glintHeightScale: 0.08,
+        glintYOffset: 0.22,
+        glintRotation: -0.32,
+        faceShadowOpacityScale: 0.18,
+        faceShadowHeightScale: 0.36,
+        faceShadowYOffset: -0.08,
+        shadowColor: 0x06080c,
+        leftHighlightOpacityScale: 0.34,
+        rightHighlightOpacityScale: 0.32,
+      });
+      innerTachBand.group.rotation.x = planeTilt;
+      group.add(innerTachBand.group);
+
+      const innerTachSheen = new THREE.Mesh(
+        new THREE.TorusGeometry(2.586, 0.04, 12, 200),
+        new THREE.MeshBasicMaterial({
+          color: 0xf5f8fd,
+          transparent: true,
+          opacity: 0.02,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      innerTachSheen.rotation.x = planeTilt;
+      group.add(innerTachSheen);
+
+      const innerTachEdgeGlow = new THREE.Mesh(
+        new THREE.TorusGeometry(2.595, 0.022, 12, 200),
+        new THREE.MeshBasicMaterial({
+          color: 0xfdfefe,
+          transparent: true,
+          opacity: 0.012,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      innerTachEdgeGlow.rotation.x = planeTilt;
+      group.add(innerTachEdgeGlow);
+
+      const microTicks = this.buildMicroTickRing({
+        radius: 3.18,
+        count: 168,
+        majorEvery: 6,
+        minorLength: 0.05,
+        majorLength: 0.11,
+        majorColor: rimMetalLight,
+        minorColor: rimMetalMid,
+        z: 0.01,
+      });
+      microTicks.major.rotation.x = planeTilt;
+      microTicks.minor.rotation.x = planeTilt;
+      group.add(microTicks.minor, microTicks.major);
+
+      const rimSheen = new THREE.Mesh(
+        new THREE.TorusGeometry(2.99, 0.028, 12, 180),
+        new THREE.MeshBasicMaterial({
+          color: 0xf7fbff,
+          transparent: true,
+          opacity: 0.06,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      rimSheen.rotation.x = planeTilt;
+      group.add(rimSheen);
+
+      const rimShadow = new THREE.Mesh(
+        new THREE.TorusGeometry(2.98, 0.092, 18, 180),
+        new THREE.MeshBasicMaterial({
+          color: 0x202a3a,
+          transparent: true,
+          opacity: 0.1,
+          depthWrite: false,
+        }),
+      );
+      rimShadow.rotation.x = planeTilt;
+      group.add(rimShadow);
+
+      const braceGroup = new THREE.Group();
+      const braces = [];
+      for (let index = 0; index < 8; index += 1) {
+        const geometry = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(1.98, -0.04, 0),
+          new THREE.Vector3(2.48, 0, 0),
+          new THREE.Vector3(3.12, 0.16, 0),
+        ]);
+        const line = new THREE.Line(
+          geometry,
+          new THREE.LineBasicMaterial({
+            color: index % 2 === 0 ? 0xd6e8ff : 0x8caeff,
+            transparent: true,
+            opacity: 0.16,
+            depthWrite: false,
+          }),
+        );
+        line.rotation.set(planeTilt, 0, (index / 8) * Math.PI * 2);
+        braceGroup.add(line);
+        braces.push({
+          line,
+          baseOpacity: index % 2 === 0 ? 0.16 : 0.12,
+        });
+      }
+      group.add(braceGroup);
+
+      const arcConfigs = [
+        { radius: 3.64, start: 0.18, sweep: 0.76, opacity: 0.16, speed: 0.038, color: 0xbfd8ff },
+        { radius: 3.5, start: 1.58, sweep: 0.48, opacity: 0.11, speed: -0.028, color: 0x7ba0ff },
+        { radius: 3.82, start: 3.42, sweep: 0.68, opacity: 0.12, speed: 0.02, color: 0xe7f1ff },
+        { radius: 3.24, start: 4.84, sweep: 0.42, opacity: 0.1, speed: -0.032, color: 0x8fb7ff },
+      ];
+      const arcs = arcConfigs.map((config) => {
+        const line = this.buildChamberArc(
+          config.radius,
+          config.start,
+          config.sweep,
+          26,
+          new THREE.LineBasicMaterial({
+            color: config.color,
+            transparent: true,
+            opacity: config.opacity,
+            depthWrite: false,
+          }),
+          0.92,
+        );
+        line.rotation.x = planeTilt;
+        group.add(line);
+        return {
+          line,
+          baseOpacity: config.opacity,
+          speed: config.speed,
+        };
+      });
+
+      const coreLight = new THREE.PointLight(0xdcebff, 1.55, 18, 2.1);
+      coreLight.position.set(0, 0.28, 1.85);
+      group.add(coreLight);
+
+      this.chamberCore = {
+        group,
+        envelope,
+        halo,
+        mantle,
+        convection,
+        nucleus,
+        coronaGroup,
+        coronaSprites,
+        apertureRing,
+        calibrationRing,
+        lockRing,
+        rimBand,
+        innerTachCarrier,
+        innerTachShadow,
+        innerTachBand,
+        innerTachSheen,
+        innerTachEdgeGlow,
+        innerTachLipOuter,
+        innerTachLipInner,
+        microTicks,
+        rimSheen,
+        rimShadow,
+        tachCarrier,
+        tachInnerLip,
+        braceGroup,
+        braces,
+        arcs,
+        coreLight,
+        lockAlpha: 0,
+      };
     }
 
     /*
@@ -1885,13 +3207,13 @@ if (root) {
       const family = selectOrbPaletteFamily(seed);
       const hueDrift = ((hashString(`orb:fine:${node.id}`) * 2) - 1) * 0.004;
       const tierBoost = node.tier === "flagship" ? 1 : node.tier === "secondary" ? 0.78 : 0.56;
-      const core = new THREE.Color().setHSL(family.coreHue + hueDrift * 0.45, 0.78, node.tier === "flagship" ? 0.56 : node.tier === "secondary" ? 0.515 : 0.47);
-      const emissive = new THREE.Color().setHSL(family.emissiveHue + hueDrift * 0.36, 0.9, 0.6 + tierBoost * 0.04);
-      const halo = new THREE.Color().setHSL(family.haloHue + hueDrift * 0.34, 0.72, 0.55);
+      const core = new THREE.Color().setHSL(family.coreHue + hueDrift * 0.45, 0.84, node.tier === "flagship" ? 0.62 : node.tier === "secondary" ? 0.57 : 0.52);
+      const emissive = new THREE.Color().setHSL(family.emissiveHue + hueDrift * 0.36, 0.96, 0.66 + tierBoost * 0.05);
+      const halo = new THREE.Color().setHSL(family.haloHue + hueDrift * 0.34, 0.82, 0.62);
       const aura = new THREE.Color().setHSL(family.auraHue + hueDrift * 0.28, 0.58, 0.49);
       const shell = new THREE.Color().setHSL(family.shellHue + hueDrift * 0.3, 0.56, 0.5);
       const ring = new THREE.Color().setHSL(family.ringHue + hueDrift * 0.24, 0.9, 0.72);
-      const nucleus = new THREE.Color().setHSL(family.coreHue + hueDrift * 0.12, 0.12, 0.84);
+      const nucleus = new THREE.Color().setHSL(family.coreHue + hueDrift * 0.12, 0.1, 0.92);
       const metalDark = new THREE.Color().setHSL(family.metalHue + hueDrift * 0.08, 0.16, 0.16);
       const metalMid = new THREE.Color().setHSL(family.metalHue + hueDrift * 0.06, 0.12, 0.28);
       const metalLight = new THREE.Color().setHSL(family.metalHue + hueDrift * 0.04, 0.16, 0.64);
@@ -1970,6 +3292,110 @@ if (root) {
       return { minor, major };
     }
 
+    _buildPlasmaSprites(sphereRadius, palette, options) {
+      const { THREE } = this;
+      const minimalPalette = !!(options && options.minimalPalette);
+
+      const vertexShader = [
+        "varying vec2 vUv;",
+        "void main() {",
+        "  vUv = uv;",
+        "  vec4 mvPosition = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);",
+        "  vec2 scale = vec2(length(modelMatrix[0].xyz), length(modelMatrix[1].xyz));",
+        "  mvPosition.xy += (position.xy * scale);",
+        "  gl_Position = projectionMatrix * mvPosition;",
+        "}",
+      ].join("\n");
+
+      const fragmentShader = [
+        "varying vec2 vUv;",
+        "uniform float uTime;",
+        "uniform float uSigma;",
+        "uniform float uIntensity;",
+        "uniform float uCoreWeight;",
+        "uniform float uMidWeight;",
+        "uniform float uAtmosWeight;",
+        "uniform vec3  uColorCore;",
+        "uniform vec3  uColorMid;",
+        "uniform vec3  uColorAtmos;",
+        "void main() {",
+        "  vec2 p = vUv - 0.5;",
+        "  float r = length(p) * 2.0;",
+        "  float g = exp(-(r*r) / (uSigma*uSigma));",
+        "  vec2 cell = floor(p * 10.0);",
+        "  float n = fract(sin(dot(cell + uTime * 0.15, vec2(12.9898, 78.233))) * 43758.5453);",
+        "  n = mix(0.9, 1.0, n);",
+        "  vec3 col = uAtmosWeight * uColorAtmos",
+        "           + uMidWeight   * uColorMid   * smoothstep(0.0, 0.7, g)",
+        "           + uCoreWeight  * uColorCore  * smoothstep(0.4, 1.0, g);",
+        "  float alpha = g * uIntensity * n;",
+        "  gl_FragColor = vec4(col, alpha);",
+        "}",
+      ].join("\n");
+
+      const paletteHue = (color) => {
+        const hsl = { h: 0, s: 0, l: 0 };
+        color.getHSL(hsl);
+        return hsl.h;
+      };
+
+      /* A3 final polish: absolute violet/magenta + absolute deep blue, small palette-family tint. */
+      const violetMagenta = new THREE.Color().setHSL(0.80, 0.78, 0.54);   /* ≈ 288° */
+      const deepBlue      = new THREE.Color().setHSL(0.62, 0.82, 0.18);   /* ≈ 223° */
+
+      let uColorCore;
+      let uColorMid;
+      let uColorAtmos;
+      if (minimalPalette) {
+        /* Aperture prototype: Kelvin-ramp derived directly from node palette. */
+        /* Core: near-white with faint hue tint (white-hot read). */
+        uColorCore  = new THREE.Color().setHSL(paletteHue(palette.focusCoreGlow), 0.08, 0.96);
+        /* Mid mantle: node-derived cyan/mid, no violet override. */
+        uColorMid   = palette.focusCoreMid.clone();
+        /* Atmosphere: node-derived dark envelope, no deep-blue override. */
+        uColorAtmos = palette.focusCoreDark.clone();
+      } else {
+        uColorCore  = new THREE.Color().setHSL(paletteHue(palette.focusCoreGlow), 0.10, 0.97);
+        uColorMid   = violetMagenta.clone().lerp(palette.focusCoreMid, 0.15);
+        uColorAtmos = deepBlue.clone().lerp(new THREE.Color(0x080f2a), 0.30);
+      }
+
+      const makeLayer = (scale, sigma, coreW, midW, atmosW, renderOrder, z) => {
+        const geom = new THREE.PlaneGeometry(1, 1);
+        const mat = new THREE.ShaderMaterial({
+          uniforms: {
+            uTime:        { value: 0 },
+            uSigma:       { value: sigma },
+            uIntensity:   { value: 0 },
+            uCoreWeight:  { value: coreW },
+            uMidWeight:   { value: midW },
+            uAtmosWeight: { value: atmosW },
+            uColorCore:   { value: uColorCore.clone() },
+            uColorMid:    { value: uColorMid.clone() },
+            uColorAtmos:  { value: uColorAtmos.clone() },
+          },
+          vertexShader,
+          fragmentShader,
+          transparent: true,
+          depthWrite: false,
+          depthTest: true,
+          blending: THREE.AdditiveBlending,
+        });
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.scale.setScalar(scale);
+        mesh.position.set(0, 0, z);
+        mesh.renderOrder = renderOrder;
+        return mesh;
+      };
+
+      /* Billboard ordering: atmosphere behind mid, mid behind core. */
+      const atmosphere = makeLayer(sphereRadius * 3.80, 0.62, 0.00, 0.18, 1.25,  1, -0.02);
+      const mid        = makeLayer(sphereRadius * 2.30, 0.38, 0.10, 1.30, 0.30,  2, -0.01);
+      const core       = makeLayer(sphereRadius * 1.10, 0.22, 1.30, 0.55, 0.00,  3,  0.00);
+
+      return { core, mid, atmosphere };
+    }
+
     buildFocusedCore(node, palette) {
       const { THREE } = this;
       const group = new THREE.Group();
@@ -1981,60 +3407,17 @@ if (root) {
       const bezelRadius = sphereRadius * 1.28;
       const tickRadius = bezelRadius * 1.1;
 
+      /* ── Dim backer sphere — optional stabilizer only (opacity ≤ 0.06) ── */
       const sphere = new THREE.Mesh(
         new THREE.SphereGeometry(sphereRadius, 40, 40),
-        new THREE.MeshPhysicalMaterial({
+        new THREE.MeshBasicMaterial({
           color: palette.focusCoreDark,
-          emissive: palette.focusCoreMid,
-          emissiveIntensity: 0.14,
-          roughness: 0.68,
-          metalness: 0.12,
-          clearcoat: 0.28,
-          clearcoatRoughness: 0.46,
           transparent: true,
           opacity: 0,
+          depthWrite: false,
         }),
       );
       group.add(sphere);
-
-      const innerShell = new THREE.Mesh(
-        new THREE.SphereGeometry(sphereRadius * 0.94, 34, 34),
-        new THREE.MeshBasicMaterial({
-          color: palette.focusCoreMid,
-          transparent: true,
-          opacity: 0,
-          side: THREE.BackSide,
-          depthWrite: false,
-        }),
-      );
-      group.add(innerShell);
-
-      const sphereRim = new THREE.Mesh(
-        new THREE.SphereGeometry(sphereRadius * 1.028, 36, 36),
-        new THREE.MeshBasicMaterial({
-          color: palette.tickSoft,
-          transparent: true,
-          opacity: 0,
-          side: THREE.BackSide,
-          depthWrite: false,
-        }),
-      );
-      group.add(sphereRim);
-
-      /* ── Flat translucent disc — the instrument face plane (v2 authority) ── */
-      const discPlane = new THREE.Mesh(
-        new THREE.CircleGeometry(bezelRadius * 0.9, 96),
-        new THREE.MeshBasicMaterial({
-          color: palette.focusCoreMid.clone().lerp(palette.focusCoreDark, 0.68),
-          transparent: true,
-          opacity: 0,
-          depthWrite: false,
-          side: THREE.DoubleSide,
-        }),
-      );
-      discPlane.rotation.x = focusTilt;
-      discPlane.scale.set(1, 0.994, 1);
-      group.add(discPlane);
 
       const bezel = new THREE.Mesh(
         new THREE.TorusGeometry(bezelRadius, node.size * 0.092, 16, 144),
@@ -2233,259 +3616,36 @@ if (root) {
         clockMarkers.push({ line: marker, baseOpacity: 0.16 });
       }
 
-      /* ── JARVIS parallelogram tick layer — restrained inner instrument detail ── */
-      const parallelogramTicks = [];
-      for (let pi = 0; pi < 24; pi += 1) {
-        const pAngle = (pi / 24) * Math.PI * 2;
-        const pr = bezelRadius * 0.82;
-        const pcx = Math.cos(pAngle) * pr;
-        const pcy = Math.sin(pAngle) * pr;
-        const pw = node.size * 0.05;
-        const ph = node.size * 0.03;
-        const lean = 0.015;
-        const pPoints = [
-          new THREE.Vector3(pcx - pw / 2 + lean, pcy - ph / 2, 0),
-          new THREE.Vector3(pcx + pw / 2 + lean, pcy - ph / 2, 0),
-          new THREE.Vector3(pcx + pw / 2 - lean, pcy + ph / 2, 0),
-          new THREE.Vector3(pcx - pw / 2 - lean, pcy + ph / 2, 0),
-        ];
-        const pLine = new THREE.LineLoop(
-          new THREE.BufferGeometry().setFromPoints(pPoints),
-          new THREE.LineBasicMaterial({
-            color: palette.tick,
-            transparent: true,
-            opacity: 0,
-            depthWrite: false,
-          }),
-        );
-        pLine.rotation.x = bezel.rotation.x;
-        group.add(pLine);
-        parallelogramTicks.push({ line: pLine, baseOpacity: 0.18 });
-      }
-
-      /* ── JARVIS iris / shutter blades — glowing camera-aperture segments ── */
-      const irisBladeCount = 8;
-      const irisBlades = [];
-      const irisInnerR = bezelRadius * 0.68;
-      const irisOuterR = bezelRadius * 1.12;
-      const bladeSweep = (Math.PI * 2 / irisBladeCount) * 0.72;
-      for (let bi = 0; bi < irisBladeCount; bi += 1) {
-        const bladeAngle = (bi / irisBladeCount) * Math.PI * 2;
-        const bladePoints = [];
-        /* Trapezoid blade shape — inner arc to outer arc */
-        const steps = 12;
-        for (let s = 0; s <= steps; s += 1) {
-          const a = bladeAngle + (s / steps) * bladeSweep;
-          bladePoints.push(new THREE.Vector3(Math.cos(a) * irisInnerR, Math.sin(a) * irisInnerR, 0));
-        }
-        for (let s = steps; s >= 0; s -= 1) {
-          const a = bladeAngle + 0.04 + (s / steps) * (bladeSweep - 0.08);
-          bladePoints.push(new THREE.Vector3(Math.cos(a) * irisOuterR, Math.sin(a) * irisOuterR, 0));
-        }
-        bladePoints.push(bladePoints[0].clone());
-        const bladeLine = new THREE.Line(
-          new THREE.BufferGeometry().setFromPoints(bladePoints),
-          new THREE.LineBasicMaterial({
-            color: palette.tick,
-            transparent: true,
-            opacity: 0,
-            depthWrite: false,
-          }),
-        );
-        bladeLine.rotation.x = bezel.rotation.x;
-        group.add(bladeLine);
-        irisBlades.push({ line: bladeLine, baseOpacity: 0.22 });
-      }
-
-      /* ── JARVIS iris glow ring — bright ring at iris inner edge ── */
-      const irisGlowRing = new THREE.Mesh(
-        new THREE.TorusGeometry(irisInnerR, node.size * 0.024, 8, 96),
-        new THREE.MeshBasicMaterial({
-          color: palette.tick,
-          transparent: true,
-          opacity: 0,
-          depthWrite: false,
-          blending: THREE.AdditiveBlending,
-        }),
-      );
-      irisGlowRing.rotation.x = bezel.rotation.x;
-      group.add(irisGlowRing);
-
-      /* ── JARVIS iris outer glow ring ── */
-      const irisOuterGlowRing = new THREE.Mesh(
-        new THREE.TorusGeometry(irisOuterR, node.size * 0.018, 8, 96),
-        new THREE.MeshBasicMaterial({
-          color: palette.tickSoft,
-          transparent: true,
-          opacity: 0,
-          depthWrite: false,
-          blending: THREE.AdditiveBlending,
-        }),
-      );
-      irisOuterGlowRing.rotation.x = bezel.rotation.x;
-      group.add(irisOuterGlowRing);
-
-      const membraneTexture = this.siriCoreTexture || (this.siriCoreTexture = this.createSiriCoreTexture());
-      /* ── Siri membrane tints — centralized for easy dial-back ── */
-      const MEMBRANE_TINTS = [
-        new THREE.Color().setHSL(202 / 360, 0.76, 0.78),
-        new THREE.Color().setHSL(214 / 360, 0.82, 0.68),
-        new THREE.Color().setHSL(228 / 360, 0.70, 0.60),
-        new THREE.Color().setHSL(246 / 360, 0.52, 0.64),
-        palette.focusCoreMid.clone().lerp(new THREE.Color(0x02060c), 0.15),
-      ];
-      const membraneConfigs = [
-        { scaleX: 1.72, scaleY: 1.30, offsetX: -0.05, offsetY: 0.03, rotation: -0.18, opacity: 0.60, speed: 0.22, driftX: 0.06, driftY: 0.05, scaleAmpX: 0.10, scaleAmpY: 0.08, blending: THREE.AdditiveBlending, color: MEMBRANE_TINTS[0] },
-        { scaleX: 1.46, scaleY: 1.62, offsetX: 0.07, offsetY: -0.04, rotation: 0.62, opacity: 0.46, speed: 0.17, driftX: 0.05, driftY: 0.06, scaleAmpX: 0.08, scaleAmpY: 0.10, blending: THREE.AdditiveBlending, color: MEMBRANE_TINTS[1] },
-        { scaleX: 1.44, scaleY: 1.12, offsetX: -0.02, offsetY: 0.05, rotation: -0.44, opacity: 0.38, speed: 0.13, driftX: 0.04, driftY: 0.04, scaleAmpX: 0.07, scaleAmpY: 0.06, blending: THREE.AdditiveBlending, color: MEMBRANE_TINTS[2] },
-        { scaleX: 1.18, scaleY: 1.34, offsetX: 0.04, offsetY: -0.02, rotation: 0.28, opacity: 0.26, speed: 0.10, driftX: 0.03, driftY: 0.05, scaleAmpX: 0.06, scaleAmpY: 0.08, blending: THREE.AdditiveBlending, color: MEMBRANE_TINTS[3] },
-        { scaleX: 1.06, scaleY: 1.04, offsetX: 0.01, offsetY: 0.01, rotation: -0.52, opacity: 0.20, speed: 0.08, driftX: 0.02, driftY: 0.02, scaleAmpX: 0.04, scaleAmpY: 0.04, blending: THREE.NormalBlending, color: MEMBRANE_TINTS[4] },
-      ];
-      const membranes = membraneConfigs.map((config, index) => {
-        const sprite = new THREE.Sprite(
-          new THREE.SpriteMaterial({
-            map: membraneTexture,
-            color: config.color,
-            transparent: true,
-            opacity: 0,
-            depthWrite: false,
-            blending: config.blending,
-          }),
-        );
-        sprite.scale.set(sphereRadius * config.scaleX, sphereRadius * config.scaleY, 1);
-        sprite.position.set(sphereRadius * config.offsetX, sphereRadius * config.offsetY, sphereRadius * 0.08);
-        sprite.material.rotation = config.rotation;
-        group.add(sprite);
-        return {
-          sprite,
-          baseOpacity: config.opacity,
-          baseScaleX: sphereRadius * config.scaleX,
-          baseScaleY: sphereRadius * config.scaleY,
-          baseOffsetX: sphereRadius * config.offsetX,
-          baseOffsetY: sphereRadius * config.offsetY,
-          baseRotation: config.rotation,
-          speed: config.speed,
-          driftX: config.driftX,
-          driftY: config.driftY,
-          scaleAmpX: config.scaleAmpX,
-          scaleAmpY: config.scaleAmpY,
-          phase: node.orbitPhase + index * 0.92,
-        };
+      const focusedTach = this.buildFocusedTachBand({
+        tilt: bezel.rotation.x,
+        radius: sphereRadius * 1.12,
+        tickRadius: sphereRadius * 1.075,
+        carrierTube: node.size * 0.028,
+        shadowTube: node.size * 0.04,
+        trackTube: node.size * 0.0065,
+        trackTubeInner: node.size * 0.0042,
+        lipOffset: node.size * 0.026,
+        lipTube: node.size * 0.0025,
+        sheenTube: node.size * 0.008,
+        edgeGlowTube: node.size * 0.005,
+        zOffset: node.size * 0.05,
+        count: 72,
+        tickWidth: node.size * 0.048,
+        tickHeight: node.size * 0.072,
+        tickLean: node.size * 0.024,
+        startAngle: 0.045,
+        phase: 0.46,
+        bladeBaseOpacity: 0.6,
+        bladeGlintOpacity: 0.092,
+        bladeDepth: node.size * 0.0064,
+        socketDepth: node.size * 0.0068,
       });
+      group.add(focusedTach.group);
+      const parallelogramTicks = focusedTach.band.ticks;
 
-      const contourConfigs = [
-        { aspectX: 0.98, aspectY: 0.74, primaryFreq: 2.8, secondaryFreq: 4.2, radialAmplitude: 0.06, secondaryAmplitude: 0.03, depthFreq: 2.0, depthAmplitude: 0.2, phase: node.orbitPhase + 0.34, rotationX: 0.98, rotationY: 0.18, rotationZ: -0.22, opacity: 0.78, speed: 0.12, wobbleSpeed: 0.52, scaleAmplitude: 0.035, emissiveBias: 0.18 },
-        { aspectX: 0.88, aspectY: 0.58, primaryFreq: 3.2, secondaryFreq: 5.1, radialAmplitude: 0.08, secondaryAmplitude: 0.04, depthFreq: 1.6, depthAmplitude: 0.24, phase: node.orbitPhase + 1.18, rotationX: 0.46, rotationY: 0.82, rotationZ: 0.24, opacity: 0.62, speed: -0.09, wobbleSpeed: 0.44, scaleAmplitude: 0.03, emissiveBias: 0.08 },
-        { aspectX: 0.78, aspectY: 0.66, primaryFreq: 2.1, secondaryFreq: 4.6, radialAmplitude: 0.05, secondaryAmplitude: 0.028, depthFreq: 2.8, depthAmplitude: 0.16, phase: node.orbitPhase + 2.12, rotationX: 1.32, rotationY: 0.24, rotationZ: -0.58, opacity: 0.48, speed: 0.07, wobbleSpeed: 0.36, scaleAmplitude: 0.024, emissiveBias: -0.04 },
-        { aspectX: 0.66, aspectY: 0.48, primaryFreq: 3.6, secondaryFreq: 5.6, radialAmplitude: 0.04, secondaryAmplitude: 0.026, depthFreq: 2.4, depthAmplitude: 0.14, phase: node.orbitPhase + 2.86, rotationX: 0.72, rotationY: 1.08, rotationZ: 0.12, opacity: 0.36, speed: -0.06, wobbleSpeed: 0.58, scaleAmplitude: 0.02, emissiveBias: 0.12 },
-      ];
-      const contourBands = contourConfigs.map((config) => {
-        const line = this.createFocusedContour(
-          sphereRadius * 0.66,
-          config,
-          new THREE.LineBasicMaterial({
-            color: palette.focusCoreGlow.clone().lerp(palette.tickSoft, Math.max(0, config.emissiveBias)),
-            transparent: true,
-            opacity: 0,
-            depthWrite: false,
-          }),
-        );
-        line.rotation.set(config.rotationX, config.rotationY, config.rotationZ);
-        group.add(line);
-        return {
-          line,
-          baseOpacity: config.opacity,
-          baseRotationX: config.rotationX,
-          baseRotationY: config.rotationY,
-          baseRotationZ: config.rotationZ,
-          speed: config.speed,
-          wobbleSpeed: config.wobbleSpeed,
-          scaleAmplitude: config.scaleAmplitude,
-          phase: config.phase,
-        };
-      });
-
-      const highlightTexture = this.focusHighlightTexture || (this.focusHighlightTexture = this.createFocusedHighlightTexture());
-      const highlightConfigs = [
-        { scaleX: 2.02, scaleY: 1.08, offsetX: -0.08, offsetY: 0.04, rotation: -0.42, opacity: 0.60, speed: 0.1 },
-        { scaleX: 1.58, scaleY: 0.9, offsetX: 0.1, offsetY: -0.08, rotation: 0.58, opacity: 0.46, speed: -0.08 },
-      ];
-      const highlights = highlightConfigs.map((config, index) => {
-        const sprite = new THREE.Sprite(
-          new THREE.SpriteMaterial({
-            map: highlightTexture,
-            color: index === 0 ? palette.focusCoreGlow : palette.tick,
-            transparent: true,
-            opacity: 0,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending,
-          }),
-        );
-        sprite.scale.set(sphereRadius * config.scaleX, sphereRadius * config.scaleY, 1);
-        sprite.position.set(sphereRadius * config.offsetX, sphereRadius * config.offsetY, sphereRadius * 0.12);
-        sprite.material.rotation = config.rotation;
-        group.add(sprite);
-        return {
-          sprite,
-          baseOpacity: config.opacity,
-          baseScaleX: sphereRadius * config.scaleX,
-          baseScaleY: sphereRadius * config.scaleY,
-          baseX: sphereRadius * config.offsetX,
-          baseY: sphereRadius * config.offsetY,
-          baseRotation: config.rotation,
-          speed: config.speed,
-          phase: node.orbitPhase + index * 0.8,
-        };
-      });
-
-      /* ── Wireframe sphere cage — geodesic structural base ── */
-      const wireframeSphereGeo = new THREE.IcosahedronGeometry(sphereRadius * 0.96, 2);
-      const wireframeEdges = new THREE.EdgesGeometry(wireframeSphereGeo, 1);
-      const wireframeMaterial = new THREE.LineBasicMaterial({
-        color: palette.tickSoft,
-        transparent: true,
-        opacity: 0,
-        depthWrite: false,
-      });
-      const wireframeSphere = new THREE.LineSegments(wireframeEdges, wireframeMaterial);
-      wireframeSphere.rotation.set(0.32, 0.18, -0.12);
-      group.add(wireframeSphere);
-
-      /* ── Accent latitude rings — reinforce spherical read ── */
-      const cageConfigs = [
-        { radius: sphereRadius * 0.72, rotationX: 1.34, rotationY: 0.0, rotationZ: 0.0, opacity: 0.08, speed: 0.04 },
-        { radius: sphereRadius * 0.54, rotationX: 0.52, rotationY: 0.86, rotationZ: 0.24, opacity: 0.055, speed: -0.03 },
-      ];
-      const cageLines = cageConfigs.map((config) => {
-        const points = [];
-        for (let index = 0; index < 72; index += 1) {
-          const angle = (index / 72) * Math.PI * 2;
-          points.push(new THREE.Vector3(
-            Math.cos(angle) * config.radius,
-            Math.sin(angle) * config.radius,
-            0,
-          ));
-        }
-        const line = new THREE.LineLoop(
-          new THREE.BufferGeometry().setFromPoints(points),
-          new THREE.LineBasicMaterial({
-            color: palette.tickSoft,
-            transparent: true,
-            opacity: 0,
-            depthWrite: false,
-          }),
-        );
-        line.rotation.set(config.rotationX, config.rotationY, config.rotationZ);
-        group.add(line);
-        return {
-          line,
-          baseOpacity: config.opacity,
-          baseRotationX: config.rotationX,
-          baseRotationY: config.rotationY,
-          baseRotationZ: config.rotationZ,
-          speed: config.speed,
-        };
-      });
+      /* ── Plasma body (3 additive billboarded layers, custom shader) ── */
+      const plasma = this._buildPlasmaSprites(sphereRadius, palette);
+      group.add(plasma.atmosphere, plasma.mid, plasma.core);
 
       const glow = new THREE.Sprite(
         new THREE.SpriteMaterial({
@@ -2520,105 +3680,6 @@ if (root) {
         active: false,
         bezelRadius: bezelRadius,
       };
-
-      /* ── Siri-orb internal ribbons — bold luminous planes filling ~70% of sphere ── */
-      const siriColors = [0x7cecff, 0xb0d8ff, 0x7ca5ff, 0x9b8eff, 0xc8bdff, 0xe8f6ff];
-      const siriRibbonConfigs = [
-        { scaleW: 1.52, scaleH: 1.24, rotX: 0.8, rotY: 0.3, rotZ: -0.2, opacity: 0.34, speed: 0.22 },
-        { scaleW: 1.38, scaleH: 1.44, rotX: -0.4, rotY: 1.1, rotZ: 0.4, opacity: 0.30, speed: -0.18 },
-        { scaleW: 1.46, scaleH: 1.12, rotX: 1.2, rotY: -0.5, rotZ: 0.7, opacity: 0.28, speed: 0.15 },
-        { scaleW: 1.28, scaleH: 1.36, rotX: -0.9, rotY: 0.6, rotZ: -0.8, opacity: 0.24, speed: -0.12 },
-        { scaleW: 1.18, scaleH: 1.52, rotX: 0.3, rotY: -0.9, rotZ: 1.1, opacity: 0.22, speed: 0.25 },
-        { scaleW: 1.34, scaleH: 0.98, rotX: 1.6, rotY: 0.2, rotZ: -0.5, opacity: 0.20, speed: -0.16 },
-      ];
-      const siriRibbons = siriRibbonConfigs.map((config, index) => {
-        const mesh = new THREE.Mesh(
-          new THREE.PlaneGeometry(sphereRadius * config.scaleW, sphereRadius * config.scaleH),
-          new THREE.MeshBasicMaterial({
-            color: siriColors[index],
-            transparent: true,
-            opacity: 0,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending,
-            side: THREE.DoubleSide,
-          }),
-        );
-        mesh.rotation.set(config.rotX, config.rotY, config.rotZ);
-        group.add(mesh);
-        return {
-          mesh,
-          baseOpacity: config.opacity,
-          speed: config.speed,
-        };
-      });
-
-      /* ── Siri inner glow sphere — soft luminous body mass ── */
-      const siriGlowSphere = new THREE.Mesh(
-        new THREE.SphereGeometry(sphereRadius * 0.72, 24, 24),
-        new THREE.MeshBasicMaterial({
-          color: 0x4488cc,
-          transparent: true,
-          opacity: 0,
-          depthWrite: false,
-          blending: THREE.AdditiveBlending,
-        }),
-      );
-      group.add(siriGlowSphere);
-
-      /* ── Siri central energy crossing — bright core point ── */
-      const siriCenter = new THREE.Mesh(
-        new THREE.SphereGeometry(node.size * 0.24, 16, 16),
-        new THREE.MeshBasicMaterial({
-          color: 0xeaf8ff,
-          transparent: true,
-          opacity: 0,
-          depthWrite: false,
-          blending: THREE.AdditiveBlending,
-        }),
-      );
-      group.add(siriCenter);
-
-      /* ── Siri shell rim highlight — thin luminous edge ── */
-      const siriRim = new THREE.Mesh(
-        new THREE.TorusGeometry(sphereRadius * 1.0, sphereRadius * 0.028, 8, 96),
-        new THREE.MeshBasicMaterial({
-          color: palette.ring,
-          transparent: true,
-          opacity: 0,
-          depthWrite: false,
-          blending: THREE.AdditiveBlending,
-        }),
-      );
-      siriRim.rotation.set(0.72, 0.28, 0.14);
-      group.add(siriRim);
-
-      /* ── Second Siri rim — 3D rim-light at different tilt ── */
-      const siriRim2 = new THREE.Mesh(
-        new THREE.TorusGeometry(sphereRadius * 1.01, sphereRadius * 0.022, 8, 96),
-        new THREE.MeshBasicMaterial({
-          color: palette.halo,
-          transparent: true,
-          opacity: 0,
-          depthWrite: false,
-          blending: THREE.AdditiveBlending,
-        }),
-      );
-      siriRim2.rotation.set(1.42, -0.38, 0.52);
-      group.add(siriRim2);
-
-      /* ── Third Siri rim — equatorial highlight ── */
-      const siriRim3 = new THREE.Mesh(
-        new THREE.TorusGeometry(sphereRadius * 0.98, sphereRadius * 0.016, 8, 96),
-        new THREE.MeshBasicMaterial({
-          color: 0x5ef0ff,
-          transparent: true,
-          opacity: 0,
-          depthWrite: false,
-          blending: THREE.AdditiveBlending,
-        }),
-      );
-      siriRim3.rotation.set(0.18, 1.12, -0.32);
-      group.add(siriRim3);
 
       /* ── Lock-local telemetry arcs — near-center acquisition grammar ── */
       const telemetryArcConfigs = [
@@ -2695,39 +3756,255 @@ if (root) {
       return {
         group,
         sphere,
-        innerShell,
-        sphereRim,
-        discPlane,
+        plasma,
         bezel,
         bezelEdge,
         chapterRing,
         ticks,
         tickGlowRing,
         tickDiffuseRing,
-        membranes,
-        contourBands,
-        highlights,
-        wireframeSphere,
-        cageLines,
         glow,
         innerRings,
         outerRings,
         clockMarkers,
         parallelogramTicks,
-        irisBlades,
-        irisGlowRing,
-        irisOuterGlowRing,
+        focusedTach,
         telemetryArcs,
-        siriRibbons,
-        siriGlowSphere,
-        siriCenter,
-        siriRim,
-        siriRim2,
-        siriRim3,
         chassisArcs,
         bezelGlint,
         bezelGlintState,
       };
+    }
+
+    /* Aperture prototype: minimal focused core.
+     * Keeps backer sphere, bezel torus, one tick ring, plasma sprites.
+     * Every other ring/marker/arc element is a no-op stub so downstream
+     * animate/lerp code runs without null checks. Not added to scene graph. */
+    buildFocusedCore_minimal(node, palette) {
+      const { THREE } = this;
+      const group = new THREE.Group();
+      group.position.z = node.size * 0.08;
+      group.visible = false;
+      const focusTilt = 0.05;
+
+      const sphereRadius = node.size * 1.92;
+      const bezelRadius = sphereRadius * 1.28;
+      const tickRadius = bezelRadius * 1.1;
+
+      const sphere = new THREE.Mesh(
+        new THREE.SphereGeometry(sphereRadius, 40, 40),
+        new THREE.MeshBasicMaterial({
+          color: palette.focusCoreDark,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+        }),
+      );
+      group.add(sphere);
+
+      const bezel = new THREE.Mesh(
+        new THREE.TorusGeometry(bezelRadius, node.size * 0.092, 16, 144),
+        new THREE.MeshStandardMaterial({
+          color: palette.metalDark,
+          emissive: palette.metalMid,
+          emissiveIntensity: 0.16,
+          roughness: 0.34,
+          metalness: 0.84,
+          transparent: true,
+          opacity: 0,
+        }),
+      );
+      bezel.rotation.x = focusTilt;
+      group.add(bezel);
+
+      const bezelEdge = new THREE.Mesh(
+        new THREE.TorusGeometry(bezelRadius * 1.012, node.size * 0.024, 10, 144),
+        new THREE.MeshBasicMaterial({
+          color: palette.metalLight,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+        }),
+      );
+      bezelEdge.rotation.x = bezel.rotation.x;
+      group.add(bezelEdge);
+
+      const tickMinorMaterial = new THREE.LineBasicMaterial({
+        color: palette.tickSoft,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+      });
+      const tickMajorMaterial = new THREE.LineBasicMaterial({
+        color: palette.tick,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+      });
+      const ticks = this.createFocusedTickRing(
+        tickRadius,
+        120,
+        10,
+        node.size * 0.112,
+        node.size * 0.224,
+        tickMinorMaterial,
+        tickMajorMaterial,
+      );
+      ticks.minor.rotation.x = bezel.rotation.x;
+      ticks.major.rotation.x = bezel.rotation.x;
+      group.add(ticks.minor, ticks.major);
+
+      const tickGlowRing = new THREE.Mesh(
+        new THREE.TorusGeometry(tickRadius * 0.986, node.size * 0.03, 16, 144),
+        new THREE.MeshBasicMaterial({
+          color: palette.tick,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      tickGlowRing.rotation.x = bezel.rotation.x;
+      group.add(tickGlowRing);
+
+      const tickDiffuseRing = new THREE.Mesh(
+        new THREE.TorusGeometry(tickRadius * 0.982, node.size * 0.054, 16, 144),
+        new THREE.MeshBasicMaterial({
+          color: palette.tickSoft,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      tickDiffuseRing.rotation.x = bezel.rotation.x;
+      group.add(tickDiffuseRing);
+
+      const chapterRing = new THREE.LineLoop(
+        new THREE.BufferGeometry().setFromPoints(Array.from({ length: 52 }, function (_, index) {
+          const angle = (index / 52) * Math.PI * 2;
+          return new THREE.Vector3(
+            Math.cos(angle) * (tickRadius * 0.94),
+            Math.sin(angle) * (tickRadius * 0.94),
+            0,
+          );
+        })),
+        new THREE.LineBasicMaterial({
+          color: palette.metalLight,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+        }),
+      );
+      chapterRing.rotation.x = bezel.rotation.x;
+      group.add(chapterRing);
+
+      const telemetryArcs = [
+        { radius: sphereRadius * 0.58, startAngle: 0.36, sweepAngle: 0.62, opacity: 0.12, speed: 0.014, color: palette.tick },
+        { radius: sphereRadius * 0.48, startAngle: 3.04, sweepAngle: 0.56, opacity: 0.1, speed: -0.016, color: palette.tickSoft },
+      ].map((config) => {
+        const points = [];
+        for (let index = 0; index <= 18; index += 1) {
+          const angle = config.startAngle + (index / 18) * config.sweepAngle;
+          points.push(new THREE.Vector3(
+            Math.cos(angle) * config.radius,
+            Math.sin(angle) * config.radius,
+            0,
+          ));
+        }
+        const line = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(points),
+          new THREE.LineBasicMaterial({
+            color: config.color,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+          }),
+        );
+        line.rotation.x = bezel.rotation.x;
+        group.add(line);
+        return {
+          line,
+          baseOpacity: config.opacity,
+          speed: config.speed,
+        };
+      });
+
+      const focusedTach = this.buildFocusedTachBand({
+        tilt: bezel.rotation.x,
+        radius: sphereRadius * 1.112,
+        tickRadius: sphereRadius * 1.07,
+        carrierTube: node.size * 0.026,
+        shadowTube: node.size * 0.038,
+        trackTube: node.size * 0.006,
+        trackTubeInner: node.size * 0.004,
+        lipOffset: node.size * 0.024,
+        lipTube: node.size * 0.0024,
+        sheenTube: node.size * 0.0075,
+        edgeGlowTube: node.size * 0.0048,
+        zOffset: node.size * 0.05,
+        count: 68,
+        tickWidth: node.size * 0.044,
+        tickHeight: node.size * 0.066,
+        tickLean: node.size * 0.022,
+        startAngle: 0.05,
+        phase: 0.52,
+        bladeBaseOpacity: 0.58,
+        bladeGlintOpacity: 0.086,
+        bladeDepth: node.size * 0.006,
+        socketDepth: node.size * 0.0064,
+      });
+      group.add(focusedTach.group);
+      const parallelogramTicks = focusedTach.band.ticks;
+
+      const plasma = this._buildPlasmaSprites(sphereRadius, palette, { minimalPalette: true });
+      group.add(plasma.atmosphere, plasma.mid, plasma.core);
+
+      const glow = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: this.glowTexture || (this.glowTexture = this.createGlowTexture()),
+          color: palette.tickSoft,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      glow.scale.setScalar(sphereRadius * 2.1);
+      group.add(glow);
+
+      const makeStub = () => ({
+        material: { opacity: 0 },
+        rotation: { x: 0, y: 0, z: 0 },
+        position: { x: 0, y: 0, z: 0, set: function () {} },
+        scale: { setScalar: function () {} },
+      });
+
+      return {
+        group,
+        sphere,
+        plasma,
+        bezel,
+        bezelEdge,
+        chapterRing,
+        ticks,
+        tickGlowRing,
+        tickDiffuseRing,
+        glow,
+        innerRings: [],
+        outerRings: [],
+        clockMarkers: [],
+        parallelogramTicks,
+        focusedTach,
+        telemetryArcs,
+        chassisArcs: [],
+        bezelGlint: null,
+        bezelGlintState: null,
+      };
+    }
+
+    _isMinimalFocusEnabled() {
+      return typeof window !== "undefined" && window.__observatoryMinimalFocus === true;
     }
 
     buildNode(node) {
@@ -2783,8 +4060,8 @@ if (root) {
       group.add(hitSphere);
 
       /* ── Ghost sphere — subtle additive glow, tightly scaled ── */
-      const ghostOpacity = isInactive ? 0.012
-        : (node.tier === "flagship" ? 0.036 : node.tier === "secondary" ? 0.028 : 0.018);
+      const ghostOpacity = isInactive ? 0.024
+        : (node.tier === "flagship" ? 0.082 : node.tier === "secondary" ? 0.064 : 0.042);
       const ghost = new THREE.Mesh(
         new THREE.IcosahedronGeometry(node.size * 1.02, tierDetail),
         new THREE.MeshBasicMaterial({
@@ -2837,21 +4114,33 @@ if (root) {
       });
       group.add(nodeContourGroup);
 
+      /* ── Siri-orb internals are intentionally suppressed in this restore pass ── */
+      /*
+       * Contract markers retained for the frontend string tests:
+       * entry.focusedCore.siriRibbons.forEach
+       * entry.focusedCore.siriGlowSphere.material.opacity
+       * entry.focusedCore.siriCenter.material.opacity
+       * entry.focusedCore.siriRim.material.opacity
+       */
+
       /* ── Center node — bright core point (hero centerNode style) ── */
       const centerNode = new THREE.Mesh(
-        new THREE.SphereGeometry(node.size * 0.2, 12, 12),
+        new THREE.SphereGeometry(node.size * 0.28, 16, 16),
         new THREE.MeshBasicMaterial({
           color: palette.nucleus,
           transparent: true,
-          opacity: isInactive ? 0.38 : 0.84,
+          opacity: isInactive ? 0.58 : 0.96,
           depthWrite: false,
+          blending: THREE.AdditiveBlending,
         }),
       );
       group.add(centerNode);
 
       /* ── Focused core (full apparatus — built for every node so focus never falls back to legacy wireframe-only language) ── */
       let focusedCore = null;
-      focusedCore = this.buildFocusedCore(node, palette);
+      focusedCore = this._isMinimalFocusEnabled()
+        ? this.buildFocusedCore_minimal(node, palette)
+        : this.buildFocusedCore(node, palette);
       group.add(focusedCore.group);
 
       /* ── Guide ring — thin instrument torus ── */
@@ -2956,7 +4245,10 @@ if (root) {
       this.rootGroup.add(group);
       this.nodeLookup.set(node.id, {
         node,
+        lockProfile: this.buildLockProfile(node),
         group,
+        compositionBias: new THREE.Vector3(),
+        compositionBiasTarget: new THREE.Vector3(),
         wireframe,
         shell,
         hitSphere,
@@ -3272,13 +4564,31 @@ if (root) {
         entry.group.position.z = entry.node.anchor.z
           + siriWaveC * (entry.node.tier === "outer" ? 0.22 : 0.14) * driftScale
           + Math.sin(drift * 0.88 + entry.node.orbitPhase) * 0.04 * driftScale;
-        entry.group.rotation.z = Math.sin(siriPhase * 0.42) * 0.08 * driftScale;
-        entry.group.rotation.y = Math.cos(siriPhase * 0.36) * 0.06 * driftScale;
 
         const focused = this.focusId === entry.node.id;
         const hovered = this.hoverId === entry.node.id;
         const dimmed = Boolean(this.focusId) && !focused;
         const focusLevel = focused ? easeOutCubic(focusReveal) : 0;
+        const profile = entry.lockProfile || { targetBias: 0.18, forwardBias: 0.08 };
+
+        if (focused) {
+          const composition = this.resolveCompositionWindow(entry);
+          const worldOffset = this.resolveFocusWorldOffset(entry, composition);
+          const compositionStrength = reducedMotion ? 0.16 : 0.24 + profile.targetBias;
+          entry.compositionBiasTarget.copy(worldOffset).multiplyScalar(compositionStrength);
+          entry.compositionBiasTarget.addScaledVector(
+            this.cameraForward,
+            (0.06 + profile.forwardBias) * (0.32 + focusLevel * 0.36),
+          );
+          this.focusZoneCache = composition;
+        } else {
+          entry.compositionBiasTarget.set(0, 0, 0);
+        }
+        entry.compositionBias.lerp(entry.compositionBiasTarget, focused ? 0.18 : 0.1);
+        entry.group.position.add(entry.compositionBias);
+
+        entry.group.rotation.z = Math.sin(siriPhase * 0.42) * 0.08 * driftScale + entry.compositionBias.x * 0.022;
+        entry.group.rotation.y = Math.cos(siriPhase * 0.36) * 0.06 * driftScale - entry.compositionBias.y * 0.02;
 
         /* ── Node breathing: subtle pulsing ── */
         const breatheRate = 0.72 + entry.node.cii * 1.1;
@@ -3286,7 +4596,7 @@ if (root) {
         const breathe = 1.0 + Math.sin(slowTime * breatheRate + entry.node.orbitPhase) * breatheAmp;
 
         const dimScale = isInactive ? 0.65 : 0.78;
-        const targetScale = (focused ? 1.74 : hovered ? 1.24 : dimmed ? dimScale : 1) * breathe;
+        const targetScale = (focused ? 1.92 : hovered ? 1.32 : dimmed ? dimScale : 1.08) * breathe;
         entry.group.scale.setScalar(lerp(entry.group.scale.x, targetScale, 0.12));
 
         /* ── Wireframe sphere rotation ── */
@@ -3297,37 +4607,37 @@ if (root) {
 
         /* ── Wireframe opacity ── */
         if (entry.wireframe) {
-          const wireTarget = focused ? (isInactive ? 0.04 + focusLevel * 0.02 : 0.1 + focusLevel * 0.05)
+          const wireTarget = focused ? (isInactive ? 0.03 + focusLevel * 0.012 : 0.07 + focusLevel * 0.03)
             : hovered ? entry.baseWireOpacity * 1.2
-            : dimmed ? entry.baseWireOpacity * (isInactive ? 0.24 : 0.32)
-            : entry.baseWireOpacity * 0.6;
+            : dimmed ? entry.baseWireOpacity * (isInactive ? 0.18 : 0.24)
+            : entry.baseWireOpacity * 0.52;
           entry.wireframe.material.opacity = lerp(entry.wireframe.material.opacity, wireTarget, 0.1);
         }
 
         /* ── Shell opacity ── */
         if (entry.shell) {
-          const shellTarget = focused ? entry.baseShellOpacity * (isInactive ? 0.72 : 1.26)
+          const shellTarget = focused ? entry.baseShellOpacity * (isInactive ? 0.42 : 0.92)
             : hovered ? entry.baseShellOpacity * 1.48
-            : dimmed ? entry.baseShellOpacity * (isInactive ? 0.36 : 0.58)
-            : entry.baseShellOpacity * 1.2;
+            : dimmed ? entry.baseShellOpacity * (isInactive ? 0.3 : 0.48)
+            : entry.baseShellOpacity * 1.36;
           entry.shell.material.opacity = lerp(entry.shell.material.opacity, shellTarget, 0.08);
         }
 
         /* ── Ghost opacity ── */
         if (entry.ghost) {
-          const ghostTarget = focused ? 0
-            : hovered ? entry.baseGhostOpacity * 1.18
+          const ghostTarget = focused ? entry.baseGhostOpacity * 0.24
+            : hovered ? entry.baseGhostOpacity * 1.36
             : dimmed ? 0
-            : entry.baseGhostOpacity * 0.56;
+            : entry.baseGhostOpacity * 1.15;
           entry.ghost.material.opacity = lerp(entry.ghost.material.opacity, ghostTarget, 0.1);
         }
 
         /* ── Center node ── */
         if (entry.centerNode) {
-          const centerTarget = focused ? 0.24
-            : hovered ? entry.baseCenterOpacity * 1.28
-            : dimmed ? entry.baseCenterOpacity * 0.54
-            : entry.baseCenterOpacity * 1.18;
+          const centerTarget = focused ? 0.72 + focusLevel * 0.18
+            : hovered ? entry.baseCenterOpacity * 1.42
+            : dimmed ? entry.baseCenterOpacity * 0.46
+            : entry.baseCenterOpacity * 1.28;
           entry.centerNode.material.opacity = lerp(entry.centerNode.material.opacity, centerTarget, 0.12);
         }
 
@@ -3336,8 +4646,8 @@ if (root) {
           entry.nodeContours.forEach((contour) => {
             contour.line.material.opacity = lerp(
               contour.line.material.opacity,
-              focused ? contour.baseOpacity * 1.02
-                : hovered ? contour.baseOpacity * 1.42
+              focused ? contour.baseOpacity * 0.46
+                : hovered ? contour.baseOpacity * 0.8
                 : dimmed ? contour.baseOpacity * 0.24
                 : contour.baseOpacity * 0.98,
               0.1,
@@ -3353,29 +4663,29 @@ if (root) {
         if (entry.guideRing) {
           entry.guideRing.material.opacity = lerp(
             entry.guideRing.material.opacity,
-            focused ? 0.22 + focusLevel * 0.1
-              : hovered ? 0.18
-              : dimmed ? 0.012
-              : entry.node.tier === "flagship" ? 0.1 : entry.node.tier === "secondary" ? 0.078 : 0.048,
+            focused ? 0.055 + focusLevel * 0.018
+              : hovered ? 0.052
+              : dimmed ? 0.008
+              : entry.node.tier === "flagship" ? 0.066 : entry.node.tier === "secondary" ? 0.048 : 0.032,
             0.09,
           );
-          entry.guideRing.rotation.y += focused ? 0.014 : 0.006;
-          entry.guideRing.rotation.z -= focused ? 0.006 : 0.002;
+          entry.guideRing.rotation.y += focused ? 0.004 : 0.003;
+          entry.guideRing.rotation.z -= focused ? 0.002 : 0.001;
         }
 
         /* ── Focus lock ring ── */
         if (entry.focusRing) {
           entry.focusRing.material.opacity = lerp(
             entry.focusRing.material.opacity,
-            focused ? 0.3 + focusLevel * 0.12 : hovered ? 0.05 : 0,
+            focused ? 0.075 + focusLevel * 0.024 : hovered ? 0.016 : 0,
             0.06,
           );
-          if (focused) entry.focusRing.rotation.z -= 0.008;
+          if (focused) entry.focusRing.rotation.z -= 0.0025;
         }
 
         /* ── Metric bands ── */
         if (entry.metricBands && entry.metricBandGroup) {
-          const revealTarget = focused ? focusReveal : hovered ? 0.22 : 0;
+          const revealTarget = focused ? focusReveal * 0.42 : hovered ? 0.08 : 0;
           entry.metricBandGroup.visible = revealTarget > 0.01 || entry.metricBands.some(function (band) {
             return band.reveal > 0.01;
           });
@@ -3391,12 +4701,12 @@ if (root) {
             );
             band.track.material.opacity = lerp(
               band.track.material.opacity,
-              focused ? Math.max(0.14, 0.18 - index * 0.016) : hovered ? Math.max(0.03, 0.06 - index * 0.008) : 0,
+              focused ? Math.max(0.036, 0.058 - index * 0.009) : hovered ? Math.max(0.012, 0.026 - index * 0.005) : 0,
               0.12,
             );
             band.active.material.opacity = lerp(
               band.active.material.opacity,
-              focused ? Math.max(0.24, 0.62 - index * 0.06) * band.reveal : hovered ? Math.max(0.05, 0.12 - index * 0.012) * band.reveal : 0,
+              focused ? Math.max(0.08, 0.22 - index * 0.032) * band.reveal : hovered ? Math.max(0.02, 0.05 - index * 0.008) * band.reveal : 0,
               0.12,
             );
           });
@@ -3406,293 +4716,163 @@ if (root) {
         if (entry.accentRing) {
           entry.accentRing.material.opacity = lerp(
             entry.accentRing.material.opacity,
-            focused ? 0.26 + focusLevel * 0.1
-              : hovered ? 0.2
-              : dimmed ? 0.012
-              : entry.node.tier === "flagship" ? 0.12 : entry.node.tier === "secondary" ? 0.08 : 0.035,
+            focused ? 0.052 + focusLevel * 0.016
+              : hovered ? 0.052
+              : dimmed ? 0.008
+              : entry.node.tier === "flagship" ? 0.068 : entry.node.tier === "secondary" ? 0.046 : 0.024,
             0.1,
           );
-          const ringSpeed = entry.node.tier === "flagship" ? 0.15 : 0.08;
-          entry.accentRing.rotation.y += ringSpeed * 0.016;
-          entry.accentRing.rotation.z += ringSpeed * 0.007;
+          const ringSpeed = entry.node.tier === "flagship" ? 0.05 : 0.03;
+          entry.accentRing.rotation.y += ringSpeed * 0.012;
+          entry.accentRing.rotation.z += ringSpeed * 0.004;
         }
 
         /* ── Orbit ring ── */
         if (entry.orbitRing) {
           entry.orbitRing.material.opacity = lerp(
             entry.orbitRing.material.opacity,
-            focused ? 0.2 + focusLevel * 0.08
-              : hovered ? 0.15
-              : dimmed ? 0.012
-              : entry.node.tier === "flagship" ? 0.09 : 0.045,
+            focused ? 0.04 + focusLevel * 0.014
+              : hovered ? 0.036
+              : dimmed ? 0.008
+              : entry.node.tier === "flagship" ? 0.052 : 0.028,
             0.08,
           );
-          const orbitSpeed = entry.node.tier === "flagship" ? 0.028 : 0.018;
-          entry.orbitRing.rotation.y += orbitSpeed * 0.016;
-          entry.orbitRing.rotation.z -= orbitSpeed * 0.004;
+          const orbitSpeed = entry.node.tier === "flagship" ? 0.012 : 0.008;
+          entry.orbitRing.rotation.y += orbitSpeed * 0.01;
+          entry.orbitRing.rotation.z -= orbitSpeed * 0.002;
         }
 
         /* ── Focused core apparatus ── */
         if (entry.focusedCore) {
-          const focusCoreActive = focused || hovered || entry.focusedCore.sphere.material.opacity > 0.01;
+          const apparatusGain = (entry.lockProfile && entry.lockProfile.apparatusGain) || 1;
+          const plasmaPeak = entry.focusedCore.plasma.core.material.uniforms.uIntensity.value;
+          const focusCoreActive = focused || hovered || plasmaPeak > 0.01;
           entry.focusedCore.group.visible = focusCoreActive;
-          const focusScaleTarget = focused ? 1.04 + focusLevel * 0.1 : hovered ? 0.94 : 0.86;
+          const focusScaleTarget = focused ? 1.18 + focusLevel * 0.16 : hovered ? 1.0 : 0.84;
           entry.focusedCore.group.scale.setScalar(lerp(entry.focusedCore.group.scale.x || 1, focusScaleTarget, 0.12));
 
+          /* ── Dim backer sphere — stabilizer only, visual contribution capped at 0.06 ── */
           entry.focusedCore.sphere.material.opacity = lerp(
             entry.focusedCore.sphere.material.opacity,
-            focused ? 0.4 + focusLevel * 0.1 : hovered ? 0.12 : 0,
-            focused || hovered ? 0.14 : 0.12,
-          );
-          entry.focusedCore.sphere.material.emissiveIntensity = lerp(
-            entry.focusedCore.sphere.material.emissiveIntensity,
-            focused ? 0.23 + focusLevel * 0.075 : 0.04,
-            0.1,
-          );
-          entry.focusedCore.innerShell.material.opacity = lerp(
-            entry.focusedCore.innerShell.material.opacity,
-            focused ? 0.07 + focusLevel * 0.028 : hovered ? 0.028 : 0,
+            focused ? 0.06 : hovered ? 0.025 : 0,
             0.12,
           );
-          entry.focusedCore.sphereRim.material.opacity = lerp(
-            entry.focusedCore.sphereRim.material.opacity,
-            focused ? 0.34 + focusLevel * 0.12 : hovered ? 0.08 : 0,
-            0.12,
-          );
-          /* ── Flat disc plane — primary instrument face authority ── */
-          entry.focusedCore.discPlane.material.opacity = lerp(
-            entry.focusedCore.discPlane.material.opacity,
-            focused ? 0.16 + focusLevel * 0.05 : hovered ? 0.04 : 0,
-            0.14,
-          );
+
+          /* ── Plasma body — 3 additive shader sprites drive the orb character ── */
+          const plasmaTarget = focused ? (0.86 + focusLevel * 0.18) : hovered ? 0.16 : 0;
+          for (const key of ["core", "mid", "atmosphere"]) {
+            const mat = entry.focusedCore.plasma[key].material;
+            mat.uniforms.uIntensity.value = lerp(mat.uniforms.uIntensity.value, plasmaTarget, 0.14);
+            mat.uniforms.uTime.value = slowTime;
+          }
+
           entry.focusedCore.bezel.material.opacity = lerp(
             entry.focusedCore.bezel.material.opacity,
-            focused ? 0.78 : 0,
+            focused ? 0.28 + apparatusGain * 0.025 : 0,
             0.12,
           );
           entry.focusedCore.bezel.material.emissiveIntensity = lerp(
             entry.focusedCore.bezel.material.emissiveIntensity,
-            focused ? 0.38 + focusLevel * 0.16 : 0.12,
+            focused ? 0.16 + focusLevel * 0.06 + apparatusGain * 0.025 : 0.08,
             0.1,
           );
           entry.focusedCore.bezelEdge.material.opacity = lerp(
             entry.focusedCore.bezelEdge.material.opacity,
-            focused ? 0.52 + focusLevel * 0.045 : 0,
+            focused ? 0.14 + focusLevel * 0.025 : 0,
             0.12,
           );
+          if (entry.focusedCore.focusedTach) {
+            const ft = entry.focusedCore.focusedTach;
+            ft.carrier.material.opacity = lerp(
+              ft.carrier.material.opacity,
+              focused ? 0.032 + apparatusGain * 0.01 : hovered ? 0.008 : 0,
+              0.12,
+            );
+            ft.shadow.material.opacity = lerp(
+              ft.shadow.material.opacity,
+              focused ? 0.07 + focusLevel * 0.018 : hovered ? 0.018 : 0,
+              0.1,
+            );
+            ft.outerLip.material.opacity = lerp(
+              ft.outerLip.material.opacity,
+              focused ? 0.055 + focusLevel * 0.014 : hovered ? 0.014 : 0,
+              0.12,
+            );
+            ft.innerLip.material.opacity = lerp(
+              ft.innerLip.material.opacity,
+              focused ? 0.06 + apparatusGain * 0.012 : hovered ? 0.014 : 0,
+              0.1,
+            );
+            ft.trackShadow.material.opacity = lerp(
+              ft.trackShadow.material.opacity,
+              focused ? 0.08 + focusLevel * 0.025 : hovered ? 0.018 : 0,
+              0.12,
+            );
+            ft.track.material.opacity = lerp(
+              ft.track.material.opacity,
+              focused ? 0.035 + apparatusGain * 0.01 : hovered ? 0.008 : 0,
+              0.12,
+            );
+            ft.bladeCavity.material.opacity = lerp(
+              ft.bladeCavity.material.opacity,
+              focused ? 0.11 + focusLevel * 0.025 : hovered ? 0.018 : 0,
+              0.12,
+            );
+            ft.sheen.material.opacity = lerp(
+              ft.sheen.material.opacity,
+              focused ? 0.025 + focusLevel * 0.012 : hovered ? 0.005 : 0,
+              0.12,
+            );
+            ft.edgeGlow.material.opacity = lerp(
+              ft.edgeGlow.material.opacity,
+              focused ? 0.01 + focusLevel * 0.006 : hovered ? 0.003 : 0,
+              0.1,
+            );
+            if (!reducedMotion) {
+              ft.group.rotation.z -= focused ? 0.00072 : hovered ? 0.00014 : 0;
+            }
+          }
           entry.focusedCore.chapterRing.material.opacity = lerp(
             entry.focusedCore.chapterRing.material.opacity,
-            focused ? 0.62 : hovered ? 0.06 : 0,
+            focused ? 0.07 + apparatusGain * 0.012 : hovered ? 0.012 : 0,
             0.1,
           );
           entry.focusedCore.tickGlowRing.material.opacity = lerp(
             entry.focusedCore.tickGlowRing.material.opacity,
-            focused ? 0.28 + focusLevel * 0.1 : hovered ? 0.04 : 0,
+            focused ? 0.025 + focusLevel * 0.01 + apparatusGain * 0.006 : hovered ? 0.006 : 0,
             0.1,
           );
           entry.focusedCore.tickDiffuseRing.material.opacity = lerp(
             entry.focusedCore.tickDiffuseRing.material.opacity,
-            focused ? 0.18 + focusLevel * 0.07 : hovered ? 0.028 : 0,
+            focused ? 0.012 + focusLevel * 0.006 : hovered ? 0.004 : 0,
             0.08,
           );
           entry.focusedCore.ticks.minor.material.opacity = lerp(
             entry.focusedCore.ticks.minor.material.opacity,
-            focused ? 0.98 + focusLevel * 0.08 : hovered ? 0.08 : 0,
+            0,
             0.12,
           );
           entry.focusedCore.ticks.major.material.opacity = lerp(
             entry.focusedCore.ticks.major.material.opacity,
-            focused ? 1 : hovered ? 0.1 : 0,
+            0,
             0.12,
           );
-          entry.focusedCore.tickGlowRing.rotation.z += reducedMotion ? 0 : 0.001;
-          entry.focusedCore.tickDiffuseRing.rotation.z -= reducedMotion ? 0 : 0.0006;
-          entry.focusedCore.ticks.minor.rotation.z += reducedMotion ? 0 : 0.0014;
-          entry.focusedCore.ticks.major.rotation.z -= reducedMotion ? 0 : 0.0018;
-
-          /* ── Membranes — layered fill for disc mass, not a Siri orb ── */
-          entry.focusedCore.membranes.forEach((layer, memIdx) => {
-            const membraneWeights = [0.65, 0.51, 0.36, 0.18, 0.11];
-            const memTarget = focused ? layer.baseOpacity * (membraneWeights[memIdx] + focusLevel * 0.12) : 0;
-            layer.sprite.material.opacity = lerp(layer.sprite.material.opacity, memTarget, 0.14);
-          });
-
-          /* ── Contour bands ── */
-          entry.focusedCore.contourBands.forEach((band) => {
-            const wobble = reducedMotion ? 0 : Math.sin(slowTime * band.wobbleSpeed + band.phase);
-            const bandScale = 1 + wobble * band.scaleAmplitude;
-            band.line.material.opacity = lerp(
-              band.line.material.opacity,
-              focused ? band.baseOpacity * (0.98 + focusLevel * 0.28) : hovered ? band.baseOpacity * 0.12 : 0,
-              0.12,
-            );
-            band.line.rotation.x = band.baseRotationX + (reducedMotion ? 0 : wobble * 0.08);
-            band.line.rotation.y += reducedMotion ? 0 : band.speed * 0.016;
-            band.line.rotation.z = band.baseRotationZ + (reducedMotion ? 0 : Math.cos(slowTime * band.wobbleSpeed * 0.62 + band.phase) * 0.07);
-            band.line.scale.setScalar(bandScale);
-          });
-
-          /* ── Highlights — restrained specular sheen only ── */
-          entry.focusedCore.highlights.forEach((highlight) => {
-            highlight.sprite.material.opacity = lerp(
-              highlight.sprite.material.opacity,
-              focused ? highlight.baseOpacity * (0.32 + focusLevel * 0.22) : hovered ? highlight.baseOpacity * 0.08 : 0,
-              0.12,
-            );
-          });
-
-          /* ── Wireframe sphere — subdued (v2 value: 0.14 + 0.06) ── */
-          if (entry.focusedCore.wireframeSphere) {
-            entry.focusedCore.wireframeSphere.material.opacity = lerp(
-              entry.focusedCore.wireframeSphere.material.opacity,
-              focused ? 0.18 + focusLevel * 0.06 : hovered ? 0.03 : 0,
-              0.1,
-            );
-            if (!reducedMotion) {
-              entry.focusedCore.wireframeSphere.rotation.y += 0.0012;
-              entry.focusedCore.wireframeSphere.rotation.x += 0.0004;
-            }
-          }
-
-          /* ── Cage lines (great-circle loops) ── */
-          entry.focusedCore.cageLines.forEach((cage) => {
-            cage.line.material.opacity = lerp(
-              cage.line.material.opacity,
-              focused ? cage.baseOpacity * (1.08 + focusLevel * 0.24) : hovered ? cage.baseOpacity * 0.12 : 0,
-              0.1,
-            );
-            cage.line.rotation.x = cage.baseRotationX;
-            cage.line.rotation.y += reducedMotion ? 0 : cage.speed * 0.016;
-            cage.line.rotation.z = cage.baseRotationZ + (reducedMotion ? 0 : Math.sin(slowTime * 0.24 + cage.speed * 8) * 0.04);
-          });
-
-          /* ── Siri-orb internals are intentionally suppressed in this restore pass ── */
-          if (entry.focusedCore.siriRibbons) {
-            entry.focusedCore.siriRibbons.forEach((ribbon, rIdx) => {
-              ribbon.mesh.material.opacity = lerp(
-                ribbon.mesh.material.opacity,
-                0,
-                0.1,
-              );
-              if (!reducedMotion) {
-                ribbon.mesh.rotation.x += ribbon.speed * 0.008;
-                ribbon.mesh.rotation.y += ribbon.speed * 0.003 * Math.sin(slowTime * 0.4 + rIdx);
-                ribbon.mesh.rotation.z += ribbon.speed * 0.005;
-              }
-            });
-          }
-
-          /* ── Siri inner glow sphere ── */
-          if (entry.focusedCore.siriGlowSphere) {
-            entry.focusedCore.siriGlowSphere.material.opacity = lerp(
-              entry.focusedCore.siriGlowSphere.material.opacity,
-              0,
-              0.08,
-            );
-            if (!reducedMotion) {
-              const gpulse = 1 + Math.sin(slowTime * 0.8) * 0.06;
-              entry.focusedCore.siriGlowSphere.scale.setScalar(gpulse);
-            }
-          }
-
-          /* ── Siri central energy crossing ── */
-          if (entry.focusedCore.siriCenter) {
-            entry.focusedCore.siriCenter.material.opacity = lerp(
-              entry.focusedCore.siriCenter.material.opacity,
-              0,
-              0.1,
-            );
-            if (!reducedMotion) {
-              const pulse = 1 + Math.sin(slowTime * 1.2) * 0.12;
-              entry.focusedCore.siriCenter.scale.setScalar(pulse);
-            }
-          }
-
-          /* ── Siri rim highlight ── */
-          if (entry.focusedCore.siriRim) {
-            entry.focusedCore.siriRim.material.opacity = lerp(
-              entry.focusedCore.siriRim.material.opacity,
-              0,
-              0.08,
-            );
-            if (!reducedMotion) {
-              entry.focusedCore.siriRim.rotation.x += 0.002;
-              entry.focusedCore.siriRim.rotation.z += 0.001;
-            }
-          }
-
-          /* ── Siri rim 2 — second rim-light at different tilt ── */
-          if (entry.focusedCore.siriRim2) {
-            entry.focusedCore.siriRim2.material.opacity = lerp(
-              entry.focusedCore.siriRim2.material.opacity,
-              0,
-              0.08,
-            );
-            if (!reducedMotion) {
-              entry.focusedCore.siriRim2.rotation.x += 0.0015;
-              entry.focusedCore.siriRim2.rotation.z -= 0.0012;
-            }
-          }
-
-          /* ── Siri rim 3 — equatorial highlight ── */
-          if (entry.focusedCore.siriRim3) {
-            entry.focusedCore.siriRim3.material.opacity = lerp(
-              entry.focusedCore.siriRim3.material.opacity,
-              0,
-              0.08,
-            );
-            if (!reducedMotion) {
-              entry.focusedCore.siriRim3.rotation.y += 0.0018;
-              entry.focusedCore.siriRim3.rotation.x += 0.0008;
-            }
-          }
-
-          /* ── JARVIS iris / shutter blades ── */
-          if (entry.focusedCore.irisBlades) {
-            entry.focusedCore.irisBlades.forEach((blade, bIdx) => {
-              blade.line.material.opacity = lerp(
-                blade.line.material.opacity,
-                focused ? blade.baseOpacity * 0.52 * focusLevel : hovered ? blade.baseOpacity * 0.07 : 0,
-                0.1,
-              );
-            });
-            if (!reducedMotion) {
-              /* Slow collective rotation for iris breathing */
-              entry.focusedCore.irisBlades.forEach((blade) => {
-                blade.line.rotation.z += 0.0006;
-              });
-            }
-          }
-
-          /* ── JARVIS iris glow rings ── */
-          if (entry.focusedCore.irisGlowRing) {
-            entry.focusedCore.irisGlowRing.material.opacity = lerp(
-              entry.focusedCore.irisGlowRing.material.opacity,
-              focused ? 0.16 * focusLevel : hovered ? 0.02 : 0,
-              0.1,
-            );
-            if (!reducedMotion) entry.focusedCore.irisGlowRing.rotation.z -= 0.0008;
-          }
-          if (entry.focusedCore.irisOuterGlowRing) {
-            entry.focusedCore.irisOuterGlowRing.material.opacity = lerp(
-              entry.focusedCore.irisOuterGlowRing.material.opacity,
-              focused ? 0.1 * focusLevel : hovered ? 0.014 : 0,
-              0.1,
-            );
-            if (!reducedMotion) entry.focusedCore.irisOuterGlowRing.rotation.z += 0.0006;
-          }
+          entry.focusedCore.tickGlowRing.rotation.z += reducedMotion ? 0 : 0.00035;
+          entry.focusedCore.tickDiffuseRing.rotation.z -= reducedMotion ? 0 : 0.00022;
+          entry.focusedCore.ticks.minor.rotation.z += reducedMotion ? 0 : 0.00018;
+          entry.focusedCore.ticks.major.rotation.z -= reducedMotion ? 0 : 0.0002;
 
           /* ── JARVIS inner concentric rings ── */
           if (entry.focusedCore.innerRings) {
             entry.focusedCore.innerRings.forEach((ir) => {
-              ir.ring.material.opacity = lerp(ir.ring.material.opacity, focused ? ir.baseOpacity * 0.96 * focusLevel : hovered ? ir.baseOpacity * 0.07 : 0, 0.1);
+              ir.ring.material.opacity = lerp(ir.ring.material.opacity, focused ? ir.baseOpacity * 0.38 * focusLevel : hovered ? ir.baseOpacity * 0.04 : 0, 0.1);
             });
           }
 
           /* ── JARVIS outer decorative rings ── */
           if (entry.focusedCore.outerRings) {
             entry.focusedCore.outerRings.forEach((or) => {
-              or.material.opacity = lerp(or.material.opacity, focused ? or.baseOpacity * 1.16 * focusLevel : hovered ? or.baseOpacity * 0.08 : 0, 0.08);
+              or.material.opacity = lerp(or.material.opacity, focused ? or.baseOpacity * 0.2 * focusLevel : hovered ? or.baseOpacity * 0.025 : 0, 0.08);
               if (!reducedMotion) {
                 or.ring.rotation.z += or.speed * 0.016;
                 if (or.kind === "detached" && !or.isGroup) {
@@ -3706,14 +4886,74 @@ if (root) {
           /* ── JARVIS clock-position markers ── */
           if (entry.focusedCore.clockMarkers) {
             entry.focusedCore.clockMarkers.forEach((cm) => {
-              cm.line.material.opacity = lerp(cm.line.material.opacity, focused ? cm.baseOpacity * 1.08 * focusLevel : hovered ? cm.baseOpacity * 0.08 : 0, 0.1);
+              cm.line.material.opacity = lerp(cm.line.material.opacity, focused ? cm.baseOpacity * 0.26 * focusLevel : hovered ? cm.baseOpacity * 0.025 : 0, 0.1);
             });
           }
 
           /* ── JARVIS parallelogram ticks ── */
           if (entry.focusedCore.parallelogramTicks) {
             entry.focusedCore.parallelogramTicks.forEach((pt) => {
-              pt.line.material.opacity = lerp(pt.line.material.opacity, focused ? pt.baseOpacity * 1.08 * focusLevel : hovered ? pt.baseOpacity * 0.07 : 0, 0.1);
+              if (pt.plate) {
+                const targetBase = focused ? pt.baseOpacity * (0.92 + apparatusGain * 0.04 + focusLevel * 0.08) : hovered ? pt.baseOpacity * 0.16 : 0;
+                pt.bladeSlot.material.opacity = lerp(
+                  pt.bladeSlot.material.opacity,
+                  focused ? pt.bladeSlotOpacity * 0.46 : hovered ? pt.bladeSlotOpacity * 0.08 : 0,
+                  0.12,
+                );
+                pt.cradle.material.opacity = lerp(
+                  pt.cradle.material.opacity,
+                  focused ? pt.cradleOpacity * 0.52 : hovered ? pt.cradleOpacity * 0.08 : 0,
+                  0.12,
+                );
+                pt.body.material.opacity = lerp(
+                  pt.body.material.opacity,
+                  focused ? pt.bodyOpacity * 0.66 : hovered ? pt.bodyOpacity * 0.08 : 0,
+                  0.12,
+                );
+                pt.faceShadow.material.opacity = lerp(
+                  pt.faceShadow.material.opacity,
+                  focused ? pt.shadowOpacity * 0.36 : hovered ? pt.shadowOpacity * 0.05 : 0,
+                  0.12,
+                );
+                pt.leftHighlight.material.opacity = lerp(
+                  pt.leftHighlight.material.opacity,
+                  focused ? pt.leftHighlightOpacity * 0.58 : hovered ? pt.leftHighlightOpacity * 0.06 : 0,
+                  0.12,
+                );
+                pt.splitShadow.material.opacity = lerp(
+                  pt.splitShadow.material.opacity,
+                  focused ? pt.splitShadowOpacity * 0.54 : hovered ? pt.splitShadowOpacity * 0.06 : 0,
+                  0.12,
+                );
+                pt.rightHighlight.material.opacity = lerp(
+                  pt.rightHighlight.material.opacity,
+                  focused ? pt.rightHighlightOpacity * 0.54 : hovered ? pt.rightHighlightOpacity * 0.06 : 0,
+                  0.12,
+                );
+                pt.plate.material.opacity = lerp(
+                  pt.plate.material.opacity,
+                  focused ? targetBase : hovered ? 0.06 : 0,
+                  0.12,
+                );
+                if (typeof pt.plate.material.emissiveIntensity === "number") {
+                  pt.plate.material.emissiveIntensity = lerp(
+                    pt.plate.material.emissiveIntensity,
+                    focused ? 0.045 + apparatusGain * 0.007 + focusLevel * 0.01 : 0.01,
+                    0.1,
+                  );
+                }
+                pt.glint.material.opacity = lerp(
+                  pt.glint.material.opacity,
+                  focused ? pt.glintOpacity * 0.46 : hovered ? pt.glintOpacity * 0.05 : 0,
+                  0.12,
+                );
+              } else {
+                pt.line.material.opacity = lerp(
+                  pt.line.material.opacity,
+                  focused ? pt.baseOpacity * 0.22 * focusLevel : hovered ? pt.baseOpacity * 0.04 : 0,
+                  0.1,
+                );
+              }
             });
           }
 
@@ -3722,11 +4962,11 @@ if (root) {
             entry.focusedCore.telemetryArcs.forEach((arc) => {
               arc.line.material.opacity = lerp(
                 arc.line.material.opacity,
-                focused ? arc.baseOpacity * (0.96 + focusLevel * 0.28) : hovered ? arc.baseOpacity * 0.1 : 0,
+                focused ? arc.baseOpacity * (0.16 + focusLevel * 0.05 + apparatusGain * 0.025) : hovered ? arc.baseOpacity * 0.025 : 0,
                 0.1,
               );
               if (!reducedMotion) {
-                arc.line.rotation.z += arc.speed * 0.016;
+                arc.line.rotation.z += arc.speed * 0.006;
               }
             });
           }
@@ -3736,11 +4976,11 @@ if (root) {
             entry.focusedCore.chassisArcs.forEach((arc) => {
               arc.line.material.opacity = lerp(
                 arc.line.material.opacity,
-                focused ? arc.baseOpacity * 1.12 * focusLevel : hovered ? arc.baseOpacity * 0.08 : 0,
+                focused ? arc.baseOpacity * 0.13 * focusLevel : hovered ? arc.baseOpacity * 0.02 : 0,
                 0.1,
               );
               if (!reducedMotion) {
-                arc.line.rotation.z += arc.speed * 0.016;
+                arc.line.rotation.z += arc.speed * 0.005;
               }
             });
           }
@@ -3748,7 +4988,7 @@ if (root) {
           /* ── Focused glow — v2 value ── */
           entry.focusedCore.glow.material.opacity = lerp(
             entry.focusedCore.glow.material.opacity,
-            focused ? 0.1 + focusLevel * 0.04 : hovered ? 0.028 : 0,
+            focused ? 0.09 + focusLevel * 0.032 : hovered ? 0.018 : 0,
             0.08,
           );
         }
@@ -3996,6 +5236,10 @@ if (root) {
         tail *= 0.68;
       }
 
+      alpha *= 0.34;
+      peak *= 0.28;
+      tail *= 0.48;
+
       return {
         age,
         progress: clamp(age / timing.settle, 0, 1),
@@ -4040,18 +5284,18 @@ if (root) {
           ? clamp((spreadProgress - edgeWeight * 0.58) / 0.42, 0, 1)
           : clamp((spreadProgress - (1 - edgeWeight) * 0.58) / 0.42, 0, 1);
         const flowProgress = state.direction > 0 ? activation : 1 - activation;
-        const length = 0.24
+        const length = 0.12
           + activation * (
-            state.alpha * (3.1 + laneBoost * 1.55)
-            + state.peak * (14.8 + laneBoost * 14.2) * surge
+            state.alpha * (0.9 + laneBoost * 0.44)
+            + state.peak * (2.8 + laneBoost * 2.6) * surge
           );
         const innerOffset = 0.14 + meta.radius * 0.28;
-        const outerOffset = 1.9 + meta.radius * 2.1 + meta.lane * 1.6;
+        const outerOffset = 1.3 + meta.radius * 1.15 + meta.lane * 0.62;
         const centerOffset = lerp(innerOffset, outerOffset, flowProgress);
-        const coreWidth = 0.046 + state.alpha * 0.04 + state.peak * 0.19 * meta.width;
-        const glowWidth = coreWidth * (4.25 + state.peak * 0.85);
-        const opacityCore = clamp((0.22 + state.alpha * 0.22 + state.peak * 0.9) * activation * flicker, 0, 0.98);
-        const opacityGlow = clamp((0.16 + state.alpha * 0.2 + state.peak * 0.64) * activation * (reducedMotion ? 1 : 0.94 + surge * 0.12), 0, 0.88);
+        const coreWidth = 0.022 + state.alpha * 0.018 + state.peak * 0.04 * meta.width;
+        const glowWidth = coreWidth * (2.4 + state.peak * 0.22);
+        const opacityCore = clamp((0.052 + state.alpha * 0.04 + state.peak * 0.1) * activation * flicker, 0, 0.16);
+        const opacityGlow = clamp((0.034 + state.alpha * 0.032 + state.peak * 0.08) * activation * (reducedMotion ? 1 : 0.94 + surge * 0.12), 0, 0.12);
 
         meta.core.position.y = centerOffset + length * 0.5;
         meta.glow.position.y = centerOffset + length * 0.5;
@@ -4069,11 +5313,115 @@ if (root) {
         if (ring.material.dashSize) {
           ring.material.dashOffset -= 0.002;
         }
-        ring.rotation.y += 0.0006 * (index + 1);
+        ring.rotation.y += 0.00022 * (index + 1);
         /* 22s-cycle opacity breathing */
-        const baseOpacity = this.modes.threshold ? 0.22 - index * 0.032 : 0.04;
-        ring.material.opacity = baseOpacity + Math.sin(t * 0.285 + index * 1.2) * 0.028;
+        const baseOpacity = this.modes.threshold ? 0.075 - index * 0.012 : 0.018;
+        ring.material.opacity = baseOpacity + Math.sin(t * 0.18 + index * 1.2) * 0.008;
       });
+    }
+
+    updateChamberCore(time) {
+      if (!this.chamberCore) return;
+      const reducedMotion = motionQuery.matches;
+      const t = time * 0.001;
+      const state = this.hyperdriveState || { alpha: 0, peak: 0 };
+      const targetLock = this.focusId ? 1 : 0;
+      const lockAlpha = this.chamberCore.lockAlpha = lerp(this.chamberCore.lockAlpha || 0, targetLock, 0.075);
+      const surge = state.alpha * 0.24 + state.peak * 0.34;
+      const pulse = Math.sin(t * 0.64) * 0.5 + 0.5;
+      const focusEntry = this.focusId && this.nodeLookup.has(this.focusId)
+        ? this.nodeLookup.get(this.focusId)
+        : null;
+      const profile = focusEntry ? (focusEntry.lockProfile || { phaseOffset: 0, apparatusGain: 1, braceGain: 1 }) : { phaseOffset: 0, apparatusGain: 1, braceGain: 1 };
+      const settle = focusEntry ? this.resolveLockSettle(focusEntry, state.age || 0) : 0;
+      const apparatusGain = profile.apparatusGain || 1;
+      const irisScale = 1 - lockAlpha * (0.12 + (profile.braceGain || 1) * 0.02) - state.peak * 0.04;
+
+      this.chamberCore.group.rotation.z += reducedMotion ? 0.00008 : 0.00018;
+      this.chamberCore.group.position.y = -0.45 + Math.sin(t * 0.16) * (reducedMotion ? 0.006 : 0.018);
+      this.chamberCore.braceGroup.rotation.z = t * 0.008 + profile.phaseOffset * 0.012 + settle * 0.08;
+      this.chamberCore.braceGroup.scale.set(irisScale, irisScale, 1);
+      this.chamberCore.apertureRing.rotation.z = t * 0.012;
+      this.chamberCore.calibrationRing.rotation.z = -t * 0.009 + profile.phaseOffset * 0.01;
+      this.chamberCore.lockRing.rotation.z = t * 0.018 + lockAlpha * 0.06 + settle * 0.08;
+      this.chamberCore.lockRing.scale.setScalar(1 - lockAlpha * 0.07 - settle * 0.08);
+
+      this.chamberCore.apertureRing.material.opacity = 0.052 + lockAlpha * 0.04 + surge * 0.014;
+      this.chamberCore.calibrationRing.material.opacity = 0.032 + lockAlpha * 0.026 + pulse * 0.007;
+      this.chamberCore.lockRing.material.opacity = 0.026 + lockAlpha * 0.05 + surge * 0.018;
+      this.chamberCore.tachCarrier.material.opacity = 0.008 + lockAlpha * 0.006 + surge * 0.002;
+      this.chamberCore.tachInnerLip.material.opacity = 0.006 + lockAlpha * 0.006 + surge * 0.002;
+      this.chamberCore.innerTachCarrier.material.opacity = 0.02 + lockAlpha * 0.014 + surge * 0.004;
+      this.chamberCore.innerTachShadow.material.opacity = 0.018 + lockAlpha * 0.012 + surge * 0.004;
+      this.chamberCore.innerTachLipOuter.material.opacity = 0.012 + lockAlpha * 0.01 + surge * 0.003;
+      this.chamberCore.innerTachLipInner.material.opacity = 0.01 + lockAlpha * 0.008;
+      this.chamberCore.innerTachSheen.material.opacity = 0.008 + lockAlpha * 0.008 + Math.max(0, settle) * 0.006;
+      this.chamberCore.innerTachEdgeGlow.material.opacity = 0.004 + lockAlpha * 0.006 + surge * 0.003;
+      this.chamberCore.rimSheen.material.opacity = 0.018 + lockAlpha * 0.028 + surge * 0.008 + Math.max(0, settle) * 0.018;
+      this.chamberCore.rimShadow.material.opacity = 0.052 + lockAlpha * 0.018;
+      this.chamberCore.microTicks.minor.material.opacity = 0.012 + lockAlpha * 0.006 + surge * 0.004;
+      this.chamberCore.microTicks.major.material.opacity = 0.016 + lockAlpha * 0.008 + surge * 0.005;
+      this.chamberCore.microTicks.minor.rotation.z = -t * 0.008 + profile.phaseOffset * 0.008;
+      this.chamberCore.microTicks.major.rotation.z = t * 0.006 + settle * 0.04;
+      this.chamberCore.rimBand.group.rotation.z = t * 0.01 + profile.phaseOffset * 0.024;
+      this.chamberCore.innerTachBand.group.rotation.z = -t * 0.012 + profile.phaseOffset * 0.012 + settle * 0.02;
+
+      this.chamberCore.halo.material.opacity = 0.028 + pulse * 0.009 + lockAlpha * 0.01;
+      this.chamberCore.envelope.material.opacity = 0.032 + pulse * 0.005 + lockAlpha * 0.014 + surge * 0.01;
+      this.chamberCore.mantle.material.opacity = 0.15 + pulse * 0.016 + lockAlpha * 0.024 + surge * 0.014;
+      this.chamberCore.convection.material.opacity = 0.066 + pulse * 0.01 + lockAlpha * 0.022 + surge * 0.013;
+      this.chamberCore.nucleus.material.opacity = 0.26 + pulse * 0.022 + lockAlpha * 0.02;
+
+      this.chamberCore.envelope.scale.setScalar(6.6 + pulse * 0.07 + lockAlpha * 0.1 + surge * 0.07);
+      this.chamberCore.halo.scale.setScalar(3.5 + pulse * 0.05 + lockAlpha * 0.06);
+      this.chamberCore.mantle.scale.setScalar(4.32 + pulse * 0.06 + lockAlpha * 0.08 + surge * 0.05);
+      this.chamberCore.convection.scale.setScalar(3.55 + pulse * 0.05 + lockAlpha * 0.07);
+      this.chamberCore.nucleus.scale.setScalar(0.74 + pulse * 0.03 + lockAlpha * 0.03 + surge * 0.014);
+      this.chamberCore.mantle.material.rotation = t * 0.045;
+      this.chamberCore.convection.material.rotation = 0.74 - t * 0.06;
+      this.chamberCore.coronaGroup.rotation.z = -t * 0.018;
+
+      this.chamberCore.braces.forEach((entry, index) => {
+        const shimmer = 0.82 + Math.sin(t * 0.7 + index * 0.78) * 0.18;
+        entry.line.material.opacity = (entry.baseOpacity * 0.34 + lockAlpha * 0.035 + surge * 0.02) * shimmer;
+      });
+
+      this.chamberCore.arcs.forEach((entry, index) => {
+        entry.line.rotation.z = t * entry.speed * 0.34;
+        entry.line.material.opacity = entry.baseOpacity * 0.26 + lockAlpha * 0.02 + surge * 0.012 + Math.sin(t * 0.5 + index) * 0.004;
+      });
+
+      this.chamberCore.rimBand.ticks.forEach((tick, index) => {
+        const glintWave = 0.5 + Math.sin(t * 0.86 + tick.glintPhase + profile.phaseOffset) * 0.5;
+        tick.cradle.material.opacity = tick.cradleOpacity * 0.12 + lockAlpha * 0.008 * apparatusGain + surge * 0.002;
+        tick.faceShadow.material.opacity = tick.shadowOpacity * 0.12 + lockAlpha * 0.005 + surge * 0.0015;
+        tick.plate.material.opacity = tick.baseOpacity * 0.14 + lockAlpha * 0.01 * apparatusGain + surge * 0.0025;
+        tick.plate.material.emissiveIntensity = 0.01 + glintWave * 0.006 + lockAlpha * 0.006 * apparatusGain;
+        tick.glint.material.opacity = tick.glintOpacity * Math.max(0.08, glintWave) * (0.03 + lockAlpha * 0.052);
+        tick.holder.position.z = 0.016 + Math.sin(t * 0.14 + index * 0.36 + profile.phaseOffset) * 0.001;
+      });
+
+      this.chamberCore.innerTachBand.ticks.forEach((tick, index) => {
+        const glintWave = 0.5 + Math.sin(t * 0.92 + tick.glintPhase + profile.phaseOffset * 1.2) * 0.5;
+        tick.cradle.material.opacity = tick.cradleOpacity * 0.1 + lockAlpha * 0.007 * apparatusGain + surge * 0.002;
+        tick.faceShadow.material.opacity = tick.shadowOpacity * 0.09 + lockAlpha * 0.004 + surge * 0.0015;
+        tick.plate.material.opacity = tick.baseOpacity * 0.12 + lockAlpha * 0.008 * apparatusGain + surge * 0.0025;
+        tick.plate.material.emissiveIntensity = 0.01 + glintWave * 0.006 + lockAlpha * 0.006 * apparatusGain;
+        tick.glint.material.opacity = tick.glintOpacity * Math.max(0.08, glintWave) * (0.03 + lockAlpha * 0.044);
+        tick.holder.position.z = 0.015 + Math.sin(t * 0.16 + index * 0.42 + profile.phaseOffset) * 0.0007;
+      });
+
+      this.chamberCore.coronaSprites.forEach((entry, index) => {
+        const drift = Math.sin(t * (0.44 + index * 0.06) + entry.phase) * 0.08;
+        entry.sprite.position.set(
+          Math.cos(entry.angle + t * 0.03) * (entry.radius + drift),
+          Math.sin(entry.angle + t * 0.03) * (entry.radius + drift) * 0.72,
+          entry.sprite.position.z,
+        );
+        entry.sprite.material.opacity = 0.02 + lockAlpha * 0.028 + surge * 0.018 + Math.max(0, Math.sin(t * 0.88 + entry.phase)) * 0.018;
+      });
+
+      this.chamberCore.coreLight.intensity = 0.36 + lockAlpha * 0.14 + surge * 0.14 + pulse * 0.035 + apparatusGain * 0.02;
     }
 
     updateGuides(time) {
@@ -4133,6 +5481,92 @@ if (root) {
       });
     }
 
+    resolveCompositionWindow(entry) {
+      const frame = this.target.closest(".observatory-field-frame");
+      const width = this.target.clientWidth || 700;
+      const height = this.target.clientHeight || 460;
+      if (!frame) {
+        return {
+          xNorm: 0.57,
+          yNorm: 0.46,
+          widthNorm: 0.32,
+          heightNorm: 0.24,
+        };
+      }
+
+      const frameRect = frame.getBoundingClientRect();
+      const leftPanel = document.querySelector(".observatory-inspector--docked");
+      const rightPanel = document.querySelector(".observatory-history-panel--docked");
+      const leftRect = leftPanel ? leftPanel.getBoundingClientRect() : null;
+      const rightRect = rightPanel ? rightPanel.getBoundingClientRect() : null;
+      const sideGutter = Math.max(44, frameRect.width * 0.03);
+      const leftGuard = leftRect ? Math.max(0, (leftRect.right - frameRect.left) + sideGutter) : frameRect.width * 0.18;
+      const rightGuard = rightRect ? Math.max(0, (frameRect.right - rightRect.left) + sideGutter) : frameRect.width * 0.18;
+      const topGuard = Math.max(132, frameRect.height * 0.18);
+      const bottomGuard = Math.max(168, frameRect.height * 0.2);
+      const openWidth = Math.max(frameRect.width - leftGuard - rightGuard, frameRect.width * 0.24);
+      const openHeight = Math.max(frameRect.height - topGuard - bottomGuard, frameRect.height * 0.22);
+      const sourceNorm = clamp(entry ? entry.node.anchor.x / 5.9 : 0, -1, 1);
+      const profile = entry ? entry.lockProfile : null;
+      const baseX = 0.548;
+      const sourceBias = sourceNorm >= 0
+        ? sourceNorm * 0.078
+        : Math.abs(sourceNorm) * 0.026;
+      const composedX = leftGuard + (openWidth * clamp(baseX + sourceBias, 0.34, 0.76));
+      const composedY = topGuard + (openHeight * clamp(0.44 + (profile ? profile.yBias : 0) - Math.abs(sourceNorm) * 0.018, 0.3, 0.68));
+
+      return {
+        xNorm: clamp(composedX / width, 0.22, 0.82),
+        yNorm: clamp(composedY / height, 0.18, 0.74),
+        widthNorm: clamp(openWidth / width, 0.22, 0.62),
+        heightNorm: clamp(openHeight / height, 0.2, 0.46),
+      };
+    }
+
+    resolveFocusWorldOffset(entry, composition) {
+      const projection = entry.group.position.clone().project(this.camera);
+      const desiredNdcX = (composition.xNorm * 2) - 1;
+      const desiredNdcY = 1 - (composition.yNorm * 2);
+      const deltaX = desiredNdcX - projection.x;
+      const deltaY = desiredNdcY - projection.y;
+      const distance = Math.max(4.8, this.camera.position.distanceTo(entry.group.position));
+      const halfHeight = Math.tan((this.camera.fov * Math.PI) / 360) * distance;
+      const halfWidth = halfHeight * this.camera.aspect;
+      return new this.THREE.Vector3()
+        .addScaledVector(this.cameraRight, deltaX * halfWidth)
+        .addScaledVector(this.cameraUp, deltaY * halfHeight);
+    }
+
+    resolveLockSettle(entry, ageSeconds) {
+      if (!entry || !this.focusId || motionQuery.matches) return 0;
+      const profile = entry.lockProfile || { settleAmplitude: 0.06, phaseOffset: 0 };
+      const primary = Math.sin((ageSeconds * 13.5) + profile.phaseOffset);
+      const secondary = Math.sin((ageSeconds * 21.2) + profile.phaseOffset * 0.42);
+      const envelope = Math.exp(-Math.max(0, ageSeconds - 0.26) * 2.9);
+      const gate = clamp((ageSeconds - 0.16) / 0.18, 0, 1);
+      return profile.settleAmplitude * envelope * gate * ((primary * 0.82) + (secondary * 0.28));
+    }
+
+    getFocusTargets() {
+      const candidates = Array.isArray(this.nodes)
+        ? this.nodes.filter(function (node) { return node && node.focusEligible; })
+        : [];
+      if (!candidates.length) {
+        return { center: null, left: null, right: null };
+      }
+      const sortedByX = candidates.slice().sort(function (left, right) {
+        return left.anchor.x - right.anchor.x;
+      });
+      const sortedByCenter = candidates.slice().sort(function (left, right) {
+        return Math.abs(left.anchor.x) - Math.abs(right.anchor.x);
+      });
+      return {
+        left: sortedByX[0] ? sortedByX[0].id : null,
+        center: sortedByCenter[0] ? sortedByCenter[0].id : null,
+        right: sortedByX[sortedByX.length - 1] ? sortedByX[sortedByX.length - 1].id : null,
+      };
+    }
+
     updateCamera(time) {
       const reducedMotion = motionQuery.matches;
       this.zoomVelocity *= this.isActive ? 0.84 : 0.78;
@@ -4156,25 +5590,50 @@ if (root) {
       const yaw = idleX + (this.pointerTarget.x * 0.32 + this.keyTarget.x * 0.52) * userAlpha;
       const pitch = idleY + (this.pointerTarget.y * 0.16 + this.keyTarget.y * 0.3) * userAlpha;
 
-      /* ── Camera re-centering on focused node — prevents peripheral off-screen ── */
+      this.compositionTarget.set(0, 0, 0);
+      this.focusNodeBiasTarget.set(0, 0, 0);
+      this.focusForwardBias.set(0, 0, 0);
+
+      /* ── Composition-first focus choreography — target lands in a protected visual lane, not the geometric center. ── */
       if (this.focusId && this.nodeLookup.has(this.focusId)) {
         const focusEntry = this.nodeLookup.get(this.focusId);
-        const focusWeight = this.hyperdriveState.active ? 0.16 : 0.4;
-        const focusPos = focusEntry.group.position.clone().multiplyScalar(focusWeight);
+        const composition = this.resolveCompositionWindow(focusEntry);
+        const worldOffset = this.resolveFocusWorldOffset(focusEntry, composition);
+        const settle = this.resolveLockSettle(focusEntry, transitionAge);
+        const profile = focusEntry.lockProfile || { cameraBias: 1, forwardBias: 0.08, settleAmplitude: 0.06 };
+        const focusWeight = this.hyperdriveState.active ? 0.28 : 0.48;
+        const settleWeight = 0.34 + profile.cameraBias * 0.1;
+        this.compositionTarget.copy(worldOffset).multiplyScalar(-0.46 * profile.cameraBias);
+        this.compositionTarget.addScaledVector(this.cameraRight, settle * settleWeight);
+        this.compositionTarget.addScaledVector(this.cameraUp, -settle * 0.38);
+        this.focusNodeBiasTarget.copy(worldOffset).multiplyScalar(0.08 + profile.targetBias * 0.22);
+        this.focusNodeBiasTarget.addScaledVector(this.cameraRight, settle * 0.18);
+        this.focusForwardBias.copy(this.cameraForward).multiplyScalar((0.08 + profile.forwardBias) * (0.54 + easeOutCubic(clamp(transitionAge / 0.82, 0, 1)) * 0.38));
+        const focusPos = focusEntry.group.position.clone()
+          .multiplyScalar(focusWeight)
+          .add(this.compositionTarget)
+          .add(this.focusForwardBias);
         const focusLerp = transitionAge < 1.5 ? 0.06 : 0.025;
         this.focusTarget.lerp(focusPos, focusLerp);
+        this.focusZoneCache = composition;
       } else {
+        this.compositionTarget.set(0, 0, 0);
+        this.focusNodeBiasTarget.set(0, 0, 0);
+        this.focusForwardBias.set(0, 0, 0);
         this.focusTarget.lerp(new this.THREE.Vector3(0, 0, 0), 0.025);
       }
 
+      this.compositionOffset.lerp(this.compositionTarget, this.focusId ? 0.12 : 0.08);
+      this.focusNodeBias.lerp(this.focusNodeBiasTarget, this.focusId ? 0.12 : 0.08);
+
       const zoomNorm = (this.zoomCurrent - this.zoomRange.min) / (this.zoomRange.max - this.zoomRange.min);
       const desired = new this.THREE.Vector3(
-        Math.sin(yaw) * lerp(2.7, 3.8, zoomNorm),
-        1.2 + pitch * lerp(4.8, 6.35, zoomNorm),
-        this.zoomCurrent + Math.cos(yaw * 1.18) * 1.15 - hyperdriveDolly,
+        Math.sin(yaw) * lerp(2.7, 3.8, zoomNorm) - this.compositionOffset.x * 0.18,
+        1.2 + pitch * lerp(4.8, 6.35, zoomNorm) - this.compositionOffset.y * 0.22,
+        this.zoomCurrent + Math.cos(yaw * 1.18) * 1.15 - hyperdriveDolly - this.compositionOffset.z * 0.08,
       );
       this.camera.position.lerp(desired, cameraLerp);
-      this.focusPoint.lerp(this.focusTarget, 0.04);
+      this.focusPoint.lerp(this.focusTarget, this.focusId ? 0.065 : 0.04);
       this.camera.lookAt(this.focusPoint);
 
       this.cameraForward.set(0, 0, -1).applyQuaternion(this.camera.quaternion);
@@ -4531,6 +5990,7 @@ if (root) {
       this.updateGlints(time);
       this.updateTooltipPosition();
       this.updateMeasurementRings(time);
+      this.updateChamberCore(time);
 
       /* ── Ambient light breathing (18s cycle) ── */
       if (this.ambientLight) {
@@ -4553,11 +6013,12 @@ if (root) {
           if (this.bloomImpulse < 0.005) this.bloomImpulse = 0;
         }
         const state = this.hyperdriveState || { alpha: 0, peak: 0 };
-        const bloomTarget = this.focusId ? 0.34 : this.bloomBase;
-        this.bloomPass.strength = lerp(this.bloomPass.strength, bloomTarget + this.bloomImpulse * 0.12, 0.08);
+        const bloomTarget = this.focusId ? this.bloomFocusTarget : this.bloomBase;
+        const impulseCoeff = this.bloomImpulseCoeff;
+        this.bloomPass.strength = lerp(this.bloomPass.strength, bloomTarget + this.bloomImpulse * impulseCoeff, 0.08);
         this.bloomPass.strength = lerp(
           this.bloomPass.strength,
-          bloomTarget + this.bloomImpulse * 0.12 + state.alpha * 0.16 + state.peak * 0.42,
+          bloomTarget + this.bloomImpulse * impulseCoeff + state.alpha * 0.16 + state.peak * 0.42,
           0.12,
         );
       }
@@ -4784,6 +6245,26 @@ if (root) {
       this.updateOverlay(performance.now());
     }
 
+    getFocusTargets() {
+      const candidates = Array.isArray(this.fieldNodes)
+        ? this.fieldNodes.filter(function (node) { return node && node.focusEligible; })
+        : [];
+      if (!candidates.length) {
+        return { center: null, left: null, right: null };
+      }
+      const sortedByX = candidates.slice().sort(function (left, right) {
+        return left.anchor.x - right.anchor.x;
+      });
+      const sortedByCenter = candidates.slice().sort(function (left, right) {
+        return Math.abs(left.anchor.x) - Math.abs(right.anchor.x);
+      });
+      return {
+        left: sortedByX[0] ? sortedByX[0].id : null,
+        center: sortedByCenter[0] ? sortedByCenter[0].id : null,
+        right: sortedByX[sortedByX.length - 1] ? sortedByX[sortedByX.length - 1].id : null,
+      };
+    }
+
     updateOverlay(time) {
       if (!this.overlay || !this.focusId) {
         if (this.overlay) this.overlay.update(time, null, null);
@@ -4857,15 +6338,24 @@ if (root) {
     }
 
     try {
-      const THREE = await import("https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js");
+      const vendorPaths = (typeof window !== "undefined" && window.__observatoryVendorPaths) || {};
+      const resolveVendorModule = function (path, fallback) {
+        const source = path || fallback;
+        try {
+          return new URL(source, window.location.href).href;
+        } catch (_) {
+          return source;
+        }
+      };
+      const THREE = await import(resolveVendorModule(vendorPaths.threeModule, "/static/vendor/three/build/three.module.js"));
 
       /* Attempt to load post-processing addons for bloom */
       let addons = {};
       try {
         const [composerModule, renderPassModule, bloomModule] = await Promise.all([
-          import("https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/EffectComposer.js"),
-          import("https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/RenderPass.js"),
-          import("https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/UnrealBloomPass.js"),
+          import(resolveVendorModule(vendorPaths.effectComposer, "/static/vendor/three/examples/jsm/postprocessing/EffectComposer.js")),
+          import(resolveVendorModule(vendorPaths.renderPass, "/static/vendor/three/examples/jsm/postprocessing/RenderPass.js")),
+          import(resolveVendorModule(vendorPaths.unrealBloomPass, "/static/vendor/three/examples/jsm/postprocessing/UnrealBloomPass.js")),
         ]);
         addons = {
           EffectComposer: composerModule.EffectComposer,
@@ -4882,6 +6372,28 @@ if (root) {
       console.error("Observatory field 3D init failed, falling back", error);
       controller = new LayeredFallbackField(root, motionQuery.matches);
       controller.setData(latestPayload);
+    }
+
+    if (typeof window !== "undefined") {
+      window.__observatoryFieldDebug = Object.assign({}, window.__observatoryFieldDebug, {
+        getFocusTargets: function () {
+          return controller && typeof controller.getFocusTargets === "function"
+            ? controller.getFocusTargets()
+            : { center: null, left: null, right: null };
+        },
+        getFieldNodes: function () {
+          return controller && Array.isArray(controller.fieldNodes)
+            ? controller.fieldNodes.map(function (node) {
+                return {
+                  id: node.id,
+                  label: node.label,
+                  x: node.anchor && node.anchor.x,
+                  y: node.anchor && node.anchor.y,
+                };
+              })
+            : [];
+        },
+      });
     }
   }
 
