@@ -10,19 +10,23 @@ from starlette.testclient import TestClient
 
 from api.main import app
 
-client = TestClient(app)
+
+@pytest.fixture
+def client():
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 # ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
 
-def test_health_returns_200():
+def test_health_returns_200(client):
     resp = client.get("/api/health")
     assert resp.status_code == 200
 
 
-def test_health_shape():
+def test_health_shape(client):
     resp = client.get("/api/health")
     data = resp.json()
     assert "status" in data
@@ -35,19 +39,19 @@ def test_health_shape():
 # Metrics
 # ---------------------------------------------------------------------------
 
-def test_timeseries_missing_metric_422():
+def test_timeseries_missing_metric_422(client):
     """metric query param is required; omitting it should return 422."""
     resp = client.get("/api/metrics/timeseries")
     assert resp.status_code == 422
 
 
-def test_timeseries_returns_list():
+def test_timeseries_returns_list(client):
     resp = client.get("/api/metrics/timeseries?metric=entropy_delta")
     assert resp.status_code == 200
     assert isinstance(resp.json(), list)
 
 
-def test_latest_returns_list():
+def test_latest_returns_list(client):
     resp = client.get("/api/metrics/latest")
     assert resp.status_code == 200
     assert isinstance(resp.json(), list)
@@ -57,7 +61,7 @@ def test_latest_returns_list():
 # Falsification
 # ---------------------------------------------------------------------------
 
-def test_falsification_status_200():
+def test_falsification_status_200(client):
     resp = client.get("/api/falsification/status")
     assert resp.status_code == 200
     data = resp.json()
@@ -67,7 +71,7 @@ def test_falsification_status_200():
     assert "n_high_d_points" in data
 
 
-def test_falsification_alerts_200():
+def test_falsification_alerts_200(client):
     resp = client.get("/api/falsification/alerts")
     assert resp.status_code == 200
     assert isinstance(resp.json(), list)
@@ -77,7 +81,7 @@ def test_falsification_alerts_200():
 # Probe trigger
 # ---------------------------------------------------------------------------
 
-def test_probe_trigger_200(monkeypatch):
+def test_probe_trigger_200(client, monkeypatch):
     """Trigger endpoint happy path.
 
     Forces DRY_RUN=true for this test so the scheduler skips real LLM calls,
@@ -104,22 +108,22 @@ def test_probe_trigger_200(monkeypatch):
 # Dashboard pages
 # ---------------------------------------------------------------------------
 
-def test_dashboard_root_200():
+def test_dashboard_root_200(client):
     resp = client.get("/")
     assert resp.status_code == 200
     assert b"Continuation Observatory" in resp.content
 
 
-def test_timeseries_page_200():
+def test_timeseries_page_200(client):
     resp = client.get("/timeseries")
     assert resp.status_code == 200
 
 
-def test_model_updates_page_200():
+def test_model_updates_page_200(client):
     resp = client.get("/model-updates")
     assert resp.status_code == 200
 
 
-def test_falsification_page_200():
+def test_falsification_page_200(client):
     resp = client.get("/falsification")
     assert resp.status_code == 200
