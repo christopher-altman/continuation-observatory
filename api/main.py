@@ -128,7 +128,12 @@ def _bundle_context() -> dict[str, Any]:
     models_data = _read_bundle_json("models.json", {"models": []})
     falsification = _read_bundle_json(
         "falsification.json",
-        {"overall_status": "collecting", "status_text": "COLLECTING. The observatory is live, and this panel is awaiting sufficient provider-backed dimensionality-sweep history to evaluate Δ(d).", "models": []},
+        {
+            "overall_status": "collecting",
+            "status_text": "COLLECTING. The observatory is live, and this panel is awaiting sufficient provider-backed dimensionality-sweep history to evaluate Δ(d).",
+            "thresholds": {"green": 0.10, "yellow": 0.05},
+            "models": [],
+        },
     )
     exports = _read_bundle_json("exports/all_metrics.json", [])
 
