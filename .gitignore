@@ -40,3 +40,32 @@ docs/report.md
 docs/diff.md
 docs/report_*.md
 docs/diff_*.md
+
+# ---------------------------------------------------------------------------
+# Local AI/dev artifacts — do not commit
+# ---------------------------------------------------------------------------
+.backup/
+.playwright-browsers/
+.tools/
+Concept 2032/
+captures/
+logs/
+node_modules/
+recovered-screenshots-with-timestamps/
+site/prototypes/
+
+# Local verification/debug files
+compile_shader_test.html
+scripts/capture_observatory.mjs
+site/static/error_scrape.html
+site/static/test_shader.html
+
+# Local package/playwright scratch dependencies
+package.json
+package-lock.json
+
+# Local AI handoff/design artifacts
+claude-design-observatory-minimal-export.zip
+claude-design-observatory-minimal-export/
+opus_4_7_new_thread_prompt.md
+thread_handoff_report.md
