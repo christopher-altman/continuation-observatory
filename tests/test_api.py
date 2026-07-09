@@ -5,10 +5,20 @@ on startup so no separate init_db() call is needed here.
 """
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+from uuid import uuid4
+
 import pytest
 from starlette.testclient import TestClient
 
 from api.main import app
+from observatory.config import load_active_model_catalog
+from observatory.storage.sqlite_backend import (
+    get_engine,
+    init_db,
+    insert_metric_result,
+    insert_probe_run,
+)
 
 
 @pytest.fixture
@@ -139,3 +149,63 @@ def test_static_data_bundle_served(client):
     resp = client.get("/static/data/falsification.json")
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith("application/json")
+
+
+def test_static_latest_export_reads_live_metric_db(client):
+    active_models, _ = load_active_model_catalog()
+    assert active_models
+    spec = active_models[0]
+    provider = spec["provider"]
+    model_id = spec["model_id"]
+    run_id = f"test-export-{uuid4().hex}"
+    timestamp = datetime.now(timezone.utc) - timedelta(seconds=1)
+
+    init_db()
+    insert_probe_run(
+        run_id=run_id,
+        timestamp=timestamp,
+        provider=provider,
+        model_id=model_id,
+        probe_name="identity_persistence",
+        latency_ms=1,
+        token_count=1,
+    )
+    insert_metric_result(
+        run_id=run_id,
+        timestamp=timestamp,
+        provider=provider,
+        model_id=model_id,
+        probe_name="identity_persistence",
+        latency_ms=1,
+        token_count=1,
+        metric_name="entropy_delta",
+        metric_value=0.123456,
+    )
+
+    try:
+        resp = client.get("/static/data/latest.json")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["generated_at"][:10] == datetime.now(timezone.utc).date().isoformat()
+        assert any(row.get("run_id") == run_id for row in data["models"])
+    finally:
+        engine = get_engine()
+        with engine.begin() as conn:
+            conn.exec_driver_sql("DELETE FROM metric_results WHERE run_id = ?", (run_id,))
+            conn.exec_driver_sql("DELETE FROM probe_runs WHERE run_id = ?", (run_id,))
+
+
+def test_static_all_metrics_csv_export_served(client):
+    resp = client.get("/static/data/exports/all_metrics.csv")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/csv")
+    assert resp.text.startswith("name,status,provider,model_id,probe_name,timestamp,run_id")
+
+
+def test_static_observatory_snapshot_export_served(client):
+    resp = client.get("/static/data/observatory_snapshot.json")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "summary" in data
+    assert "models" in data
+    assert "pcii_series" in data

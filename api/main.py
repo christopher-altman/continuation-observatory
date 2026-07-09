@@ -14,6 +14,7 @@ from fastapi.templating import Jinja2Templates
 from jinja2 import ChoiceLoader, FileSystemLoader
 from starlette.requests import Request
 
+from api.routes.data_exports import router as data_exports_router
 from api.routes.falsification import router as falsification_router
 from api.routes.health import router as health_router
 from api.routes.metrics import router as metrics_router
@@ -21,6 +22,12 @@ from api.routes.observatory import router as observatory_router
 from api.routes.probes import router as probes_router
 from api.routes.websocket import router as websocket_router
 from observatory.config import get_cors_allowed_origins, settings, validate_live_configuration
+from observatory.live_exports import (
+    build_export_summary,
+    build_falsification_export,
+    build_latest_export,
+    build_models_export,
+)
 from observatory.storage.sqlite_backend import init_db
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -126,36 +133,47 @@ def _read_bundle_json(name: str, fallback: Any) -> Any:
 
 
 def _bundle_context() -> dict[str, Any]:
-    latest = _read_bundle_json("latest.json", {"models": []})
-    models_data = _read_bundle_json("models.json", {"models": []})
-    falsification = _read_bundle_json(
-        "falsification.json",
-        {
-            "overall_status": "collecting",
-            "status_text": "COLLECTING. The observatory is live, and this panel is awaiting sufficient provider-backed dimensionality-sweep history to evaluate Δ(d).",
-            "thresholds": {"green": 0.10, "yellow": 0.05},
-            "models": [],
-        },
-    )
-    exports = _read_bundle_json("exports/all_metrics.json", [])
+    try:
+        latest = build_latest_export()
+        models_data = build_models_export()
+        falsification = build_falsification_export()
+        export_summary = build_export_summary()
+        experiment_count = int(export_summary.get("experiment_count", 0))
+        data_since = str(export_summary.get("data_since", ""))
+        build_stamp = str(export_summary.get("generated_at") or latest.get("generated_at") or "")
+    except Exception:
+        latest = _read_bundle_json("latest.json", {"models": []})
+        models_data = _read_bundle_json("models.json", {"models": []})
+        falsification = _read_bundle_json(
+            "falsification.json",
+            {
+                "overall_status": "collecting",
+                "status_text": "COLLECTING. The observatory is live, and this panel is awaiting sufficient provider-backed dimensionality-sweep history to evaluate Delta(d).",
+                "thresholds": {"green": 0.10, "yellow": 0.05},
+                "models": [],
+            },
+        )
+        exports = _read_bundle_json("exports/all_metrics.json", [])
+        timestamps = [row.get("timestamp", "") for row in exports if row.get("timestamp")]
+        experiment_count = len(exports)
+        data_since = min(timestamps)[:10] if timestamps else ""
+
+        build_time = 0
+        try:
+            build_time = (STATIC_OUTPUT_DIR / "latest.json").stat().st_mtime_ns
+        except OSError:
+            build_time = 0
+
+        if build_time:
+            build_stamp = datetime.fromtimestamp(build_time / 1_000_000_000, tz=timezone.utc).isoformat()
+        else:
+            build_stamp = ""
 
     signal_values = [
         abs(entry["entropy_delta"])
         for entry in latest.get("models", [])
         if entry.get("entropy_delta") is not None
     ]
-    timestamps = [row.get("timestamp", "") for row in exports if row.get("timestamp")]
-
-    build_time = 0
-    try:
-        build_time = (STATIC_OUTPUT_DIR / "latest.json").stat().st_mtime_ns
-    except OSError:
-        build_time = 0
-
-    if build_time:
-        build_stamp = datetime.fromtimestamp(build_time / 1_000_000_000, tz=timezone.utc).isoformat()
-    else:
-        build_stamp = ""
 
     return {
         "build_time": build_stamp,
@@ -165,8 +183,8 @@ def _bundle_context() -> dict[str, Any]:
         "falsification_status": falsification.get("overall_status", "collecting"),
         "falsification_text": falsification.get("status_text", ""),
         "model_count": len(models_data.get("models", [])),
-        "experiment_count": len(exports),
-        "data_since": min(timestamps)[:10] if timestamps else "",
+        "experiment_count": experiment_count,
+        "data_since": data_since,
         "marquee_models": [entry.get("model_id", "") for entry in models_data.get("models", []) if entry.get("model_id")],
         "home_signal_score": sum(signal_values) / len(signal_values) if signal_values else 0.0,
     }
@@ -255,8 +273,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-if STATIC_OUTPUT_DIR.exists():
-    app.mount("/static/data", StaticFiles(directory=str(STATIC_OUTPUT_DIR)), name="static-data")
+app.include_router(data_exports_router)
 
 static_output_figures_dir = STATIC_OUTPUT_STATIC_DIR / "figures"
 if static_output_figures_dir.exists():
