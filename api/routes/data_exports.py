@@ -26,37 +26,37 @@ def _json_response(payload):
     return JSONResponse(content=payload, headers=NO_STORE_HEADERS)
 
 
-@router.get("/latest.json")
+@router.api_route("/latest.json", methods=["GET", "HEAD"])
 def latest_json():
     return _json_response(build_latest_export())
 
 
-@router.get("/timeseries.json")
+@router.api_route("/timeseries.json", methods=["GET", "HEAD"])
 def timeseries_json():
     return _json_response(build_timeseries_export())
 
 
-@router.get("/falsification.json")
+@router.api_route("/falsification.json", methods=["GET", "HEAD"])
 def falsification_json():
     return _json_response(build_falsification_export())
 
 
-@router.get("/models.json")
+@router.api_route("/models.json", methods=["GET", "HEAD"])
 def models_json():
     return _json_response(build_models_export())
 
 
-@router.get("/observatory_snapshot.json")
+@router.api_route("/observatory_snapshot.json", methods=["GET", "HEAD"])
 def observatory_snapshot_json():
     return _json_response(build_live_observatory_snapshot_export())
 
 
-@router.get("/exports/all_metrics.json")
+@router.api_route("/exports/all_metrics.json", methods=["GET", "HEAD"])
 def all_metrics_json():
     return _json_response(build_all_metrics_rows())
 
 
-@router.get("/exports/all_metrics.csv")
+@router.api_route("/exports/all_metrics.csv", methods=["GET", "HEAD"])
 def all_metrics_csv():
     return Response(
         content=build_all_metrics_csv(),

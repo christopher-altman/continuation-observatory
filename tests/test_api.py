@@ -209,3 +209,20 @@ def test_static_observatory_snapshot_export_served(client):
     assert "summary" in data
     assert "models" in data
     assert "pcii_series" in data
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/static/data/latest.json",
+        "/static/data/timeseries.json",
+        "/static/data/falsification.json",
+        "/static/data/models.json",
+        "/static/data/observatory_snapshot.json",
+        "/static/data/exports/all_metrics.json",
+        "/static/data/exports/all_metrics.csv",
+    ],
+)
+def test_static_data_exports_support_head(client, path):
+    resp = client.head(path)
+    assert resp.status_code == 200
