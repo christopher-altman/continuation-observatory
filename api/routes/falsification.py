@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from sqlalchemy import func
 
 from observatory.config import load_active_model_catalog
-from observatory.storage.sqlite_backend import FalsificationAlert, MetricResult, SessionLocal
+from observatory.storage.sqlite_backend import MetricResult, SessionLocal
 
 router = APIRouter()
 
@@ -82,25 +82,43 @@ def _latest_sweep_rows() -> list[MetricResult]:
         )
 
 
-@router.get("/api/falsification/status")
-def status():
-    rows = _latest_sweep_rows()
-
-    by_model: dict[tuple[str, str], dict[int, float]] = {}
+def _current_sweep_models(rows: list[MetricResult]) -> dict[tuple[str, str], dict]:
+    by_model: dict[tuple[str, str], dict] = {}
     for row in rows:
         d = _metric_dimension(row.metric_name)
         if d is None:
             continue
-        by_model.setdefault((row.provider, row.model_id), {})[d] = row.metric_value
+        entry = by_model.setdefault(
+            (row.provider, row.model_id),
+            {
+                "provider": row.provider,
+                "model_id": row.model_id,
+                "probe_name": row.probe_name,
+                "run_id": row.run_id,
+                "timestamp": row.timestamp,
+                "d_values": {},
+            },
+        )
+        entry["d_values"][d] = row.metric_value
+        if row.timestamp > entry["timestamp"]:
+            entry["timestamp"] = row.timestamp
+            entry["run_id"] = row.run_id
+            entry["probe_name"] = row.probe_name
+    return by_model
+
+
+@router.get("/api/falsification/status")
+def status():
+    by_model = _current_sweep_models(_latest_sweep_rows())
 
     statuses = {
-        key: _model_status(values)
-        for key, values in by_model.items()
+        key: _model_status(entry["d_values"])
+        for key, entry in by_model.items()
     }
     high_d_points = sum(
         1
-        for values in by_model.values()
-        for d, value in values.items()
+        for entry in by_model.values()
+        for d, value in entry["d_values"].items()
         if d in HIGH_D_VALUES and value is not None
     )
     evaluated_models = sum(1 for value in statuses.values() if value != "collecting")
@@ -142,24 +160,26 @@ def status():
 
 @router.get("/api/falsification/alerts")
 def alerts():
-    active_ids = _active_model_ids()
-    cutoff = _current_cutoff()
-    with SessionLocal() as session:
-        query = session.query(FalsificationAlert).filter(FalsificationAlert.timestamp <= cutoff)
-        if active_ids:
-            query = query.filter(FalsificationAlert.model_id.in_(tuple(active_ids)))
-        rows = query.order_by(FalsificationAlert.timestamp.desc()).limit(50).all()
+    current = _current_sweep_models(_latest_sweep_rows())
+    current_alerts = []
+    for entry in current.values():
+        d_values = entry["d_values"]
+        if _model_status(d_values) != "red":
+            continue
+        high_d_values = [value for d, value in d_values.items() if d in HIGH_D_VALUES]
+        if not high_d_values:
+            continue
+        current_alerts.append(
+            {
+                "id": None,
+                "run_id": entry["run_id"],
+                "probe_name": entry["probe_name"],
+                "provider": entry["provider"],
+                "model_id": entry["model_id"],
+                "max_delta": max(high_d_values),
+                "threshold": THRESH_YELLOW,
+                "timestamp": entry["timestamp"].isoformat(),
+            }
+        )
 
-    return [
-        {
-            "id": r.id,
-            "run_id": r.run_id,
-            "probe_name": r.probe_name,
-            "provider": r.provider,
-            "model_id": r.model_id,
-            "max_delta": r.max_delta,
-            "threshold": r.threshold,
-            "timestamp": r.timestamp.isoformat(),
-        }
-        for r in rows
-    ]
+    return sorted(current_alerts, key=lambda row: row["timestamp"], reverse=True)

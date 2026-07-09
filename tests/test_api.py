@@ -137,6 +137,8 @@ def test_model_updates_page_200(client):
 def test_falsification_page_200(client):
     resp = client.get("/falsification")
     assert resp.status_code == 200
+    assert b"Current Per-Model Sweep Data" in resp.content
+    assert b"Recent Falsification Alerts" not in resp.content
 
 
 def test_legacy_html_routes_redirect(client):

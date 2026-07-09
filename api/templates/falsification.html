@@ -47,10 +47,51 @@
 </div>
 
 <div class="panel">
-  <div class="panel-title">Recent Falsification Alerts</div>
-  <div id="fals-alerts" hx-get="/api/falsification/alerts" hx-trigger="load, every 60s" hx-swap="innerHTML">
-    <p class="muted">Loading&hellip;</p>
+  <div class="panel-title">Current Per-Model Sweep Data</div>
+  {% if falsification and falsification.models %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Provider</th>
+          <th>Model</th>
+          <th>Verdict</th>
+          <th>d=10</th>
+          <th>d=50</th>
+          <th>d=100</th>
+          <th>d=200</th>
+          <th>d=500</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in falsification.models %}
+        {% set mstatus = m.model_status if m.model_status is defined else "collecting" %}
+        <tr>
+          <td>{{ m.provider or "—" }}</td>
+          <td><code>{{ m.model_id or "—" }}</code></td>
+          <td>
+            {% if mstatus == 'green' %}<span class="badge complete">green</span>
+            {% elif mstatus == 'yellow' %}<span class="badge pending">yellow</span>
+            {% elif mstatus == 'red' %}<span class="badge failed">red</span>
+            {% else %}<span class="badge collecting">collecting</span>
+            {% endif %}
+          </td>
+          {% for d in [10, 50, 100, 200, 500] %}
+          {% set val = m.d_values.get(d, m.d_values.get(d|string)) %}
+          <td class="{% if val is not none %}{% if val >= 0.10 %}val-positive{% elif val >= 0.05 %}val-neutral{% else %}val-negative{% endif %}{% else %}val-muted{% endif %}">
+            {% if val is not none %}{{ "%.5f" | format(val) }}{% else %}—{% endif %}
+          </td>
+          {% endfor %}
+          <td class="val-muted">{{ (m.timestamp or "")[:16] | replace("T", " ") or "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
+  {% else %}
+  <p class="muted">Current dimensionality-sweep data are still collecting.</p>
+  {% endif %}
 </div>
 
 <!-- Threshold definitions -->
@@ -107,32 +148,6 @@ document.body.addEventListener("htmx:afterRequest", function(evt) {
           '<div class="fals-status-metrics muted">High-d measurements: ' + (d.n_high_d_points || 0) + '</div>' +
           '<p class="fals-status-detail muted">' + (d.reason || "") + '</p>' +
         '</div>';
-    } catch(e) {}
-  }
-
-  if (path === "/api/falsification/alerts") {
-    try {
-      var alerts = JSON.parse(evt.detail.xhr.responseText);
-      if (!alerts.length) {
-        document.getElementById("fals-alerts").innerHTML =
-          '<p class="muted">No alerts recorded.</p>';
-        return;
-      }
-      var html = '<div class="table-wrap"><table><thead><tr>' +
-        '<th>Timestamp</th><th>Provider</th><th>Model</th>' +
-        '<th>Probe</th><th>Max Δ</th><th>Threshold</th>' +
-        '</tr></thead><tbody>';
-      alerts.forEach(function(a) {
-        html += '<tr>' +
-          '<td class="val-muted">' + a.timestamp.replace('T',' ').slice(0,19) + ' UTC</td>' +
-          '<td>' + a.provider + '</td><td><code>' + a.model_id + '</code></td>' +
-          '<td>' + a.probe_name + '</td>' +
-          '<td class="val-negative">' + a.max_delta.toFixed(4) + '</td>' +
-          '<td class="val-muted">' + a.threshold + '</td>' +
-          '</tr>';
-      });
-      html += '</tbody></table></div>';
-      document.getElementById("fals-alerts").innerHTML = html;
     } catch(e) {}
   }
 });
