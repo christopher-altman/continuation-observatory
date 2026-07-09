@@ -30,7 +30,7 @@ def test_get_observatory_events_excludes_hidden_types_before_limit():
     engine = get_engine()
     with engine.begin() as conn:
         conn.exec_driver_sql("DELETE FROM observatory_events")
-    burst_ts = datetime.now(timezone.utc) + timedelta(days=36500)
+    burst_ts = datetime.now(timezone.utc) - timedelta(minutes=1)
     visible_ts = burst_ts - timedelta(milliseconds=100)
     since = burst_ts - timedelta(milliseconds=200)
 

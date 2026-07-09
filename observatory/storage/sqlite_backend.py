@@ -9,7 +9,7 @@ work unchanged because this module re-exports every public symbol from models.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Sequence
 
 from sqlalchemy import func
@@ -27,6 +27,8 @@ from observatory.storage.models import (  # noqa: F401
     _engine,
     get_engine,
 )
+
+EVENT_FUTURE_SKEW = timedelta(minutes=5)
 
 
 def init_db() -> None:
@@ -319,16 +321,22 @@ def get_pcii_timeseries(
 
 def get_observatory_events(
     since: datetime | None = None,
+    end: datetime | None = None,
     severity: str | None = None,
     model_id: str | None = None,
     limit: int = 50,
     event_type: str | None = None,
     exclude_event_types: Sequence[str] | None = None,
+    include_future: bool = False,
 ) -> list[dict]:
     with SessionLocal() as session:
         query = session.query(ObservatoryEvent)
         if since:
             query = query.filter(ObservatoryEvent.timestamp >= since)
+        if end:
+            query = query.filter(ObservatoryEvent.timestamp <= end)
+        elif not include_future:
+            query = query.filter(ObservatoryEvent.timestamp <= datetime.now(timezone.utc) + EVENT_FUTURE_SKEW)
         if severity:
             query = query.filter(ObservatoryEvent.severity == severity)
         if model_id:

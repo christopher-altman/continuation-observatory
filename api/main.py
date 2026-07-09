@@ -26,6 +26,8 @@ from observatory.storage.sqlite_backend import init_db
 BASE_DIR = Path(__file__).resolve().parent
 REPO_ROOT = BASE_DIR.parent
 STATIC_OUTPUT_DIR = REPO_ROOT / "site" / "output" / "static" / "data"
+STATIC_OUTPUT_STATIC_DIR = REPO_ROOT / "site" / "output" / "static"
+STATIC_SOURCE_DIR = REPO_ROOT / "site" / "static"
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 templates.env.loader = ChoiceLoader(
     [
@@ -221,6 +223,14 @@ def render_page(request: Request, template_name: str, page_name: str):
     return response
 
 
+def redirect_no_store(url: str, status_code: int = 308) -> RedirectResponse:
+    response = RedirectResponse(url=url, status_code=status_code)
+    response.headers["Cache-Control"] = "no-store, max-age=0, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     validate_live_configuration()
@@ -245,7 +255,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static", StaticFiles(directory=str(REPO_ROOT / "site" / "static")), name="static")
+if STATIC_OUTPUT_DIR.exists():
+    app.mount("/static/data", StaticFiles(directory=str(STATIC_OUTPUT_DIR)), name="static-data")
+
+static_output_figures_dir = STATIC_OUTPUT_STATIC_DIR / "figures"
+if static_output_figures_dir.exists():
+    app.mount(
+        "/static/figures",
+        StaticFiles(directory=str(static_output_figures_dir)),
+        name="static-figures",
+    )
+
+app.mount("/static", StaticFiles(directory=str(STATIC_SOURCE_DIR)), name="static")
 
 
 app.include_router(health_router)
@@ -261,9 +282,19 @@ def dashboard(request: Request):
     return render_page(request, "index.html", "home")
 
 
+@app.get("/index.html")
+def dashboard_html_redirect():
+    return redirect_no_store("/")
+
+
 @app.get("/observatory")
 def observatory_view(request: Request):
     return render_page(request, "observatory.html", "observatory")
+
+
+@app.get("/observatory.html")
+def observatory_html_redirect():
+    return redirect_no_store("/observatory")
 
 
 @app.get("/timeseries")
@@ -271,14 +302,29 @@ def timeseries_view(request: Request):
     return render_page(request, "timeseries.html", "timeseries")
 
 
+@app.get("/timeseries.html")
+def timeseries_html_redirect():
+    return redirect_no_store("/timeseries")
+
+
 @app.get("/models")
 def models_view(request: Request):
     return render_page(request, "models.html", "models")
 
 
+@app.get("/models.html")
+def models_html_redirect():
+    return redirect_no_store("/models")
+
+
 @app.get("/methodology")
 def methodology_view(request: Request):
     return render_page(request, "methodology.html", "methodology")
+
+
+@app.get("/methodology.html")
+def methodology_html_redirect():
+    return redirect_no_store("/methodology")
 
 
 @app.get("/research/")
@@ -306,6 +352,11 @@ def data_view(request: Request):
     return render_page(request, "data.html", "data")
 
 
+@app.get("/data.html")
+def data_html_redirect():
+    return redirect_no_store("/data")
+
+
 @app.get("/model-updates")
 def model_updates_view(request: Request):
     return render_page(request, "model_updates.html", "model_updates")
@@ -314,6 +365,11 @@ def model_updates_view(request: Request):
 @app.get("/falsification")
 def falsification_view(request: Request):
     return render_page(request, "falsification.html", "falsification")
+
+
+@app.get("/falsification.html")
+def falsification_html_redirect():
+    return redirect_no_store("/falsification")
 
 
 @app.get("/ucip/")

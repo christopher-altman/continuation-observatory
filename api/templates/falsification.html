@@ -86,7 +86,7 @@ document.body.addEventListener("htmx:afterRequest", function(evt) {
     try {
       var d = JSON.parse(evt.detail.xhr.responseText);
       // Update traffic light
-      var lights = {green: "green-light", yellow: "amber-light", red: "red-light"};
+      var lights = {green: "green-light", yellow: "amber-light", red: "red-light", collecting: "amber-light"};
       ["red-light", "amber-light", "green-light"].forEach(function(id) {
         document.getElementById(id).classList.remove("active");
       });

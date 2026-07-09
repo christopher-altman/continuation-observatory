@@ -147,7 +147,7 @@ def test_events_route_hides_completions_by_default_but_preserves_include_complet
     engine = get_engine()
     with engine.begin() as conn:
         conn.exec_driver_sql("DELETE FROM observatory_events")
-    burst_ts = datetime.now(timezone.utc) + timedelta(days=38500)
+    burst_ts = datetime.now(timezone.utc) - timedelta(minutes=1)
     visible_ts = burst_ts - timedelta(milliseconds=100)
     since = (burst_ts - timedelta(milliseconds=200)).isoformat()
 
@@ -189,7 +189,7 @@ def test_incidents_route_collapses_repeated_rows_while_events_route_stays_raw():
     engine = get_engine()
     with engine.begin() as conn:
         conn.exec_driver_sql("DELETE FROM observatory_events")
-    anchor = datetime.now(timezone.utc) + timedelta(days=38600)
+    anchor = datetime.now(timezone.utc) - timedelta(minutes=10)
     since = (anchor - timedelta(hours=2)).isoformat()
 
     for index in range(3):
@@ -236,7 +236,7 @@ def test_incident_board_route_exposes_grouped_state_and_suppression_metadata():
     engine = get_engine()
     with engine.begin() as conn:
         conn.exec_driver_sql("DELETE FROM observatory_events")
-    anchor = datetime.now(timezone.utc) + timedelta(days=38620)
+    anchor = datetime.now(timezone.utc) - timedelta(minutes=30)
     since = (anchor - timedelta(hours=2)).isoformat()
 
     for index, model_id in enumerate(["gpt-5", "o3", "claude-haiku-4-5-20251001"]):
@@ -288,7 +288,7 @@ def test_incident_board_route_exposes_healthy_now_summary_without_success_spam()
     engine = get_engine()
     with engine.begin() as conn:
         conn.exec_driver_sql("DELETE FROM observatory_events")
-    anchor = datetime.now(timezone.utc) + timedelta(days=38630)
+    anchor = datetime.now(timezone.utc) - timedelta(minutes=10)
 
     for index, model_id in enumerate(["gpt-5", "o3", "claude-haiku-4-5-20251001"]):
         insert_observatory_event(

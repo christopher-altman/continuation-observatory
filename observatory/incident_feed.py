@@ -28,6 +28,8 @@ STATUS_PRIORITY = {
     "stale": 3,
 }
 
+FUTURE_EVENT_SKEW = timedelta(minutes=5)
+
 TRANSITION_LABELS = {
     "active": "fresh recurrence inside active window",
     "recovered": "inferred recovery from newer successful probe evidence",
@@ -353,6 +355,16 @@ def _window_bucket_for_timestamp(latest_timestamp: datetime, *, now: datetime, f
 
 def _format_compact_timestamp(timestamp: datetime) -> str:
     return timestamp.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+
+def _is_public_time_window_event(
+    event: dict[str, Any],
+    *,
+    stale_cutoff: datetime,
+    future_cutoff: datetime,
+) -> bool:
+    timestamp = _coerce_timestamp(event.get("timestamp"))
+    return stale_cutoff <= timestamp <= future_cutoff
 
 
 def _duration_label(first_seen: datetime, latest_timestamp: datetime) -> str:
@@ -1094,10 +1106,15 @@ def build_public_incident_board(
 
     source_event_count = len(raw_events)
     stale_cutoff = current_time - timedelta(hours=feed_config["stale_after_hours"])
+    future_cutoff = current_time + FUTURE_EVENT_SKEW
     visible_events = [
         dict(event)
         for event in raw_events
-        if _coerce_timestamp(event.get("timestamp")) >= stale_cutoff
+        if _is_public_time_window_event(
+            event,
+            stale_cutoff=stale_cutoff,
+            future_cutoff=future_cutoff,
+        )
     ]
     visible_event_count = len(visible_events)
     provider_map = _model_provider_map(observatory_config)

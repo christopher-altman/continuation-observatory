@@ -507,7 +507,7 @@ def test_snapshot_filters_static_scope_across_models_pcii_history_and_events(mon
 
 
 def test_snapshot_preserves_raw_events_and_adds_collapsed_incidents(monkeypatch):
-    anchor = datetime.now(timezone.utc) + timedelta(days=38650)
+    anchor = datetime.now(timezone.utc) - timedelta(minutes=10)
     raw_events = [
         {
             "id": 1,
@@ -585,7 +585,7 @@ def test_snapshot_returns_visible_events_when_latest_burst_is_hidden(monkeypatch
     engine = get_engine()
     with engine.begin() as conn:
         conn.exec_driver_sql("DELETE FROM observatory_events")
-    burst_ts = datetime.now(timezone.utc) + timedelta(days=37500)
+    burst_ts = datetime.now(timezone.utc) - timedelta(minutes=1)
     visible_ts = burst_ts - timedelta(milliseconds=100)
     for index in range(4):
         insert_observatory_event(
@@ -684,7 +684,7 @@ def test_snapshot_returns_visible_events_when_latest_burst_is_hidden(monkeypatch
 
 
 def test_snapshot_incident_board_tracks_suppressed_counts_while_preserving_raw_events(monkeypatch):
-    anchor = datetime.now(timezone.utc) + timedelta(days=38670)
+    anchor = datetime.now(timezone.utc) - timedelta(minutes=10)
     raw_events = [
         {
             "id": 1,
@@ -767,7 +767,7 @@ def test_snapshot_incident_board_tracks_suppressed_counts_while_preserving_raw_e
 
 
 def test_snapshot_incident_board_exposes_healthy_now_from_recent_completion_evidence(monkeypatch):
-    anchor = datetime.now(timezone.utc) + timedelta(days=38680)
+    anchor = datetime.now(timezone.utc) - timedelta(minutes=10)
     completion_events = [
         {
             "id": 1,

@@ -66,7 +66,7 @@ def test_falsification_status_200(client):
     assert resp.status_code == 200
     data = resp.json()
     assert "status" in data
-    assert data["status"] in ("green", "yellow", "red")
+    assert data["status"] in ("collecting", "green", "yellow", "red")
     assert "reason" in data
     assert "n_high_d_points" in data
 
@@ -127,3 +127,15 @@ def test_model_updates_page_200(client):
 def test_falsification_page_200(client):
     resp = client.get("/falsification")
     assert resp.status_code == 200
+
+
+def test_legacy_html_routes_redirect(client):
+    resp = client.get("/falsification.html", follow_redirects=False)
+    assert resp.status_code == 308
+    assert resp.headers["location"] == "/falsification"
+
+
+def test_static_data_bundle_served(client):
+    resp = client.get("/static/data/falsification.json")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("application/json")

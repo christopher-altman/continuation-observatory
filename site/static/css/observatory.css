@@ -1118,6 +1118,19 @@ pre {
   letter-spacing: -0.02em;
 }
 
+#results .results-value-status--green {
+  color: var(--green);
+}
+
+#results .results-value-status--yellow,
+#results .results-value-status--collecting {
+  color: var(--amber);
+}
+
+#results .results-value-status--red {
+  color: var(--red);
+}
+
 #results .results-column span {
   font-size: 0.96rem;
   color: rgba(244, 242, 239, 0.66);

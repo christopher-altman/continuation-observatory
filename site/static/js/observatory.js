@@ -34,6 +34,7 @@
     models: [],
     pcii: [],
     events: [],
+    falsification: null,
   };
 
   const observatoryRoot = document.querySelector("[data-observatory-root]");
@@ -717,7 +718,17 @@
     window.dispatchEvent(new Event("observatory:marquee-refresh"));
   }
 
-  function renderLanding(models, pcii, events) {
+  function normalizeFalsificationStatus(falsification) {
+    const rawStatus = falsification && typeof falsification.status === "string"
+      ? falsification.status.toLowerCase()
+      : "";
+    if (["green", "yellow", "red", "collecting"].includes(rawStatus)) {
+      return rawStatus;
+    }
+    return "live";
+  }
+
+  function renderLanding(models, pcii, events, falsification) {
     const latest = pcii[pcii.length - 1];
     const scoreNode = qs("#live-home-score");
     const modelsNode = qs("#live-home-model-count");
@@ -731,9 +742,16 @@
       latestNode.textContent = latest ? `latest sample ${ageLabel(latest.timestamp)}` : "awaiting live telemetry";
     }
     if (statusNode) {
-      statusNode.textContent = events.length
-        ? String(events[0].severity || "live").toUpperCase()
-        : "LIVE";
+      const falsificationStatus = normalizeFalsificationStatus(falsification);
+      statusNode.textContent = falsificationStatus.toUpperCase();
+      statusNode.classList.remove(
+        "results-value-status--green",
+        "results-value-status--yellow",
+        "results-value-status--red",
+        "results-value-status--collecting",
+        "results-value-status--live",
+      );
+      statusNode.classList.add(`results-value-status--${falsificationStatus}`);
     }
 
     if (briefsNode) {
@@ -769,16 +787,18 @@
   }
 
   async function refreshLandingData() {
-    const eventsUrl = "/api/observatory/events?limit=40&include_completed=true";
-    const [pcii, models, events] = await Promise.all([
+    const eventsUrl = "/api/observatory/events?limit=40";
+    const [pcii, models, events, falsification] = await Promise.all([
       fetchJSON("/api/observatory/pcii?range=24h"),
       fetchJSON("/api/observatory/models"),
       fetchJSON(eventsUrl),
+      fetchJSON("/api/falsification/status").catch(function () { return null; }),
     ]);
     landingState.pcii = pcii;
     landingState.models = models;
     landingState.events = events;
-    renderLanding(models, pcii, events);
+    landingState.falsification = falsification;
+    renderLanding(models, pcii, events, falsification);
   }
 
   function connectLandingSocket() {
