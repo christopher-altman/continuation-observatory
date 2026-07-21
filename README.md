@@ -66,11 +66,18 @@ See `docs/DEPLOYMENT.md`. The live deployment entrypoints remain `api.main:app` 
 }
 ```
 
+---
+
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.
 
-## Contact
+---
 
-[Frontier Research Lab](https://lab.christopheraltman.com) ・ [Continuation Observatory](https://continuationobservatory.org) ・ [Website](https://christopheraltman.com) ・ [GitHub](https://github.com/christopher-altman) ・ [Google Scholar](https://scholar.google.com/citations?user=tvwpCcgAAAAJ) ・ [Bio](https://th-pedia.org/wiki/Christopher_Altman) ・ [Email](mailto:x@christopheraltman.com)
+# Contact
 
+[Frontier AI Lab](https://lab.christopheraltman.com) ・ [Continuation Observatory](https://continuationobservatory.org) ・ [Personal Website](https://christopheraltman.com) ・ [GitHub](https://github.com/christopher-altman) ・ [Google Scholar](https://scholar.google.com/citations?user=tvwpCcgAAAAJ) ・ [Biography](https://th-pedia.org/wiki/Christopher_Altman) ・ [Email](mailto:x@christopheraltman.com)
+
+---
+
+*Christopher Altman (2025–2026)*
