@@ -13,12 +13,19 @@
       <span>tracked systems inside the current field</span>
     </a>
     <a class="results-column reveal" data-delay="320" href="{{ route_timeseries }}">
-      <p class="results-label">Aggregate score</p>
+      <p class="results-label">Signed mean entropy delta</p>
       <strong id="live-home-score">
-        {{ "%.3f"|format(home_signal_score if home_signal_score is defined else 0.0) }}
+        {% if home_signal_score is defined and home_signal_score is not none %}
+          {{ "%+.3f"|format(home_signal_score) }}
+        {% else %}
+          —
+        {% endif %}
       </strong>
       <span id="live-home-latest">
-        {% if build_time is defined %}
+        {% if home_metric_summary is defined %}
+          entropy_delta_mean.v1 · {{ home_metric_summary.n_valid }}/{{ home_metric_summary.n_total }} valid ·
+          mean |Δ| {% if home_metric_summary.mean_absolute_value is not none %}{{ "%.3f"|format(home_metric_summary.mean_absolute_value) }}{% else %}—{% endif %}
+        {% elif build_time is defined %}
           latest bundle {{ build_time[:10] }}
         {% else %}
           awaiting live telemetry
@@ -26,9 +33,9 @@
       </span>
     </a>
     <a class="results-column reveal" data-delay="400" href="{{ route_falsification }}">
-      <p class="results-label">Falsification</p>
-      <strong id="live-home-status" class="results-value-status">{{ falsification_status|upper if falsification_status is defined else "LIVE" }}</strong>
-      <span>dimensional sweep tested against published thresholds</span>
+      <p class="results-label">Monitoring</p>
+      <strong id="live-home-status" class="results-value-status">{{ falsification_status|upper if falsification_status is defined else "NOMINAL" }}</strong>
+      <span>scheduled provider measurements across the active roster</span>
     </a>
   </div>
   <div class="results-detail">

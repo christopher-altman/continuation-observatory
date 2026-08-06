@@ -2,7 +2,7 @@
  * observatory-instrument.js — vNext Direction A, Phase 2 (additive module).
  *
  * Semantic instrument layer: renders the per-model measurement ring and the
- * aggregate/focused core readout from data the page has already loaded.
+ * cross-model PCII/focused core readout from data the page has already loaded.
  *
  * Boundaries (by design):
  *  - Reads ONLY the public window.__observatoryDebug API (getState/setFocusModel)
@@ -292,7 +292,7 @@
         (state && state.mode !== "live" ? " · snapshot" : "");
     } else {
       signal = mean;
-      readoutLabel.textContent = "Aggregate continuation signal";
+      readoutLabel.textContent = "Mean CII (cii_mean.v1)";
       readoutValue.textContent = fmt(mean);
       readoutValue.dataset.gate = typeof mean === "number" && mean >= gate ? "above" : "below";
       if (readings.length === 0) {
@@ -300,11 +300,11 @@
       } else if (liveCount === 0) {
         var generated = snapshot && snapshot.generated_at ? snapshot.generated_at : null;
         readoutMeta.textContent =
-          "bundle mean of " + readings.length + " models · 0 live · " +
+          "cii_mean.v1 over " + readings.length + " models · 0 live · " +
           (generated ? "bundle " + String(generated).slice(0, 10) : "window " + range);
       } else {
         readoutMeta.textContent =
-          "mean of " + readings.length + " models · " + liveCount + " live · window " + range +
+          "cii_mean.v1 over " + readings.length + " models · " + liveCount + " live · window " + range +
           (state && state.mode !== "live" ? " · snapshot" : "");
       }
     }

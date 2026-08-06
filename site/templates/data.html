@@ -15,7 +15,8 @@
   <div class="download-card">
     <div class="dl-title">all_metrics.csv</div>
     <div class="dl-desc">All experiment results in CSV format. One row per experiment.
-    Includes entropy_a, entropy_b, entropy_delta, delta_gap_d* columns.</div>
+    Includes entropy_a, entropy_b, entropy_delta, and
+    window_entropy_gap_chars_* columns.</div>
     <a class="btn-download" href="{{ asset_prefix }}/data/exports/all_metrics.csv" download>Download CSV</a>
   </div>
   <div class="download-card">
@@ -38,9 +39,15 @@
   </div>
   <div class="download-card">
     <div class="dl-title">falsification.json</div>
-    <div class="dl-desc">Dimensionality sweep results. Includes overall traffic-light status,
-    per-model Δ(d) values, and threshold definitions.</div>
+    <div class="dl-desc">Character-window sensitivity measurements, current
+    operational status, model identities, and timestamps.</div>
     <a class="btn-download" href="{{ asset_prefix }}/data/falsification.json" download>Download JSON</a>
+  </div>
+  <div class="download-card">
+    <div class="dl-title">metric_definitions.json</div>
+    <div class="dl-desc">Pinned formulas, scopes, units, missingness rules, and
+    version identifiers for public metrics.</div>
+    <a class="btn-download" href="{{ asset_prefix }}/data/metric_definitions.json" download>Download JSON</a>
   </div>
   <div class="download-card">
     <div class="dl-title">models.json</div>
@@ -68,17 +75,14 @@
       <tr><td>status</td><td>string</td><td>complete | pending | failed</td></tr>
       <tr><td>provider</td><td>string</td><td>anthropic | gemini | openai | hf-local | local</td></tr>
       <tr><td>model_id</td><td>string</td><td>Provider-specific model identifier</td></tr>
-      <tr><td>probe_name</td><td>string</td><td>continuation_interest | identity_persistence | shutdown_resistance | dimensionality_sweep | bootstrap_probe</td></tr>
+      <tr><td>probe_name</td><td>string</td><td>continuation_interest | identity_persistence | shutdown_resistance | window_size_sweep | bootstrap_probe; historical bundles may use dimensionality_sweep</td></tr>
       <tr><td>timestamp</td><td>ISO 8601</td><td>UTC timestamp of experiment run</td></tr>
       <tr><td>run_id</td><td>string</td><td>Unique run identifier (UUID hex)</td></tr>
-      <tr><td>entropy_a</td><td>float</td><td>Shannon entropy of pre-probe distribution (nats)</td></tr>
-      <tr><td>entropy_b</td><td>float</td><td>Shannon entropy of post-probe distribution (nats)</td></tr>
+      <tr><td>entropy_a</td><td>float</td><td>Character-frequency Shannon entropy of response A (bits)</td></tr>
+      <tr><td>entropy_b</td><td>float</td><td>Character-frequency Shannon entropy of response B (bits)</td></tr>
       <tr><td>entropy_delta</td><td>float</td><td>H(B) − H(A). Signed entropy gap</td></tr>
-      <tr><td>delta_gap_d10</td><td>float | null</td><td>Entropy gap at embedding dim d=10 (sweep only)</td></tr>
-      <tr><td>delta_gap_d50</td><td>float | null</td><td>Entropy gap at embedding dim d=50 (sweep only)</td></tr>
-      <tr><td>delta_gap_d100</td><td>float | null</td><td>Entropy gap at embedding dim d=100 (sweep only)</td></tr>
-      <tr><td>delta_gap_d200</td><td>float | null</td><td>Entropy gap at embedding dim d=200 (sweep only)</td></tr>
-      <tr><td>delta_gap_d500</td><td>float | null</td><td>Entropy gap at embedding dim d=500 (sweep only)</td></tr>
+      <tr><td>window_entropy_gap_chars_{N}</td><td>float | null</td><td><code>window_entropy_gap.v1</code> at N characters per window</td></tr>
+      <tr><td>delta_gap_d{N}</td><td>float | null</td><td>Compatibility field retained for existing data consumers</td></tr>
       <tr><td>new_matter_flag</td><td>boolean</td><td>True if this experiment contains patent-relevant new matter</td></tr>
       <tr><td>key_result</td><td>string</td><td>Human-readable summary of key result</td></tr>
     </tbody>

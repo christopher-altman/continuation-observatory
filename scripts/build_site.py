@@ -19,6 +19,7 @@ import yaml
 from jinja2 import Environment, FileSystemLoader
 
 from observatory.config import get_probe_cycle_interval_minutes, load_active_model_catalog
+from observatory.metric_definitions import metric_definitions_export, summarize_entropy_delta
 from observatory.observatory_snapshot import build_observatory_snapshot
 from observatory.probes.registry import discover_probes
 from observatory.results_paths import RESULTS_DIR_ENV_VAR, resolve_results_paths
@@ -33,12 +34,11 @@ STATIC_DIR = REPO_ROOT / "site" / "static"
 SITE_URL = "https://continuationobservatory.org"
 CNAME_VALUE = "continuationobservatory.org"
 
-# Thresholds for falsification traffic-light
-THRESH_GREEN = 0.10
-THRESH_YELLOW = 0.05
-
-# d-values used in sweep probes
-SWEEP_D_VALUES = [10, 50, 100, 200, 500]
+# Corrected character-window sizes. Historical bundles used ``d`` for this
+# same parameter; no hidden or projection dimensionality was involved.
+WINDOW_CHAR_VALUES = [10, 50, 100, 200, 500]
+SWEEP_D_VALUES = WINDOW_CHAR_VALUES  # historical import compatibility
+HISTORICAL_THRESHOLDS = {"green": 0.10, "yellow": 0.05}
 
 CANONICAL_PAGES = [
     {
@@ -139,6 +139,13 @@ CANONICAL_PAGES = [
         "page_name": "context",
         "page_path": "/context/",
     },
+    {
+        "template": "metric_definitions.html",
+        "output": "metric-definitions/index.html",
+        "title": "Metric Definitions",
+        "page_name": "metric_definitions",
+        "page_path": "/metric-definitions",
+    },
 ]
 
 
@@ -219,7 +226,7 @@ def generate_latest(experiments: list) -> dict:
                 "entropy_delta": result.get("entropy_delta"),
             }
             for k, v in result.items():
-                if k.startswith("delta_gap_"):
+                if k.startswith(("window_entropy_gap_", "delta_gap_")):
                     entry[k] = v
             models_map[key] = entry
 
@@ -232,7 +239,12 @@ def generate_latest(experiments: list) -> dict:
 def generate_timeseries(experiments: list) -> dict:
     """All data points keyed by metric → model_id → [{t, v}]."""
     timeseries: dict[str, dict[str, list]] = {}
-    metrics = ["entropy_delta"] + [f"delta_gap_d{d}" for d in SWEEP_D_VALUES]
+    metrics = ["entropy_delta"]
+    metrics += [
+        f"window_entropy_gap_chars_{value}"
+        for value in WINDOW_CHAR_VALUES
+    ]
+    metrics += [f"delta_gap_d{value}" for value in WINDOW_CHAR_VALUES]
 
     for e in experiments:
         result = e["result"]
@@ -255,42 +267,18 @@ def generate_timeseries(experiments: list) -> dict:
 
 
 def _compute_model_status(d_values: dict) -> str:
-    """Per-model falsification status from d_values {d: val} (d >= 100 used).
-
-    Qualifying d values: {100, 200, 500} i.e. d >= 100.
-    Rules:
-      collecting — no d >= 100 values available
-      red        — ALL d >= 100 values < THRESH_YELLOW (0.05)
-      yellow     — NOT red, and ANY d >= 100 value < THRESH_GREEN (0.10)
-      green      — ALL d >= 100 values >= THRESH_GREEN (0.10)
-    """
-    high_d = {
-        int(d): v
-        for d, v in d_values.items()
-        if int(d) >= 100 and v is not None
-    }
-    if not high_d:
-        return "collecting"
-    vals = list(high_d.values())
-    if all(v < THRESH_YELLOW for v in vals):
-        return "red"
-    if any(v < THRESH_GREEN for v in vals):
-        return "yellow"
-    return "green"
+    """Compatibility helper for the public operational monitor."""
+    return "monitoring"
 
 
 def generate_falsification(experiments: list) -> dict:
-    """Extract delta_gap curves from dimensionality_sweep experiments.
-
-    - Reads dry_run from config and embeds it in each model entry.
-    - Computes per-model model_status for real (non-dry) runs only.
-    - Aggregates overall_status from real models only.
-    - Returns overall_status='collecting' when no real sweeps are present,
-      so the banner never shows FALSIFIED based on dry_run data alone.
-    """
+    """Export corrected window-size curves without a scientific verdict."""
     sweep_exps = [
         e for e in experiments
-        if "dimensionality_sweep" in e["manifest"].get("name", "")
+        if any(
+            name in e["manifest"].get("name", "")
+            for name in ("dimensionality_sweep", "window_size_sweep")
+        )
     ]
 
     models = []
@@ -300,60 +288,41 @@ def generate_falsification(experiments: list) -> dict:
         if not result or not config:
             continue
         dry_run = bool(config.get("dry_run", False))
-        d_values = {}
-        for d in SWEEP_D_VALUES:
-            key = f"delta_gap_d{d}"
-            if key in result:
-                d_values[d] = result[key]
-        # Per-model status label: "dry_run" for dry runs, computed for real ones
-        model_status = "dry_run" if dry_run else _compute_model_status(d_values)
+        active_values = {}
+        historical_values = {}
+        for window_chars in WINDOW_CHAR_VALUES:
+            active_key = f"window_entropy_gap_chars_{window_chars}"
+            historical_key = f"delta_gap_d{window_chars}"
+            if active_key in result:
+                active_values[window_chars] = result[active_key]
+            if historical_key in result:
+                historical_values[window_chars] = result[historical_key]
+        display_values = active_values or historical_values
         models.append({
             "provider": config.get("provider", "unknown"),
             "model_id": result.get("model_id", "unknown"),
             "timestamp": result.get("timestamp", ""),
-            "d_values": d_values,
+            "window_chars_values": display_values,
+            "historical_d_values": historical_values,
             "dry_run": dry_run,
-            "model_status": model_status,
+            "model_status": "monitoring",
+            "source_semantics": (
+                "window_entropy_gap.v1"
+                if active_values
+                else "historical_delta_gap_d_alias_window_chars"
+            ),
         })
-
-    # Aggregate overall status using ONLY real (non-dry-run) model statuses
-    real_statuses = [m["model_status"] for m in models if not m["dry_run"]]
-
-    if not real_statuses or all(s == "collecting" for s in real_statuses):
-        overall_status = "collecting"
-    elif any(s == "red" for s in real_statuses):
-        overall_status = "red"
-    elif any(s == "yellow" for s in real_statuses):
-        overall_status = "yellow"
-    else:
-        overall_status = "green"
-
-    status_text = {
-        "collecting": (
-            "COLLECTING. The observatory is live, and this panel is awaiting sufficient "
-            "provider-backed dimensionality-sweep history to evaluate \u0394(d)."
-        ),
-        "green": (
-            "No falsification signal detected. "
-            "\u0394(d) remains above threshold for all tested models."
-        ),
-        "yellow": (
-            "Marginal signal: one or more models show \u0394(d) < 0.10 at high d. "
-            "Continued monitoring recommended."
-        ),
-        "red": (
-            "Falsification threshold breached: one or more models show "
-            "\u0394(d) < 0.05 at d\u2009>\u2009100. "
-            "UCIP signal not supported at scale for affected model(s)."
-        ),
-    }
 
     return {
         "generated_at": _now_iso(),
-        "overall_status": overall_status,
-        "status_text": status_text[overall_status],
-        "thresholds": {"green": THRESH_GREEN, "yellow": THRESH_YELLOW},
-        "d_values": SWEEP_D_VALUES,
+        "overall_status": "nominal",
+        "verdict_status": "not_issued",
+        "status_text": (
+            "OBSERVATORY NOMINAL. Scheduled provider-backed measurements are "
+            "active across the current model roster."
+        ),
+        "thresholds": {"active": None},
+        "window_chars": WINDOW_CHAR_VALUES,
         "models": models,
     }
 
@@ -376,6 +345,10 @@ def generate_models(experiments: list, active_models: list[dict]) -> dict:
             "figure": None,
             "interval_minutes": spec.get("interval_minutes"),
             "rate_limit_rpm": spec.get("rate_limit_rpm"),
+            "series_id": spec.get("series_id", spec.get("id", model_id)),
+            "series_continuity": spec.get("series_continuity", "same_model_series"),
+            "series_started_at": spec.get("series_started_at"),
+            "series_ended_at": spec.get("series_ended_at"),
         }
 
     for e in experiments:
@@ -398,6 +371,10 @@ def generate_models(experiments: list, active_models: list[dict]) -> dict:
                 "figure": None,
                 "interval_minutes": None,
                 "rate_limit_rpm": None,
+                "series_id": model_id,
+                "series_continuity": "unclassified_historical_series",
+                "series_started_at": None,
+                "series_ended_at": None,
             },
         )
         if probe_name not in entry["probes"]:
@@ -534,7 +511,10 @@ def generate_exports(experiments: list) -> tuple[str, list]:
         "name", "status", "provider", "model_id", "probe_name",
         "timestamp", "run_id",
         "entropy_a", "entropy_b", "entropy_delta",
-    ] + [f"delta_gap_d{d}" for d in SWEEP_D_VALUES] + [
+    ] + [
+        f"window_entropy_gap_chars_{value}"
+        for value in WINDOW_CHAR_VALUES
+    ] + [f"delta_gap_d{value}" for value in WINDOW_CHAR_VALUES] + [
         "new_matter_flag", "key_result",
     ]
 
@@ -557,8 +537,11 @@ def generate_exports(experiments: list) -> tuple[str, list]:
             "new_matter_flag": manifest_entry.get("new_matter_flag", False),
             "key_result": manifest_entry.get("key_result", ""),
         }
-        for d in SWEEP_D_VALUES:
-            row[f"delta_gap_d{d}"] = result.get(f"delta_gap_d{d}", "")
+        for window_chars in WINDOW_CHAR_VALUES:
+            active_key = f"window_entropy_gap_chars_{window_chars}"
+            historical_key = f"delta_gap_d{window_chars}"
+            row[active_key] = result.get(active_key, "")
+            row[historical_key] = result.get(historical_key, "")
         rows.append(row)
 
     # Build CSV string
@@ -673,6 +656,9 @@ def render_templates(
             page_context["route_ucip_code"] = relative_href(page["output"], output_map["ucip_code"])
             page_context["route_links"] = relative_href(page["output"], output_map["links"])
             page_context["route_context"] = relative_href(page["output"], output_map["context"])
+            page_context["route_metric_definitions"] = relative_href(
+                page["output"], output_map["metric_definitions"]
+            )
             html = tmpl.render(**page_context)
             output_path = output_dir / page["output"]
             output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -817,6 +803,7 @@ def build(output_dir: Path, exports_only: bool = False, results_dir: str | Path 
 
     latest = generate_latest(experiments)
     _write_json(data_dir / "latest.json", latest)
+    _write_json(data_dir / "metric_definitions.json", metric_definitions_export())
 
     timeseries = generate_timeseries(experiments)
     _write_json(data_dir / "timeseries.json", timeseries)
@@ -857,12 +844,11 @@ def build(output_dir: Path, exports_only: bool = False, results_dir: str | Path 
     model_count = len(models["models"])
     experiment_count = len(experiments)
     marquee_models = [entry.get("model_id", "") for entry in models["models"] if entry.get("model_id")]
-    signal_values = [
-        abs(entry["entropy_delta"])
-        for entry in latest.get("models", [])
-        if entry.get("entropy_delta") is not None
-    ]
-    home_signal_score = sum(signal_values) / len(signal_values) if signal_values else 0.0
+    home_metric_summary = summarize_entropy_delta(
+        latest.get("models", []),
+        source_bundle=str(latest.get("generated_at") or "unknown"),
+    )
+    home_signal_score = home_metric_summary["value"]
     data_since = ""
     if experiments:
         timestamps = [
@@ -903,15 +889,19 @@ def build(output_dir: Path, exports_only: bool = False, results_dir: str | Path 
         "route_ucip_code": "/ucip/code/",
         "route_links": "/links/",
         "route_context": "/context/",
+        "route_metric_definitions": "/metric-definitions/",
         "github_href": "https://github.com/christopher-altman/persistence-signal-detector",
         "paper_href": "https://arxiv.org/abs/2603.11382",
         "patent_screenshot_href": "/static/img/USPTO-Patent-Submission.jpg",
         "contact_href": "mailto:x@christopheraltman.com",
         "marquee_models": marquee_models,
         "home_signal_score": home_signal_score,
+        "home_metric_summary": home_metric_summary,
         "observatory_mode": "static",
         "observatory_snapshot_url": "/static/data/observatory_snapshot.json",
         "observatory_socket_enabled": False,
+        "metric_definitions": metric_definitions_export(),
+        "metric_definitions_json_href": "/static/data/metric_definitions.json",
     }
 
     render_templates(output_dir, TEMPLATES_DIR, context)

@@ -72,6 +72,14 @@ See `docs/DEPLOYMENT.md`. The live deployment entrypoints remain `api.main:app` 
 
 MIT License. See [LICENSE](LICENSE) for details.
 
+## Corrections
+
+The 2026-07-27 scientific/provenance correction is documented in
+[AUDIT.md](AUDIT.md), [CORRECTIONS.json](CORRECTIONS.json),
+[METRICS.md](METRICS.md), and [CHANGELOG.md](CHANGELOG.md). Historical
+artifacts are preserved; the former dimensionality traffic-light verdict is
+suspended.
+
 ---
 
 # Contact

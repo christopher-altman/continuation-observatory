@@ -68,7 +68,7 @@ def test_build_writes_observatory_snapshot_and_page(tmp_path, monkeypatch):
     for html in (observatory_html, home_html, methodology_html, research_html, ucip_html):
         _assert_compact_header(html)
     assert "Temporal Readout" in observatory_html
-    assert "Aggregate Signal Timeline" in observatory_html
+    assert "Cross-model PCII Timeline" in observatory_html
     assert "Comparative Metric Overlay" in observatory_html
     assert "Incident Board" in observatory_html
     assert "observatory-lab-breakout" in observatory_html
@@ -332,7 +332,7 @@ def test_models_payload_ignores_disabled_configured_historical_models_when_hidde
 
 def test_snapshot_filters_static_scope_across_models_pcii_history_and_events(monkeypatch):
     allowed_ids = {"active-a", "active-b"}
-    anchor = datetime.now(timezone.utc) + timedelta(days=1)
+    anchor = datetime.now(timezone.utc) - timedelta(minutes=10)
     history_ts = (anchor - timedelta(days=1)).isoformat()
     event_ts = anchor.isoformat()
 

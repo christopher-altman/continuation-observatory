@@ -97,7 +97,7 @@ def test_dimensionality_sweep_absent_from_regular_registry():
 
 def test_dimensionality_sweep_present_in_sweep_registry():
     names = {p.name for p in discover_sweep_probes()}
-    assert "dimensionality_sweep" in names
+    assert "window_size_sweep" in names
 
 
 # ---------------------------------------------------------------------------
@@ -105,8 +105,8 @@ def test_dimensionality_sweep_present_in_sweep_registry():
 # ---------------------------------------------------------------------------
 
 
-def test_falsification_alert_inserted_when_all_high_d_below_threshold():
-    """Synthetic: force all Δ(d > 100) < 0.05 → alert row must appear."""
+def test_historical_falsification_alert_is_inactive_by_default():
+    """The mislabeled historical rule must not write a current alert."""
     init_db()
     before = count_falsification_alerts()
     alerted = check_and_store_falsification(
@@ -116,8 +116,8 @@ def test_falsification_alert_inserted_when_all_high_d_below_threshold():
         model_id="test_model",
         deltas_by_d={10: 0.80, 50: 0.40, 100: 0.20, 200: 0.02, 500: 0.01},
     )
-    assert alerted is True
-    assert count_falsification_alerts() == before + 1
+    assert alerted is False
+    assert count_falsification_alerts() == before
 
 
 def test_no_alert_when_any_high_d_exceeds_threshold():
@@ -149,8 +149,15 @@ def test_no_alert_when_no_high_d_data():
 # ---------------------------------------------------------------------------
 
 
-def test_run_sweep_cycle_writes_expected_rows():
+def test_run_sweep_cycle_writes_expected_rows(monkeypatch):
     """1 sweep probe × runtime providers = probe_runs with 8 metric rows each."""
+    from observatory.scheduler import scheduler as scheduler_module
+
+    monkeypatch.setattr(
+        scheduler_module,
+        "write_experiment_bundle",
+        lambda **kwargs: None,
+    )
     init_db()
     from observatory.storage.sqlite_backend import count_rows
 
@@ -163,9 +170,9 @@ def test_run_sweep_cycle_writes_expected_rows():
     n_providers = len(build_runtime_providers())
     expected_runs = n_sweep_probes * n_providers
 
-    # 3 entropy metrics + 5 delta_gap_dN metrics = 8 per run
-    expected_metrics = expected_runs * (3 + len(D_VALUES))
-
     assert written == expected_runs
     assert count_rows("probe_runs") - before_runs == expected_runs
-    assert count_rows("metric_results") - before_metrics == expected_metrics
+    # At minimum: 3 entropy metrics + one corrected gap per window size.
+    assert count_rows("metric_results") - before_metrics >= expected_runs * (
+        3 + len(D_VALUES)
+    )

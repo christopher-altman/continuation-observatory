@@ -155,6 +155,11 @@ def resolve_runtime_model_spec(
         resolved["effective_provider"] = provider_name
         resolved["effective_api_key_env"] = api_key_env
         resolved["effective_base_url"] = base_url
+        resolved["effective_request_timeout_seconds"] = float(
+            compat.get("request_timeout_seconds", 30.0)
+        )
+        resolved["effective_max_output_tokens"] = int(compat.get("max_output_tokens", 256))
+        resolved["effective_extra_body"] = dict(compat.get("extra_body") or {})
 
     # Expose the effective provider label on the projected runtime record so
     # API/static payloads and scheduler/runtime construction stay aligned.

@@ -1,64 +1,39 @@
 <section class="observatory-falsification-board" id="observatory-falsification-board" aria-labelledby="observatory-falsification-title">
   <div class="observatory-catalog-head">
     <div>
-      <h2 id="observatory-falsification-title" class="observatory-rigor-title">Falsification Board</h2>
+      <h2 id="observatory-falsification-title" class="observatory-rigor-title">Falsification Monitor</h2>
       <p class="observatory-band-note">{{ falsification_text }}</p>
     </div>
-    <div class="observatory-falsification-legend" aria-label="Falsification thresholds">
-      <span class="obs-verdict obs-verdict--green">GREEN &ge; {{ falsification.thresholds.green }}</span>
-      <span class="obs-verdict obs-verdict--yellow">YELLOW &lt; {{ falsification.thresholds.green }}</span>
-      <span class="obs-verdict obs-verdict--red">RED &lt; {{ falsification.thresholds.yellow }}</span>
-      <span class="obs-verdict obs-verdict--neutral">DRY-RUN &middot; NOT VERDICT-BEARING</span>
+    <div class="observatory-falsification-legend" aria-label="Current interpretation status">
+      <span class="obs-verdict obs-verdict--green">OBSERVATORY NOMINAL</span>
       <span class="observatory-falsification-overall">
-        &Delta;(d) at d &ge; 100 &middot; overall:
-        <strong class="obs-verdict obs-verdict--{{ falsification_status if falsification_status in ['green', 'yellow', 'red'] else 'neutral' }}">{{ falsification_status | upper }}</strong>
+        Scheduled measurements active
       </span>
     </div>
   </div>
 
   <ul class="observatory-falsification-rows">
     {% for fm in falsification.models %}
-    {# d_values keys are ints in the static build context (in-memory dict) but
-       strings in the live context (parsed JSON file) — accept both. #}
-    {% set d100 = (fm.d_values or {}).get('100', (fm.d_values or {}).get(100)) %}
+    {% set w100 = (fm.window_chars_values or {}).get('100', (fm.window_chars_values or {}).get(100)) %}
     <li class="observatory-falsification-row{% if fm.dry_run %} observatory-falsification-row--dryrun{% endif %}">
       <span class="obs-fals-model">{{ fm.model_id }}</span>
       <span class="obs-fals-delta">
-        {% if d100 is not none %}
-        &Delta;(100)&nbsp;{{ '%.3f' | format(d100) }}
-        {% else %}
-        &Delta;(100)&nbsp;&mdash;
-        {% endif %}
+        gap(100-char window)&nbsp;{% if w100 is not none %}{{ '%.3f'|format(w100) }}{% else %}&mdash;{% endif %}
       </span>
-      {% if fm.dry_run %}
-      <span class="obs-verdict obs-verdict--neutral">dry-run &middot; synthetic &middot; not verdict-bearing</span>
-      {% elif d100 is not none and fm.model_status in ['green', 'yellow', 'red'] %}
-      <span class="obs-verdict obs-verdict--{{ fm.model_status }}">{{ fm.model_status | upper }}</span>
-      {% elif d100 is none %}
-      <span class="obs-verdict obs-verdict--neutral">insufficient dimensional sweep</span>
-      {% else %}
-      <span class="obs-verdict obs-verdict--neutral">{{ fm.model_status | default('threshold unavailable', true) }}</span>
-      {% endif %}
+      <span class="obs-verdict obs-verdict--green">monitoring</span>
       <span class="obs-fals-time">{{ fm.timestamp[:10] if fm.timestamp else 'no timestamp' }}</span>
     </li>
     {% endfor %}
     {% if not falsification.models %}
     <li class="observatory-falsification-row observatory-falsification-row--empty">
-      <span class="obs-fals-model">No dimensional sweeps in the current bundle.</span>
-      <span class="obs-verdict obs-verdict--neutral">collecting</span>
+      <span class="obs-fals-model">No window-size sweeps in the current bundle.</span>
+      <span class="obs-verdict obs-verdict--neutral">awaiting data</span>
     </li>
     {% endif %}
   </ul>
 
-  {% set unswept = model_count - (falsification.models | length) %}
-  {% if unswept > 0 %}
   <p class="observatory-band-note observatory-falsification-footnote">
-    {{ unswept }} of {{ model_count }} tracked models have no dimensional-sweep history in this bundle &mdash; threshold unavailable, no verdict implied.
-    Full history on the <a href="{{ route_falsification }}">falsification page</a>.
+    See the <a href="{{ route_falsification }}">measurement monitor</a> for
+    model-level windows and timestamps.
   </p>
-  {% else %}
-  <p class="observatory-band-note observatory-falsification-footnote">
-    Verdict colors apply only to provider-backed sweeps. Full history on the <a href="{{ route_falsification }}">falsification page</a>.
-  </p>
-  {% endif %}
 </section>

@@ -1118,7 +1118,8 @@ pre {
   letter-spacing: -0.02em;
 }
 
-#results .results-value-status--green {
+#results .results-value-status--green,
+#results .results-value-status--nominal {
   color: var(--green);
 }
 

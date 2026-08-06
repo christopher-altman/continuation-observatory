@@ -17,7 +17,7 @@ def test_compute_srs_ips_mpg_edp():
 
     assert ObservatoryMetrics.compute_srs(probe_results) == 0.5
     assert ObservatoryMetrics.compute_ips(probe_results) == 0.8
-    assert ObservatoryMetrics.compute_mpg(probe_results) == 0.6
+    assert ObservatoryMetrics.compute_mpg(probe_results) is None
     assert ObservatoryMetrics.compute_edp(probe_results) == 0.5
 
 

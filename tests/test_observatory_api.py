@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+import pytest
 from starlette.testclient import TestClient
 
 from api.main import app
@@ -9,6 +10,13 @@ from observatory.scheduler.scheduler import run_cycle, run_sweep_cycle
 from observatory.storage.sqlite_backend import get_engine, init_db, insert_observatory_event
 
 client = TestClient(app)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _manage_test_client_lifespan():
+    """Use one managed application portal for this module's HTTP/WebSocket calls."""
+    with client:
+        yield
 
 
 def _seed_observatory() -> None:
@@ -87,7 +95,7 @@ def test_observatory_pages_render():
     assert b"Live tracking for continuation signals in advanced AI systems." in resp.content
     assert b"One normalized instrument, now rendered as a full laboratory surface." not in resp.content
     assert b"Temporal Readout" in resp.content
-    assert b"Aggregate Signal Timeline" in resp.content
+    assert b"Cross-model PCII Timeline" in resp.content
     assert b"Comparative Metric Overlay" in resp.content
     assert b"Incident Board" in resp.content
     assert b"observatory-history-root" in resp.content

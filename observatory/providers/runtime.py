@@ -39,6 +39,11 @@ def build_runtime_providers() -> list[BaseProvider]:
                     provider_name=str(spec.get("effective_provider", "openai-compatible")),
                     base_url=spec.get("effective_base_url"),
                     api_key_env=str(spec.get("effective_api_key_env", "OPENAI_API_KEY")),
+                    request_timeout_seconds=float(
+                        spec.get("effective_request_timeout_seconds", 30.0)
+                    ),
+                    max_output_tokens=int(spec.get("effective_max_output_tokens", 256)),
+                    extra_body=spec.get("effective_extra_body"),
                 )
             )
 

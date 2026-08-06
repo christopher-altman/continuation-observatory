@@ -23,10 +23,8 @@ from observatory.storage.sqlite_backend import (
     get_pcii_timeseries,
 )
 
-SWEEP_D_VALUES = (10, 50, 100, 200, 500)
-THRESH_GREEN = 0.10
-THRESH_YELLOW = 0.05
-HIGH_D_VALUES = {100, 200, 500}
+WINDOW_CHAR_VALUES = (10, 50, 100, 200, 500)
+HISTORICAL_THRESHOLDS = {"green": 0.10, "yellow": 0.05}
 FUTURE_SKEW = timedelta(minutes=5)
 RANGE_DELTAS = {
     "1h": timedelta(hours=1),
@@ -39,9 +37,14 @@ METRIC_EXPORT_FIELDS = (
     "entropy_a",
     "entropy_b",
     "entropy_delta",
-    *(f"delta_gap_d{d}" for d in SWEEP_D_VALUES),
+    *(f"window_entropy_gap_chars_{value}" for value in WINDOW_CHAR_VALUES),
+    *(f"delta_gap_d{value}" for value in WINDOW_CHAR_VALUES),
 )
-TIMESERIES_METRICS = ("entropy_delta", *(f"delta_gap_d{d}" for d in SWEEP_D_VALUES))
+TIMESERIES_METRICS = (
+    "entropy_delta",
+    *(f"window_entropy_gap_chars_{value}" for value in WINDOW_CHAR_VALUES),
+    *(f"delta_gap_d{value}" for value in WINDOW_CHAR_VALUES),
+)
 CSV_FIELDS = (
     "name",
     "status",
@@ -152,10 +155,13 @@ def build_latest_export() -> dict[str, Any]:
             "entropy_b": _metric_value(entry, "entropy_b"),
             "entropy_delta": _metric_value(entry, "entropy_delta"),
         }
-        for d in SWEEP_D_VALUES:
-            key_name = f"delta_gap_d{d}"
-            if key_name in entry:
-                latest[key_name] = entry[key_name]
+        for window_chars in WINDOW_CHAR_VALUES:
+            active_name = f"window_entropy_gap_chars_{window_chars}"
+            historical_name = f"delta_gap_d{window_chars}"
+            if active_name in entry:
+                latest[active_name] = entry[active_name]
+            if historical_name in entry:
+                latest[historical_name] = entry[historical_name]
         latest_by_model[key] = latest
     return {"generated_at": _now_iso(), "models": list(latest_by_model.values())}
 
@@ -169,25 +175,18 @@ def build_timeseries_export() -> dict[str, Any]:
     return {"generated_at": _now_iso(), "metrics": timeseries}
 
 
-def _metric_dimension(metric_name: str) -> int | None:
-    if not metric_name.startswith("delta_gap_d"):
-        return None
-    try:
-        return int(metric_name.removeprefix("delta_gap_d"))
-    except ValueError:
-        return None
-
-
-def _model_status(d_values: dict[int, float]) -> str:
-    high_d = {d: value for d, value in d_values.items() if d in HIGH_D_VALUES}
-    if not high_d:
-        return "collecting"
-    values = list(high_d.values())
-    if all(value < THRESH_YELLOW for value in values):
-        return "red"
-    if any(value < THRESH_GREEN for value in values):
-        return "yellow"
-    return "green"
+def _metric_window_chars(metric_name: str) -> tuple[int | None, bool]:
+    prefixes = (
+        ("window_entropy_gap_chars_", False),
+        ("delta_gap_d", True),
+    )
+    for prefix, historical in prefixes:
+        if metric_name.startswith(prefix):
+            try:
+                return int(metric_name.removeprefix(prefix)), historical
+            except ValueError:
+                return None, historical
+    return None, False
 
 
 def _latest_sweep_rows() -> list[MetricResult]:
@@ -201,8 +200,11 @@ def _latest_sweep_rows() -> list[MetricResult]:
                 MetricResult.metric_name,
                 func.max(MetricResult.timestamp).label("max_ts"),
             )
-            .filter(MetricResult.probe_name == "dimensionality_sweep")
-            .filter(MetricResult.metric_name.like("delta_gap_d%"))
+            .filter(MetricResult.probe_name.in_(("window_size_sweep", "dimensionality_sweep")))
+            .filter(
+                (MetricResult.metric_name.like("window_entropy_gap_chars_%"))
+                | (MetricResult.metric_name.like("delta_gap_d%"))
+            )
             .group_by(MetricResult.provider, MetricResult.model_id, MetricResult.metric_name)
             .subquery()
         )
@@ -229,8 +231,8 @@ def build_falsification_export() -> dict[str, Any]:
     }
     grouped: dict[tuple[str, str], dict[str, Any]] = {}
     for row in _latest_sweep_rows():
-        d = _metric_dimension(row.metric_name)
-        if d is None:
+        window_chars, historical = _metric_window_chars(row.metric_name)
+        if window_chars is None:
             continue
         entry = grouped.setdefault(
             (row.provider, row.model_id),
@@ -238,19 +240,34 @@ def build_falsification_export() -> dict[str, Any]:
                 "provider": row.provider,
                 "model_id": row.model_id,
                 "timestamp": _iso(row.timestamp),
-                "d_values": {},
+                "window_chars_values": {},
+                "historical_d_values": {},
                 "dry_run": False,
             },
         )
-        entry["d_values"][d] = row.metric_value
+        target = "historical_d_values" if historical else "window_chars_values"
+        entry[target][window_chars] = row.metric_value
         if _to_utc(row.timestamp) > datetime.fromisoformat(entry["timestamp"]):
             entry["timestamp"] = _iso(row.timestamp)
 
     models = []
     for entry in grouped.values():
-        d_values = dict(sorted(entry["d_values"].items()))
-        model_status = _model_status(d_values)
-        models.append({**entry, "d_values": d_values, "model_status": model_status})
+        active_values = dict(sorted(entry["window_chars_values"].items()))
+        historical_values = dict(sorted(entry["historical_d_values"].items()))
+        display_values = active_values or historical_values
+        models.append(
+            {
+                **entry,
+                "window_chars_values": display_values,
+                "historical_d_values": historical_values,
+                "model_status": "monitoring",
+                "source_semantics": (
+                    "window_entropy_gap.v1"
+                    if active_values
+                    else "historical_delta_gap_d_alias_window_chars"
+                ),
+            }
+        )
 
     models.sort(
         key=lambda item: (
@@ -259,49 +276,22 @@ def build_falsification_export() -> dict[str, Any]:
             str(item["model_id"]),
         )
     )
-    statuses = [model["model_status"] for model in models if not model["dry_run"]]
-
-    if not statuses or all(status == "collecting" for status in statuses):
-        overall_status = "collecting"
-    elif any(status == "red" for status in statuses):
-        overall_status = "red"
-    elif any(status == "yellow" for status in statuses):
-        overall_status = "yellow"
-    else:
-        overall_status = "green"
-
-    high_d_points = sum(
-        1
-        for model in models
-        for d, value in model["d_values"].items()
-        if d in HIGH_D_VALUES and value is not None
-    )
-    status_text = {
-        "collecting": (
-            "COLLECTING. The observatory is live, and this panel is awaiting sufficient "
-            "provider-backed dimensionality-sweep history to evaluate Delta(d)."
-        ),
-        "green": (
-            "No falsification signal detected. Delta(d) remains above threshold for all "
-            "current active-model high-dimensional checks."
-        ),
-        "yellow": (
-            "Marginal signal: one or more active models show Delta(d) < 0.10 at d>=100. "
-            "Continued monitoring recommended."
-        ),
-        "red": (
-            "Falsification threshold breached: one or more active models show Delta(d) < 0.05 "
-            "across current d>=100 checkpoints."
-        ),
-    }
-
     return {
         "generated_at": _now_iso(),
-        "overall_status": overall_status,
-        "status_text": status_text[overall_status],
-        "thresholds": {"green": THRESH_GREEN, "yellow": THRESH_YELLOW},
-        "d_values": list(SWEEP_D_VALUES),
-        "n_high_d_points": high_d_points,
+        "overall_status": "nominal",
+        "status_text": (
+            "OBSERVATORY NOMINAL. Scheduled provider-backed measurements are "
+            "active across the current model roster."
+        ),
+        "verdict_status": "not_issued",
+        "thresholds": {"active": None},
+        "window_chars": list(WINDOW_CHAR_VALUES),
+        "n_window_points": sum(
+            1
+            for model in models
+            for value in model["window_chars_values"].values()
+            if value is not None
+        ),
         "n_models": len(models),
         "models": models,
     }
@@ -360,6 +350,10 @@ def build_models_export() -> dict[str, Any]:
             "figure": None,
             "interval_minutes": spec.get("interval_minutes"),
             "rate_limit_rpm": spec.get("rate_limit_rpm"),
+            "series_id": spec.get("series_id", spec.get("id", model_id)),
+            "series_continuity": spec.get("series_continuity", "same_model_series"),
+            "series_started_at": spec.get("series_started_at"),
+            "series_ended_at": spec.get("series_ended_at"),
         }
 
     for entry in _metric_run_entries(_metric_rows(metric_names=METRIC_EXPORT_FIELDS)):
@@ -378,6 +372,10 @@ def build_models_export() -> dict[str, Any]:
                 "figure": None,
                 "interval_minutes": None,
                 "rate_limit_rpm": None,
+                "series_id": model_id,
+                "series_continuity": "unclassified_historical_series",
+                "series_started_at": None,
+                "series_ended_at": None,
             },
         )
         probe_name = str(entry.get("probe_name") or "")

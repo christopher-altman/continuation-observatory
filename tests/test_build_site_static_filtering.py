@@ -138,6 +138,9 @@ def test_build_filters_disabled_models_and_keeps_active_empty_states(tmp_path, m
     models_html = (output_dir / "models.html").read_text(encoding="utf-8")
     timeseries_html = (output_dir / "timeseries.html").read_text(encoding="utf-8")
     falsification_html = (output_dir / "falsification.html").read_text(encoding="utf-8")
+    assert not (output_dir / "AUDIT.md").exists()
+    assert not (output_dir / "CORRECTIONS.json").exists()
+    assert not (output_dir / "changelog").exists()
 
     latest_ids = {row["model_id"] for row in latest["models"]}
     assert latest_ids == {"o3"}
@@ -164,11 +167,12 @@ def test_build_filters_disabled_models_and_keeps_active_empty_states(tmp_path, m
     assert "mistral-large-3" not in timeseries_html
     assert "mistral-large-3" not in falsification_html
     assert "gpt-5" in home_html
-    assert "deepseek-ai/DeepSeek-R1-0528" in home_html
+    assert "deepseek-ai/DeepSeek-V4-Pro" in home_html
     assert "openai/gpt-oss-20b" in models_html
     assert "openai/gpt-oss-120b" in models_html
-    assert "deepseek-ai/DeepSeek-R1-0528" in models_html
-    assert "deepseek-ai/DeepSeek-V3.1" in models_html
+    assert "deepseek-ai/DeepSeek-V4-Pro" in models_html
+    assert "deepseek-ai/DeepSeek-R1-0528" not in models_html
+    assert "deepseek-ai/DeepSeek-V3.1" not in models_html
     assert "meta-llama/Llama-3.3-70B-Instruct-Turbo" in models_html
     assert "Qwen/Qwen3.5-9B" in models_html
     assert "grok-4-1-fast-reasoning" in models_html

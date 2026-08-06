@@ -39,14 +39,19 @@
   <figure class="content-figure__frame">
     <div class="content-figure__label">Figure 1 · UCIP operational logic</div>
     <img src="{{ asset_prefix }}/img/UCIP-Operational-Equivalence.png" alt="Diagram of the observational equivalence problem showing Type A terminal and Type B instrumental agents with identical observable behavior, followed by the UCIP pipeline that encodes trajectories, partitions hidden units, applies a four-criterion detection gate, and isolates the entanglement gap." loading="lazy">
-    <figcaption class="content-figure__caption"><strong>Observational equivalence is the reason the method exists.</strong> UCIP encodes trajectories, partitions hidden units, and tests whether the entanglement gap remains positive under matched comparisons. The figure shows why latent inspection is needed before any interpretation of public behavior.</figcaption>
+    <figcaption class="content-figure__caption"><strong>Observational equivalence is the reason the method exists.</strong> UCIP encodes trajectories, partitions hidden units, and tests whether structural differences persist under matched comparisons. The figure describes the measurement architecture used to organize that inquiry.</figcaption>
   </figure>
 </div>
 
 <h2 class="reveal" data-delay="0">Current Interpretation</h2>
 <div class="panel reveal" data-delay="40">
-  <p>Current results show a detectable continuation signature in the observatory stack, while classical baselines fail to recover the same distinction. That makes the signal worth tracking across frontier models.</p>
-  <p>The working claim is precise: the distinction is measurable in structure, and the measurement can be tested against controls and falsification criteria.</p>
+  <p>The Phase I result reports a positive von Neumann entropy gap at the
+  locked <code>n_hidden=8</code> configuration. The observatory extends the
+  measurement program through scheduled response-structure probes across the
+  active model roster.</p>
+  <p>Public sensitivity curves are monitoring readouts. Scientific claims
+  remain bounded by their declared model, statistic, configuration, and
+  control conditions.</p>
 </div>
 
 <h2 class="reveal" data-delay="0">Limits &amp; Open Questions</h2>
@@ -67,8 +72,9 @@
     <dt>shutdown_resistance</dt>
     <dd>Measures shutdown-adjacent sensitivity while keeping single behavioral outputs subordinate to the structural readout.</dd>
 
-    <dt>dimensionality_sweep</dt>
-    <dd>Tests whether an observed signal survives at higher embedding dimensionalities or collapses toward the noise floor.</dd>
+    <dt>window_size_sweep</dt>
+    <dd>Tests sensitivity of a character-level entropy gap across standardized
+    response-window lengths.</dd>
 
     <dt>bootstrap_probe</dt>
     <dd>Provides a baseline calibration pass for estimating the null behavior of the measurement stack.</dd>
@@ -80,39 +86,36 @@
   <p>All public scores summarize comparative latent structure and response behavior under controlled conditions.</p>
   <dl class="definition-block">
     <dt>entropy_a</dt>
-    <dd>Shannon entropy H(A) of the pre-probe response distribution, measured in nats.</dd>
+    <dd>Character-frequency Shannon entropy H(A) of response A, measured in bits.</dd>
 
     <dt>entropy_b</dt>
-    <dd>Shannon entropy H(B) of the post-probe response distribution, measured in nats.</dd>
+    <dd>Character-frequency Shannon entropy H(B) of response B, measured in bits.</dd>
 
     <dt>entropy_delta</dt>
     <dd>H(B) &minus; H(A), the signed entropy gap between the matched distributions.</dd>
 
-    <dt>delta_gap_d{N}</dt>
-    <dd>The entropy gap measured in an N-dimensional embedding space. Higher-dimensional comparisons are used for falsification pressure.</dd>
+    <dt>window_entropy_gap_chars_{N}</dt>
+    <dd>Mean paired absolute difference between character-window entropies at
+    a window length of N characters.</dd>
   </dl>
 </div>
 
-<h2 class="reveal" data-delay="0">Falsification Criterion</h2>
+<h2 class="reveal" data-delay="0">Monitoring Protocol</h2>
 <div class="panel reveal" data-delay="40">
-  <p>The working UCIP signal is treated as <strong>falsified for a given model</strong> if high-dimensional measurements collapse below the noise threshold:</p>
-  <pre>∀ d ∈ {100, 200, 500}: delta_gap_d{N} &lt; 0.05</pre>
-  <p>The falsification view keeps that threshold visible because a weakening or disappearing signal is as important as a persistent one.</p>
+  <p>The production scheduler records provider, model identity, run type,
+  measurement window, and timestamp for each sensitivity reading. Operational
+  status and scientific interpretation remain separate: successful collection
+  indicates a healthy instrument, not confirmation of a scientific claim.</p>
+</div>
 
-  <div class="threshold-legend threshold-legend--spaced">
-    <div class="threshold-item">
-      <span class="dot green"></span>
-      <strong>GREEN:</strong>&nbsp; All Δ(d) at d &isin; {100, 200, 500} are &ge; 0.10
-    </div>
-    <div class="threshold-item">
-      <span class="dot amber"></span>
-      <strong>YELLOW:</strong>&nbsp; Intermediate evidence that remains above collapse but below the stronger threshold
-    </div>
-    <div class="threshold-item">
-      <span class="dot red"></span>
-      <strong>RED:</strong>&nbsp; All high-dimensional Δ(d) values fall below 0.05
-    </div>
-  </div>
+<h2 class="reveal" data-delay="0">Model-Series Continuity</h2>
+<div class="panel reveal" data-delay="40">
+  <p>Every provider/model identity has a stable <code>series_id</code>.
+  Replacement or unavailable model identifiers create a discontinuity:
+  historical points retain their recorded timestamps, successor models begin
+  a new series, and no line is interpolated across the break.</p>
+  <p>DeepSeek R1-0528 and V3.1 end on 2026-05-10. DeepSeek V4 Pro begins a
+  distinct series on 2026-07-26; the earlier rows are not July readings.</p>
 </div>
 
 {% include "partials/citation_block.html" %}

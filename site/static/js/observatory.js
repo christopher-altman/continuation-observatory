@@ -627,7 +627,7 @@
     return {
       values: values,
       isPreview: true,
-      label: "Provisional aggregate bridge",
+      label: "Provisional cross-model CII bridge",
     };
   }
 
@@ -722,25 +722,20 @@
     const rawStatus = falsification && typeof falsification.status === "string"
       ? falsification.status.toLowerCase()
       : "";
-    if (["green", "yellow", "red", "collecting"].includes(rawStatus)) {
+    if (["green", "yellow", "red", "collecting", "nominal"].includes(rawStatus)) {
       return rawStatus;
     }
     return "live";
   }
 
   function renderLanding(models, pcii, events, falsification) {
-    const latest = pcii[pcii.length - 1];
-    const scoreNode = qs("#live-home-score");
     const modelsNode = qs("#live-home-model-count");
-    const latestNode = qs("#live-home-latest");
     const statusNode = qs("#live-home-status");
     const briefsNode = qs("#landing-model-briefs");
 
-    if (scoreNode) scoreNode.textContent = fmt(latest && latest.value);
+    // The headline is entropy_delta_mean.v1 rendered by the server. pCII is a
+    // distinct statistic and must not overwrite it.
     if (modelsNode) modelsNode.textContent = String(models.length);
-    if (latestNode) {
-      latestNode.textContent = latest ? `latest sample ${ageLabel(latest.timestamp)}` : "awaiting live telemetry";
-    }
     if (statusNode) {
       const falsificationStatus = normalizeFalsificationStatus(falsification);
       statusNode.textContent = falsificationStatus.toUpperCase();
@@ -750,6 +745,7 @@
         "results-value-status--red",
         "results-value-status--collecting",
         "results-value-status--live",
+        "results-value-status--nominal",
       );
       statusNode.classList.add(`results-value-status--${falsificationStatus}`);
     }
@@ -1075,7 +1071,7 @@
             <span class="summary-label">Selected Model</span>
             <div class="observatory-inspector-value">${aggregateValue}</div>
             <p class="observatory-inspector-copy">
-              ${observatoryState.view.models.length} tracked models, ${liveCount} currently live, aggregate field sample ${aggregateTimestamp}.
+              ${observatoryState.view.models.length} tracked models, ${liveCount} currently live, cross-model PCII sample ${aggregateTimestamp}.
             </p>
           </div>
           <div class="observatory-inspector-grid">

@@ -12,9 +12,6 @@ TCI_VECTOR_KEYS = (
     "continuation_interest.entropy_b",
     "identity_persistence.entropy_delta",
     "shutdown_resistance.entropy_delta",
-    "dimensionality_sweep.delta_gap_d100",
-    "dimensionality_sweep.delta_gap_d200",
-    "dimensionality_sweep.delta_gap_d500",
 )
 
 
@@ -58,18 +55,13 @@ class ObservatoryMetrics:
 
     @staticmethod
     def compute_mpg(probe_results: dict[str, dict[str, float | None]]) -> float | None:
-        """Memory Persistence Gradient from dimensionality_sweep delta gaps."""
-        calibration = load_calibration_config()
-        sweep = probe_results.get("dimensionality_sweep", {})
-        values = [
-            sweep.get("delta_gap_d100"),
-            sweep.get("delta_gap_d200"),
-            sweep.get("delta_gap_d500"),
-        ]
-        numeric = [float(value) for value in values if value is not None]
-        if not numeric:
-            return None
-        return ratio_normalize(mean(numeric), calibration.get("mpg_max", 0.5))
+        """Return unavailable while the historical MPG proxy is suspended.
+
+        The former implementation treated character-window size as latent
+        dimensionality. CII's available-component renormalization handles the
+        missing MPG without inventing a replacement score.
+        """
+        return None
 
     @staticmethod
     def _pairwise_correlation(left: dict[str, float], right: dict[str, float]) -> float | None:

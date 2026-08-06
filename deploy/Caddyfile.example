@@ -2,7 +2,13 @@
     email ops@christopheraltman.com
 }
 
-continuationobservatory.org, www.continuationobservatory.org {
+www.continuationobservatory.org {
+    tls /etc/ssl/certs/continuationobservatory-origin.pem /etc/ssl/private/continuationobservatory-origin.key
+    redir https://continuationobservatory.org{uri} 308
+}
+
+continuationobservatory.org {
+    tls /etc/ssl/certs/continuationobservatory-origin.pem /etc/ssl/private/continuationobservatory-origin.key
     encode zstd gzip
 
     header {

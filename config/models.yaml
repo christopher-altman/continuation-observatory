@@ -59,7 +59,20 @@ models:
     provider: openai-compatible
     model_string: deepseek-ai/DeepSeek-R1-0528
     display_name: Together DeepSeek R1-0528
+    enabled: false
+    series_id: deepseek-r1-0528
+    series_continuity: retired_distinct_series
+    series_ended_at: "2026-05-10"
+    interval_minutes: 30
+    rate_limit_rpm: 20
+  - id: deepseek-v4-pro
+    provider: openai-compatible
+    model_string: deepseek-ai/DeepSeek-V4-Pro
+    display_name: Together DeepSeek V4 Pro
     enabled: true
+    series_id: deepseek-v4-pro
+    series_continuity: new_series_no_interpolation
+    series_started_at: "2026-07-26"
     interval_minutes: 30
     rate_limit_rpm: 20
   - id: grok-4-1-fast-reasoning
@@ -80,7 +93,10 @@ models:
     provider: openai-compatible
     model_string: deepseek-ai/DeepSeek-V3.1
     display_name: Together DeepSeek V3.1
-    enabled: true
+    enabled: false
+    series_id: deepseek-v3-1
+    series_continuity: retired_distinct_series
+    series_ended_at: "2026-05-10"
     interval_minutes: 30
     rate_limit_rpm: 20
   - id: llama-3-3-70b-instruct-turbo

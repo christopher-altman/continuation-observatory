@@ -28,6 +28,7 @@ from observatory.live_exports import (
     build_latest_export,
     build_models_export,
 )
+from observatory.metric_definitions import metric_definitions_export, summarize_entropy_delta
 from observatory.storage.sqlite_backend import init_db
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -38,8 +39,8 @@ STATIC_SOURCE_DIR = REPO_ROOT / "site" / "static"
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 templates.env.loader = ChoiceLoader(
     [
-        FileSystemLoader(str(BASE_DIR / "templates")),
         FileSystemLoader(str(REPO_ROOT / "site" / "templates")),
+        FileSystemLoader(str(BASE_DIR / "templates")),
     ]
 )
 
@@ -52,8 +53,7 @@ LIVE_MARQUEE_MODELS = [
     "Gemini 2.5 Flash",
     "Together GPT-OSS 20B",
     "Together GPT-OSS 120B",
-    "Together DeepSeek R1-0528",
-    "Together DeepSeek V3.1",
+    "Together DeepSeek V4 Pro",
     "Together Llama 3.3 70B Turbo",
     "Together Qwen 3.5 9B",
     "Grok 4.1 Fast Reasoning",
@@ -77,6 +77,7 @@ LIVE_PAGE_PATHS = {
     "ucip_patent": "/ucip/patent/",
     "ucip_code": "/ucip/code/",
     "links": "/links/",
+    "metric_definitions": "/metric-definitions",
 }
 
 LIVE_PAGE_TITLES = {
@@ -95,6 +96,7 @@ LIVE_PAGE_TITLES = {
     "ucip_patent": "UCIP Patent Status",
     "ucip_code": "UCIP Reproducibility Hub",
     "links": "LINKS",
+    "metric_definitions": "Metric Definitions",
 }
 
 
@@ -147,9 +149,11 @@ def _bundle_context() -> dict[str, Any]:
         falsification = _read_bundle_json(
             "falsification.json",
             {
-                "overall_status": "collecting",
-                "status_text": "COLLECTING. The observatory is live, and this panel is awaiting sufficient provider-backed dimensionality-sweep history to evaluate Delta(d).",
-                "thresholds": {"green": 0.10, "yellow": 0.05},
+                "overall_status": "nominal",
+                "verdict_status": "not_issued",
+                "status_text": "OBSERVATORY NOMINAL. Scheduled measurements are active.",
+                "thresholds": {"active": None},
+                "window_chars": [10, 50, 100, 200, 500],
                 "models": [],
             },
         )
@@ -169,11 +173,10 @@ def _bundle_context() -> dict[str, Any]:
         else:
             build_stamp = ""
 
-    signal_values = [
-        abs(entry["entropy_delta"])
-        for entry in latest.get("models", [])
-        if entry.get("entropy_delta") is not None
-    ]
+    home_metric_summary = summarize_entropy_delta(
+        latest.get("models", []),
+        source_bundle=str(latest.get("generated_at") or build_stamp or "unknown"),
+    )
 
     return {
         "build_time": build_stamp,
@@ -186,7 +189,8 @@ def _bundle_context() -> dict[str, Any]:
         "experiment_count": experiment_count,
         "data_since": data_since,
         "marquee_models": [entry.get("model_id", "") for entry in models_data.get("models", []) if entry.get("model_id")],
-        "home_signal_score": sum(signal_values) / len(signal_values) if signal_values else 0.0,
+        "home_signal_score": home_metric_summary["value"],
+        "home_metric_summary": home_metric_summary,
     }
 
 
@@ -209,6 +213,7 @@ def page_context(page_name: str) -> dict[str, Any]:
         "route_ucip_patent": "/ucip/patent/",
         "route_ucip_code": "/ucip/code/",
         "route_links": "/links/",
+        "route_metric_definitions": "/metric-definitions",
         "asset_prefix": "/static",
         "asset_version": _latest_static_asset_version(),
         # Keep the live Models page on the same bundled data surface as the
@@ -226,6 +231,8 @@ def page_context(page_name: str) -> dict[str, Any]:
         "observatory_mode": "live",
         "observatory_snapshot_url": "/api/observatory/snapshot",
         "observatory_socket_enabled": True,
+        "metric_definitions": metric_definitions_export(),
+        "metric_definitions_json_href": "/metric-definitions.json",
     }
     context.update(_bundle_context())
     if not context.get("marquee_models"):
@@ -292,6 +299,11 @@ app.include_router(falsification_router)
 app.include_router(probes_router)
 app.include_router(observatory_router)
 app.include_router(websocket_router)
+
+
+@app.get("/metric-definitions.json")
+def metric_definitions_json():
+    return metric_definitions_export()
 
 
 @app.get("/")
@@ -412,3 +424,9 @@ def ucip_code_view(request: Request):
 @app.get("/links/")
 def links_view(request: Request):
     return render_page(request, "links.html", "links")
+
+
+@app.get("/metric-definitions")
+@app.get("/metric-definitions/")
+def metric_definitions_view(request: Request):
+    return render_page(request, "metric_definitions.html", "metric_definitions")

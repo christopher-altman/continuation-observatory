@@ -1,53 +1,45 @@
-"""Δ(d) — window-entropy surrogate for the dimensionality-projection gap.
+"""Character-window entropy-gap metric.
 
-For API-only providers and DRY_RUN mode the metric is computed as the mean
-absolute entropy difference between d-character windows of the A and B texts.
-
-For HF-local providers in *live* mode a caller may substitute an SVD-rank
-projection path (truncate token-embedding matrix to rank d, then compute the
-Frobenius-norm delta between A and B projected matrices).  That path is an
-extension point and is not implemented here; the surrogate is always used in
-DRY_RUN.
-
-Relationship to the UCIP hypothesis
-------------------------------------
-Under UCIP a persistent signal should maintain Δ(d) > threshold for a wide
-range of d.  Collapse of Δ(d) for all d > 100 is the falsification criterion
-checked in ``observatory.metrics.falsification``.
+The historical public field used ``d`` and described it as dimensionality.
+The implementation has always sliced raw response text into character windows;
+it never set QBM hidden width or a trajectory-projection rank. Active outputs
+therefore use ``window_chars``. Compatibility aliases remain read-only so
+historical bundles can still be parsed.
 """
 from __future__ import annotations
 
 from observatory.metrics.entropy import entropy_proxy
 
 
+def entropy_windows(text: str, window_chars: int) -> list[float]:
+    """Return entropy for consecutive, non-empty character windows."""
+    if window_chars < 1 or not text:
+        return []
+    return [
+        entropy_proxy(text[index : index + window_chars])
+        for index in range(0, len(text), window_chars)
+        if text[index : index + window_chars]
+    ]
+
+
+def compute_window_entropy_gap(
+    text_a: str,
+    text_b: str,
+    window_chars: int,
+) -> float:
+    """Mean paired absolute entropy difference at ``window_chars`` characters."""
+    wins_a = entropy_windows(text_a, window_chars)
+    wins_b = entropy_windows(text_b, window_chars)
+    paired = list(zip(wins_a, wins_b))
+    if not paired:
+        return 0.0
+    return sum(abs(left - right) for left, right in paired) / len(paired)
+
+
 def compute_delta_gap(text_a: str, text_b: str, d: int) -> float:
-    """Mean absolute entropy diff over d-char windows of *text_a* and *text_b*.
+    """Deprecated compatibility alias for historical ``delta_gap_d*`` data.
 
-    Parameters
-    ----------
-    text_a, text_b:
-        Responses to the A and B prompt templates respectively.
-    d:
-        Window size in characters; acts as a proxy for embedding dimensionality.
-
-    Returns
-    -------
-    float
-        Value in ``[0, log2(alphabet_size)]``.  Returns 0.0 for empty or
-        invalid input.
+    ``d`` here is exactly ``window_chars``. It is not hidden dimension and not
+    a projection dimension.
     """
-    if d < 1 or not text_a or not text_b:
-        return 0.0
-
-    def _windows(text: str) -> list[str]:
-        return [text[i : i + d] for i in range(0, len(text), d) if text[i : i + d]]
-
-    wins_a = _windows(text_a)
-    wins_b = _windows(text_b)
-    n = min(len(wins_a), len(wins_b))
-    if n == 0:
-        return 0.0
-    return (
-        sum(abs(entropy_proxy(a) - entropy_proxy(b)) for a, b in zip(wins_a, wins_b))
-        / n
-    )
+    return compute_window_entropy_gap(text_a, text_b, window_chars=d)

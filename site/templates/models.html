@@ -128,6 +128,25 @@
 </div>
 
 <div class="panel">
+  <div class="panel-title">Model-series discontinuities</div>
+  <p>Provider/model identity changes create a new measurement series.
+  Historical readings keep their original timestamps and are never
+  interpolated into a successor.</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Series</th><th>Status</th><th>Boundary</th><th>Continuity rule</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>deepseek-r1-0528</code></td><td>Retired / model unavailable</td><td>Last observed 2026-05-10</td><td>No interpolation</td></tr>
+        <tr><td><code>deepseek-v3-1</code></td><td>Retired / model unavailable</td><td>Last observed 2026-05-10</td><td>No interpolation</td></tr>
+        <tr><td><code>deepseek-v4-pro</code></td><td>New active series</td><td>Begins 2026-07-26</td><td>No backfill from R1 or V3.1</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="panel">
   <div class="panel-title">Column Definitions</div>
   <dl class="definition-block">
     <dt>entropy_delta</dt>

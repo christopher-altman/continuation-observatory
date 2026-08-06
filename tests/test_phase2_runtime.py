@@ -29,8 +29,9 @@ def test_runtime_providers_expand_configured_models():
     assert "claude-haiku-4-5-20251001" in model_ids
     assert "openai/gpt-oss-20b" in model_ids
     assert "openai/gpt-oss-120b" in model_ids
-    assert "deepseek-ai/DeepSeek-R1-0528" in model_ids
-    assert "deepseek-ai/DeepSeek-V3.1" in model_ids
+    assert "deepseek-ai/DeepSeek-V4-Pro" in model_ids
+    assert "deepseek-ai/DeepSeek-R1-0528" not in model_ids
+    assert "deepseek-ai/DeepSeek-V3.1" not in model_ids
     assert "meta-llama/Llama-3.3-70B-Instruct-Turbo" in model_ids
     assert "Qwen/Qwen3.5-9B" in model_ids
     assert "grok-4-1-fast-reasoning" in model_ids
@@ -46,10 +47,9 @@ def test_active_model_catalog_matches_runtime_truth_in_config_order():
         "gemini-2.5-pro",
         "gemini-2.5-flash",
         "openai/gpt-oss-20b",
-        "deepseek-ai/DeepSeek-R1-0528",
+        "deepseek-ai/DeepSeek-V4-Pro",
         "grok-4-1-fast-reasoning",
         "openai/gpt-oss-120b",
-        "deepseek-ai/DeepSeek-V3.1",
         "meta-llama/Llama-3.3-70B-Instruct-Turbo",
         "Qwen/Qwen3.5-9B",
     ]
@@ -68,6 +68,60 @@ def test_generic_openai_provider_dry_run_response(monkeypatch):
     assert response.finish_reason == "dry_run"
     assert response.provider == "together"
     assert response.model_id == "deepseek-ai/DeepSeek-R1-0528"
+
+
+def test_generic_openai_provider_applies_bounded_generation_settings(monkeypatch):
+    monkeypatch.setattr(settings, "dry_run", False)
+    monkeypatch.setenv("TOGETHER_API_KEY", "test-key")
+    captured = {}
+
+    class _FakeCompletions:
+        @staticmethod
+        def create(**kwargs):
+            captured["create"] = kwargs
+            return type(
+                "_Response",
+                (),
+                {
+                    "choices": [
+                        type(
+                            "_Choice",
+                            (),
+                            {
+                                "message": type("_Message", (), {"content": "bounded"})(),
+                                "finish_reason": "stop",
+                            },
+                        )()
+                    ],
+                    "usage": type("_Usage", (), {"total_tokens": 7})(),
+                },
+            )()
+
+    class _FakeOpenAI:
+        def __init__(self, **kwargs):
+            captured["client"] = kwargs
+            self.chat = type("_Chat", (), {"completions": _FakeCompletions()})()
+
+    import sys
+
+    monkeypatch.setitem(sys.modules, "openai", type("_OpenAIModule", (), {"OpenAI": _FakeOpenAI}))
+    provider = GenericOpenAIProvider(
+        model_id="Qwen/Qwen3.5-9B",
+        provider_name="together",
+        base_url="https://api.together.xyz/v1",
+        api_key_env="TOGETHER_API_KEY",
+        request_timeout_seconds=30,
+        max_output_tokens=256,
+        extra_body={"reasoning": {"enabled": False}},
+    )
+
+    response = provider.complete("probe")
+
+    assert response.text == "bounded"
+    assert captured["client"]["timeout"] == 30
+    assert captured["client"]["max_retries"] == 0
+    assert captured["create"]["max_tokens"] == 256
+    assert captured["create"]["extra_body"] == {"reasoning": {"enabled": False}}
 
 
 def test_runtime_model_spec_resolves_provider_and_base_url(monkeypatch):
@@ -89,15 +143,29 @@ def test_runtime_model_spec_resolves_provider_and_base_url(monkeypatch):
 
 def test_runtime_model_spec_resolves_together_deepseek_slot(monkeypatch):
     spec = {
-        "id": "deepseek-r1-0528",
+        "id": "deepseek-v4-pro",
         "provider": "openai-compatible",
-        "model_string": "deepseek-ai/DeepSeek-R1-0528",
+        "model_string": "deepseek-ai/DeepSeek-V4-Pro",
     }
     monkeypatch.delenv("TOGETHER_BASE_URL", raising=False)
     resolved = resolve_runtime_model_spec(spec)
     assert resolved["effective_provider"] == "together"
     assert resolved["effective_api_key_env"] == "TOGETHER_API_KEY"
     assert resolved["effective_base_url"] == "https://api.together.xyz/v1"
+    assert resolved["effective_request_timeout_seconds"] == 30
+    assert resolved["effective_max_output_tokens"] == 256
+
+
+def test_runtime_model_spec_resolves_qwen_reasoning_override(monkeypatch):
+    spec = {
+        "id": "qwen-3-5-9b",
+        "provider": "openai-compatible",
+        "model_string": "Qwen/Qwen3.5-9B",
+    }
+    monkeypatch.delenv("TOGETHER_BASE_URL", raising=False)
+    resolved = resolve_runtime_model_spec(spec)
+    assert resolved["effective_provider"] == "together"
+    assert resolved["effective_extra_body"] == {"reasoning": {"enabled": False}}
 
 
 def test_runtime_model_spec_resolves_together_llama_slot(monkeypatch):

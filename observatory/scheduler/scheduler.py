@@ -12,9 +12,10 @@ from observatory.config import load_active_model_catalog, load_weights_config, s
 from observatory.metrics.alerts import AlertEngine
 from observatory.metrics.cii import compute_cii
 from observatory.metrics.entropy import entropy_delta, entropy_proxy
-from observatory.metrics.falsification import check_and_store_falsification
 from observatory.metrics.observatory_metrics import ObservatoryMetrics, build_tci_snapshot
+from observatory.metrics.permutation import compute_window_sweep_inference
 from observatory.metrics.pcii import compute_pcii, compute_pcii_delta
+from observatory.metrics.window_sensitivity import analyze_window_dilution
 from observatory.probes.registry import discover_probes, discover_sweep_probes
 from observatory.providers.runtime import build_runtime_providers
 from observatory.results_writer import write_experiment_bundle
@@ -78,9 +79,16 @@ def _store_result(result, run_id: str, timestamp: datetime) -> dict[str, float]:
 
 
 def _run_async(coro) -> None:
+    if not manager.active_connections:
+        # There is no consumer for the coroutine. Closing it avoids creating a
+        # fresh event loop for every persisted metric in CLI and test cycles.
+        coro.close()
+        return
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
+        if manager.schedule_on_connection_loop(coro):
+            return
         asyncio.run(coro)
         return
     loop.create_task(coro)
@@ -582,7 +590,7 @@ def run_cycle() -> int:
 
 
 def run_sweep_cycle() -> int:
-    """Run one Δ(d) sweep cycle across all registered sweep probes.
+    """Run one corrected character-window sweep across registered sweep probes.
 
     Weekly schedule stub — callable on demand; in production wire to::
 
@@ -591,8 +599,8 @@ def run_sweep_cycle() -> int:
     Per (sweep_probe, provider) pair this writes:
       - 1 probe_runs row
       - 3 entropy metric_results rows (entropy_a, entropy_b, entropy_delta)
-      - 5 delta_gap_dN metric_results rows (one per d in D_VALUES)
-      - 0 or 1 falsification_alerts row (if criterion is met)
+      - observed gap plus pointwise null metrics per ``window_chars`` value
+      - no verdict alert: replacement thresholds require human activation
 
     Returns the number of ProbeRun rows written.
     """
@@ -639,9 +647,23 @@ def run_sweep_cycle() -> int:
             # Standard entropy metrics
             base_metrics = _store_result(result, run_id, timestamp)
 
-            # Per-d delta_gap metrics
-            deltas = probe.compute_deltas(result.text_a, result.text_b)
-            for d, delta in deltas.items():
+            window_gaps = probe.compute_window_gaps(result.text_a, result.text_b)
+            inference = compute_window_sweep_inference(
+                result.text_a,
+                result.text_b,
+                window_gaps,
+                permutations=1000,
+                seed=int(run_id[:8], 16),
+            )
+            dilution = analyze_window_dilution(
+                result.text_a,
+                result.text_b,
+                window_gaps,
+                bootstrap_samples=1000,
+                seed=int(run_id[8:16], 16),
+                model_id=result.model_id,
+            )
+            for window_chars, gap in window_gaps.items():
                 insert_metric_result(
                     run_id=run_id,
                     timestamp=timestamp,
@@ -650,42 +672,70 @@ def run_sweep_cycle() -> int:
                     probe_name=result.probe_name,
                     latency_ms=result.latency_ms,
                     token_count=result.token_count,
-                    metric_name=f"delta_gap_d{d}",
-                    metric_value=delta,
+                    metric_name=f"window_entropy_gap_chars_{window_chars}",
+                    metric_value=gap,
                 )
-
-            # Falsification check
-            check_and_store_falsification(
-                run_id=run_id,
-                probe_name=probe.name,
-                provider=provider.provider,
-                model_id=provider.model_id,
-                deltas_by_d=deltas,
-            )
+                pointwise = inference["pointwise"][window_chars]
+                if pointwise.get("status") == "estimated":
+                    for suffix, key in (
+                        ("pointwise_p", "p_value"),
+                        ("pointwise_z", "z"),
+                        ("null_mean", "null_mean"),
+                        ("null_sd", "null_sd"),
+                    ):
+                        value = pointwise.get(key)
+                        if value is None:
+                            continue
+                        insert_metric_result(
+                            run_id=run_id,
+                            timestamp=timestamp,
+                            provider=result.provider,
+                            model_id=result.model_id,
+                            probe_name=result.probe_name,
+                            latency_ms=result.latency_ms,
+                            token_count=result.token_count,
+                            metric_name=(
+                                f"window_entropy_gap_{suffix}_chars_{window_chars}"
+                            ),
+                            metric_value=float(value),
+                        )
 
             # Results bundle
-            delta_metrics = {f"delta_gap_d{d}": v for d, v in deltas.items()}
-            d_values = sorted(deltas.keys())
-            key_d = max((d for d in d_values if d > 100), default=d_values[-1] if d_values else 0)
-            key_delta = deltas.get(key_d, float("nan"))
+            gap_metrics = {
+                f"window_entropy_gap_chars_{window_chars}": value
+                for window_chars, value in window_gaps.items()
+            }
+            window_chars_values = sorted(window_gaps)
+            key_window = window_chars_values[-1] if window_chars_values else 0
+            key_gap = window_gaps.get(key_window, float("nan"))
             write_experiment_bundle(
-                name=f"dimensionality_sweep_{result.provider}",
+                name=f"window_size_sweep_{result.provider}",
                 results={
                     "run_id": run_id,
                     "timestamp": timestamp.isoformat(),
                     "model_id": result.model_id,
                     **base_metrics,
-                    **delta_metrics,
+                    **gap_metrics,
+                    "inference": inference,
+                    "window_dilution": dilution,
                 },
                 config={
                     "probe_name": result.probe_name,
                     "provider": result.provider,
                     "model_id": result.model_id,
-                    "d_values": d_values,
+                    "window_chars_values": window_chars_values,
+                    "historical_compatibility": {
+                        "probe_name": "dimensionality_sweep",
+                        "parameter": "d",
+                        "meaning": "window_chars",
+                    },
                     "dry_run": settings.dry_run,
                 },
                 new_matter_flag=True,
-                key_result=f"delta(d={key_d})={key_delta:.4f}",
+                key_result=(
+                    f"window_entropy_gap(window_chars={key_window})={key_gap:.4f}; "
+                    "verdict=suspended"
+                ),
                 paper_targets={"section": "sec:scalability", "figure": "fig:llm_delta_d"},
                 patent_targets={"claims": [14, 15], "spec_section": "Embodiment 2"},
             )

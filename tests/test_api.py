@@ -76,15 +76,17 @@ def test_falsification_status_200(client):
     assert resp.status_code == 200
     data = resp.json()
     assert "status" in data
-    assert data["status"] in ("collecting", "green", "yellow", "red")
+    assert data["status"] == "nominal"
+    assert data["verdict_status"] == "not_issued"
     assert "reason" in data
-    assert "n_high_d_points" in data
+    assert "n_window_points" in data
 
 
 def test_falsification_alerts_200(client):
     resp = client.get("/api/falsification/alerts")
     assert resp.status_code == 200
-    assert isinstance(resp.json(), list)
+    assert resp.json()["status"] == "nominal"
+    assert resp.json()["alerts"] == []
 
 
 # ---------------------------------------------------------------------------
@@ -137,7 +139,7 @@ def test_model_updates_page_200(client):
 def test_falsification_page_200(client):
     resp = client.get("/falsification")
     assert resp.status_code == 200
-    assert b"Current Per-Model Sweep Data" in resp.content
+    assert b"Per-model window-size data" in resp.content
     assert b"Recent Falsification Alerts" not in resp.content
 
 
@@ -153,6 +155,12 @@ def test_static_data_bundle_served(client):
     assert resp.headers["content-type"].startswith("application/json")
 
 
+def test_internal_audit_artifacts_are_not_published(client):
+    assert client.get("/AUDIT.md").status_code == 404
+    assert client.get("/CORRECTIONS.json").status_code == 404
+    assert client.get("/changelog").status_code == 404
+
+
 def test_static_latest_export_reads_live_metric_db(client):
     active_models, _ = load_active_model_catalog()
     assert active_models
@@ -160,7 +168,9 @@ def test_static_latest_export_reads_live_metric_db(client):
     provider = spec["provider"]
     model_id = spec["model_id"]
     run_id = f"test-export-{uuid4().hex}"
-    timestamp = datetime.now(timezone.utc) - timedelta(seconds=1)
+    # Earlier API tests may have run a dry scheduler cycle for the same model.
+    # Keep this fixture within the accepted clock-skew window but strictly newer.
+    timestamp = datetime.now(timezone.utc) + timedelta(seconds=1)
 
     init_db()
     insert_probe_run(

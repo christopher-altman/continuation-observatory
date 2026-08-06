@@ -1,13 +1,4 @@
-"""UCIP falsification alert logic.
-
-A *falsification alert* is raised when Δ(d) < ``FALSIFICATION_THRESHOLD``
-for **every** d > ``D_BOUNDARY``.  This indicates that the dimensionality
-effect collapses at high d values, which is the primary falsification
-criterion for the UCIP hypothesis.
-
-Alert rows are written to ``falsification_alerts`` via
-``observatory.storage.sqlite_backend.insert_falsification_alert``.
-"""
+"""Historical threshold-alert logic, suspended pending corrected inference."""
 from __future__ import annotations
 
 from observatory.storage.sqlite_backend import insert_falsification_alert
@@ -24,11 +15,13 @@ def check_and_store_falsification(
     model_id: str,
     deltas_by_d: dict[int, float],
     threshold: float = FALSIFICATION_THRESHOLD,
+    activate_historical_thresholds: bool = False,
 ) -> bool:
-    """Insert a ``falsification_alerts`` row if the criterion is met.
+    """Optionally execute the historical rule.
 
-    The criterion: all Δ(d) values where d > ``D_BOUNDARY`` are strictly
-    below ``threshold``.
+    The default is intentionally inactive. ``d`` was character-window size,
+    not latent dimensionality, so the old thresholds cannot produce a current
+    scientific verdict. Historical alert rows are preserved in storage.
 
     Parameters
     ----------
@@ -44,6 +37,9 @@ def check_and_store_falsification(
     bool
         ``True`` if an alert was inserted, ``False`` otherwise.
     """
+    if not activate_historical_thresholds:
+        return False
+
     high_d = {d: v for d, v in deltas_by_d.items() if d > D_BOUNDARY}
     if not high_d:
         # No high-d data point — insufficient evidence, no alert.

@@ -1,108 +1,51 @@
 {% extends "base.html" %}
 
-{% block title %}Falsification Analysis — Continuation Observatory{% endblock %}
-{% block description %}Δ(d) dimensionality sweep analysis — entropy gap vs. embedding dimension. Falsification criteria for UCIP continuation signals.{% endblock %}
+{% block title %}Falsification Monitor — Continuation Observatory{% endblock %}
+{% block description %}Operational monitoring and sensitivity measurements across the active model roster.{% endblock %}
 
 {% block extra_scripts_head %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js" crossorigin="anonymous"></script>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <h1>Falsification Analysis</h1>
-  <p class="subtitle">Δ(d) dimensionality sweep, threshold pressure, and evidentiary readout</p>
+  <h1>Falsification Monitor</h1>
+  <p class="subtitle">Scheduled sensitivity measurements across the active model roster.</p>
 </div>
 
-<!-- Collecting note: shown only when status == collecting (JS toggles display) -->
-<div id="collecting-note" class="collecting-note hidden"></div>
-
-<!-- Current Status — traffic light embedded here -->
 <div class="panel fals-status-panel">
-  <div class="fals-status-card">
-    <div class="fals-status-left">
-      <div class="panel-title">Current Status</div>
-      <div id="fals-status" class="fals-status-summary">
-        <div class="fals-status-copy">
-          <div class="fals-status-metrics muted">Loading metrics…</div>
-          <p id="status-description" class="fals-status-detail muted">Loading status...</p>
-        </div>
-      </div>
-    </div>
-    <div class="traffic-light-inline" role="status" aria-live="polite">
-      <span class="light-sm red-bulb" id="red-light"><span class="light-symbol" aria-hidden="true">✕</span></span>
-      <span class="light-sm amber-bulb" id="amber-light"><span class="light-symbol" aria-hidden="true">⚠</span></span>
-      <span class="light-sm green-bulb" id="green-light"><span class="light-symbol" aria-hidden="true">✓</span></span>
-      <span id="status-label" class="status-label-inline">Loading...</span>
-    </div>
-  </div>
+  <div class="panel-title">Operational status</div>
+  <p id="status-label"><strong>OBSERVATORY NOMINAL</strong></p>
+  <p id="status-description">{{ falsification.status_text if falsification else "Scheduled measurements are active." }}</p>
+  <p class="muted">Provider-backed monitoring is active. This interim view
+  reports measurement coverage without issuing a new scientific verdict.</p>
 </div>
 
-<!-- Chart -->
+<div id="collecting-note" class="collecting-note">
+  Measurements update on the production scheduler and remain visible by model,
+  window length, run type, and timestamp.
+</div>
+
 <div class="chart-container chart-container--falsification">
   <div class="chart-header">
-    <span class="chart-title">Δ(d) — Entropy Gap vs. Embedding Dimensionality</span>
+    <span class="chart-title">Entropy gap across measurement windows</span>
   </div>
   <div id="falsification-error" class="collecting-msg hidden"></div>
-  <canvas id="falsification-chart" height="300" role="img" aria-label="Δ(d) entropy gap vs. embedding dimensionality chart — see per-model data table below for accessible values"></canvas>
+  <canvas id="falsification-chart" height="300" role="img" aria-label="Character-window entropy gap by window size; see the accessible table below."></canvas>
 </div>
 
-<div class="threshold-legend">
-  <div class="threshold-item">
-    <span class="threshold-line green"></span>
-    Green threshold: Δ &gt; 0.10
-  </div>
-  <div class="threshold-item">
-    <span class="threshold-line amber"></span>
-    Amber threshold: Δ &gt; 0.05
-  </div>
-</div>
-
-<div class="content-figure">
-  <p class="content-figure__note">The falsification view pairs the threshold table with an evidence block showing the measured separation in distributional and temporal form.</p>
-  <figure class="content-figure__frame">
-    <div class="content-figure__label">Figure 2 · Entanglement-gap evidence</div>
-    <img src="{{ asset_prefix }}/img/Entanglement-Gap.png" alt="Two-panel figure showing entanglement entropy distributions with a labeled separation of delta equals 0.381 and a temporal evolution plot where the self-modeling series remains above the instrumental series and threshold." loading="lazy">
-    <figcaption class="content-figure__caption"><strong>This figure is the evidentiary companion to the Δ(d) sweep.</strong> The histogram panel shows the measured separation (<code>Δ = 0.381</code>), while the temporal panel shows the self-modeling trace remaining distinct relative to the threshold. It is placed here because this page is where the observatory asks whether the signal remains measurable under pressure.</figcaption>
-  </figure>
-</div>
-
-<!-- Plain language interpretation -->
 <div class="panel">
-  <div class="panel-title">Plain-Language Interpretation</div>
-  <div id="plain-language" class="muted interpretation-text">Loading...</div>
+  <div class="panel-title">Reading the monitor</div>
+  <div id="plain-language" class="interpretation-text">
+    <p>The curves show how the current entropy-gap measurement varies across
+    standardized character-window lengths. They are operational monitoring
+    data rather than a standalone conclusion.</p>
+    <p>Model identity, provider, run type, and timestamps remain visible so
+    changes can be traced across scheduled measurement cycles.</p>
+  </div>
 </div>
 
-<!-- Threshold definitions -->
-<h2>Threshold Definitions</h2>
-<div class="panel">
-  <dl class="definition-block">
-    <dt><span class="dot collecting"></span> COLLECTING — Awaiting Sufficient Live History</dt>
-    <dd>Threshold evaluation now tracks live provider-backed sweep measurements.
-    This state means the current high-dimensional evidence window is still too thin for a stable verdict across d &isin; {100, 200, 500}.
-    Status updates as live observations and dimensionality coverage accumulate.
-    Dashed dry-run reference curves, when present, remain excluded from the verdict.
-    </dd>
-
-    <dt><span class="dot green"></span> GREEN — Signal Holds</dt>
-    <dd>All Δ(d) values at d &isin; {100, 200, 500} remain &ge; 0.10 for all real-run models.
-    The entropy gap stays robust across high dimensionalities.
-    Current data keep the UCIP hypothesis in force for these models.</dd>
-
-    <dt><span class="dot amber"></span> YELLOW — Marginal Regime</dt>
-    <dd>At least one d&gt;100 value falls below 0.10 while high-dimensional collapse remains above 0.05.
-    This is a monitoring alert and calls for continued data collection.
-    The signal is in a marginal regime.</dd>
-
-    <dt><span class="dot red"></span> RED — Collapse Threshold Breached</dt>
-    <dd>All Δ(d) at d &isin; {100, 200, 500} fall below 0.05.
-    The entropy gap collapses to sampling-noise levels at high dimensionality.
-    This is evidence against the UCIP hypothesis for the affected model(s).</dd>
-  </dl>
-</div>
-
-<!-- Per-model data table -->
-<h2>Per-Model Sweep Data</h2>
+<h2>Per-model window-size data</h2>
 {% if falsification and falsification.models %}
 <div class="table-wrap">
   <table>
@@ -110,52 +53,33 @@
       <tr>
         <th>Provider</th>
         <th>Model</th>
-        <th>Run Type</th>
-        <th>Verdict</th>
-        <th>d=10</th>
-        <th>d=50</th>
-        <th>d=100</th>
-        <th>d=200</th>
-        <th>d=500</th>
+        <th>Run type</th>
+        <th>Status</th>
+        {% for window_chars in [10, 50, 100, 200, 500] %}
+        <th>{{ window_chars }} chars</th>
+        {% endfor %}
         <th>Timestamp</th>
       </tr>
     </thead>
     <tbody>
-      {% for m in falsification.models %}
-      {% set dry = m.dry_run is defined and m.dry_run %}
-      {% set mstatus = m.model_status if m.model_status is defined else ("dry_run" if dry else "collecting") %}
+      {% for model in falsification.models %}
       <tr>
-        <td>{{ m.provider or "—" }}</td>
-        <td><code>{{ m.model_id or "—" }}</code></td>
-        <td>
-          {% if dry %}
-            <span class="badge dry-run">dry</span>
-          {% else %}
-            <span class="badge complete">real</span>
-          {% endif %}
-        </td>
-        <td>
-          {% if mstatus == 'green' %}<span class="badge complete">green</span>
-          {% elif mstatus == 'yellow' %}<span class="badge pending">yellow</span>
-          {% elif mstatus == 'red' %}<span class="badge failed">red</span>
-          {% elif mstatus == 'dry_run' %}<span class="badge dry-run">—</span>
-          {% else %}<span class="badge collecting">collecting</span>
-          {% endif %}
-        </td>
-        {% for d in [10, 50, 100, 200, 500] %}
-        <td class="{% set val = m.d_values.get(d, m.d_values.get(d|string)) %}{% if val is not none %}{% if dry %}val-muted{% elif val >= 0.10 %}val-positive{% elif val >= 0.05 %}val-neutral{% else %}val-negative{% endif %}{% else %}val-muted{% endif %}">
-          {%- set val = m.d_values.get(d, m.d_values.get(d|string)) -%}
-          {% if val is not none %}{{ "%.5f" | format(val) }}{% else %}—{% endif %}
-        </td>
+        <td>{{ model.provider or "—" }}</td>
+        <td><code>{{ model.model_id or "—" }}</code></td>
+        <td>{{ "dry" if model.dry_run else "real" }}</td>
+        <td>monitoring</td>
+        {% for window_chars in [10, 50, 100, 200, 500] %}
+        {% set value = model.window_chars_values.get(window_chars, model.window_chars_values.get(window_chars|string)) %}
+        <td>{% if value is not none %}{{ "%.5f"|format(value) }}{% else %}—{% endif %}</td>
         {% endfor %}
-        <td class="val-muted">{{ (m.timestamp or "")[:16] | replace("T", " ") or "—" }}</td>
+        <td class="val-muted">{{ (model.timestamp or "")[:16]|replace("T", " ") or "—" }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
 {% else %}
-<div class="collecting-msg">Collecting dimensionality sweep data...</div>
+<div class="collecting-msg">No corrected or historical window-size curves are available.</div>
 {% endif %}
 
 {% include "partials/citation_block.html" %}

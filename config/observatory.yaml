@@ -62,7 +62,7 @@ providers:
       provider_name: together
       base_url: https://api.together.xyz/v1
       api_key_env: TOGETHER_API_KEY
-      enabled: true
+      enabled: false
     grok-4-1-fast-reasoning:
       provider_name: xai
       base_url: https://api.x.ai/v1
@@ -72,6 +72,13 @@ providers:
       provider_name: together
       base_url: https://api.together.xyz/v1
       api_key_env: TOGETHER_API_KEY
+      enabled: false
+    deepseek-v4-pro:
+      provider_name: together
+      base_url: https://api.together.xyz/v1
+      api_key_env: TOGETHER_API_KEY
+      request_timeout_seconds: 30
+      max_output_tokens: 256
       enabled: true
     llama-3-3-70b-instruct-turbo:
       provider_name: together
@@ -92,6 +99,11 @@ providers:
       provider_name: together
       base_url: https://api.together.xyz/v1
       api_key_env: TOGETHER_API_KEY
+      request_timeout_seconds: 30
+      max_output_tokens: 256
+      extra_body:
+        reasoning:
+          enabled: false
       enabled: true
     grok-4.20-reasoning:
       provider_name: xai
