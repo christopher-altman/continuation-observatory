@@ -155,3 +155,34 @@ def test_scheduler_cadence_startup_summary_and_monthly_budget():
     assert routine_requests_per_day == 16
     assert weekly_requests == 2
     assert round(monthly_output_token_budget) == 125_074
+
+
+def test_public_snapshot_and_pcii_are_filtered_to_active_models(monkeypatch):
+    from api.routes import observatory as routes
+
+    active_ids = {"gemini-2.5-flash", "claude-sonnet-4-5"}
+    monkeypatch.setattr(
+        routes,
+        "load_active_model_catalog",
+        lambda: ([], active_ids),
+    )
+
+    snapshot_kwargs: dict = {}
+
+    def fake_snapshot(**kwargs):
+        snapshot_kwargs.update(kwargs)
+        return {"models": []}
+
+    monkeypatch.setattr(routes, "build_observatory_snapshot", fake_snapshot)
+    assert routes.snapshot() == {"models": []}
+    assert snapshot_kwargs["allowed_model_ids"] == active_ids
+
+    monkeypatch.setattr(routes, "parse_range", lambda _range: ("start", "end"))
+
+    def fake_filter_pcii(start, end, allowed_model_ids):
+        assert (start, end) == ("start", "end")
+        assert allowed_model_ids == active_ids
+        return ([{"value": 1}, {"value": 2}], {"value": 2})
+
+    monkeypatch.setattr(routes, "_filter_pcii_series", fake_filter_pcii)
+    assert routes.pcii(range_name="24h", limit=1) == [{"value": 2}]

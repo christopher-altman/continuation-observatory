@@ -5,23 +5,36 @@ from typing import Any
 
 from fastapi import APIRouter, Query
 
-from observatory.config import load_alerts_config, load_observatory_config
+from observatory.config import (
+    load_active_model_catalog,
+    load_alerts_config,
+    load_observatory_config,
+)
 from observatory.incident_feed import (
     build_public_incident_board,
     build_public_incidents,
     get_public_board_source_events,
     get_public_feed_config,
-    get_public_visible_events,
 )
 from observatory.observatory_snapshot import (
+    _filter_pcii_series,
     build_constellation,
     build_observatory_snapshot,
     models_payload,
     parse_range,
 )
-from observatory.storage.sqlite_backend import get_observatory_events, get_observatory_timeseries, get_pcii_timeseries
+from observatory.storage.sqlite_backend import (
+    get_observatory_events,
+    get_observatory_timeseries,
+    get_pcii_timeseries,
+)
 
 router = APIRouter(prefix="/api/observatory", tags=["observatory"])
+
+
+def _active_model_ids() -> set[str]:
+    _, active_model_ids = load_active_model_catalog()
+    return active_model_ids
 
 
 @router.get("/models")
@@ -52,7 +65,8 @@ def pcii(
     limit: int = Query(500, ge=1, le=5000),
 ) -> list[dict[str, Any]]:
     start, end = parse_range(range_name)
-    return get_pcii_timeseries(start=start, end=end, limit=limit)
+    series, _ = _filter_pcii_series(start, end, _active_model_ids())
+    return series[-limit:]
 
 
 @router.get("/events")
@@ -73,7 +87,9 @@ def events(
             limit=limit,
             event_type=event_type,
         )
-    hidden_types = set(load_alerts_config().get("ui", {}).get("default_hide_event_types", []))
+    hidden_types = set(
+        load_alerts_config().get("ui", {}).get("default_hide_event_types", [])
+    )
     return get_observatory_events(
         since=since_dt,
         severity=severity,
@@ -152,4 +168,8 @@ def constellation() -> dict[str, Any]:
 
 @router.get("/snapshot")
 def snapshot() -> dict[str, Any]:
-    return build_observatory_snapshot(history_range="30d", event_limit=40)
+    return build_observatory_snapshot(
+        history_range="30d",
+        event_limit=40,
+        allowed_model_ids=_active_model_ids(),
+    )
