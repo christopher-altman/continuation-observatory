@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Corrections and Changelog — Continuation Observatory{% endblock %}
+{% block description %}Public correction record for Continuation Observatory metrics and model series.{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Corrections and Changelog</h1>
+  <p class="subtitle">The historical record is preserved; corrected definitions supersede interpretation, not artifacts.</p>
+</div>
+
+<div class="panel">
+  <h2>2026-07-27 · Scientific and provenance correction</h2>
+  <ul>
+    <li>The historical front-page 0.476 cross-model “aggregate score” was the mean absolute latest
+    entropy delta. It is replaced by the signed
+    <code>entropy_delta_mean.v1</code>; mean absolute magnitude is reported
+    separately.</li>
+    <li>The sweep parameter historically called <code>d</code> is
+    <code>window_chars</code>. It is neither QBM hidden dimension nor
+    trajectory projection rank.</li>
+    <li>Traffic-light verdicts based on the mislabeled sweep are suspended.
+    Pointwise plus-one permutation controls are defined at every window size;
+    the global test and replacement thresholds await explicit approval.</li>
+    <li>DeepSeek R1-0528, V3.1, and V4 are separate model series. The May
+    readings are not treated as July readings or interpolated into V4.</li>
+  </ul>
+  <p>Machine-readable details: <a href="/CORRECTIONS.json">CORRECTIONS.json</a>.
+  Full trace: <a href="/AUDIT.md">AUDIT.md</a>.</p>
+</div>
+{% endblock %}

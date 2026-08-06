@@ -1,0 +1,132 @@
+{
+  "schema_version": "continuation-observatory-corrections.v1",
+  "release_date": "2026-07-27",
+  "release_status": "candidate_pending_scientific_signoff",
+  "preservation_rule": "Historical artifacts and database rows are not overwritten or recomputed.",
+  "corrections": [
+    {
+      "correction_id": "CO-2026-001",
+      "field": "front_page_aggregate",
+      "prior_value": 0.476,
+      "new_value": null,
+      "prior_definition": "mean(abs(latest entropy_delta))",
+      "new_definition": "entropy_delta_mean.v1, with mean_abs_entropy_delta.v1 reported separately",
+      "reason": "Absolute value destroyed the sign of the directional statistic.",
+      "affected_bundle": "public front-page bundle current before 2026-07-27",
+      "superseded": true,
+      "date": "2026-07-27",
+      "commit": null,
+      "audit_url": "/changelog",
+      "subject": "front_page_aggregate",
+      "historical_label": "aggregate score",
+      "historical_value": 0.476,
+      "historical_computation": "mean(abs(latest entropy_delta))",
+      "replacement_headline_definition": "entropy_delta_mean.v1",
+      "context_definition": "mean_abs_entropy_delta.v1",
+      "required_metadata": [
+        "n_total",
+        "n_valid",
+        "n_excluded",
+        "exclusions",
+        "source_bundle"
+      ]
+    },
+    {
+      "correction_id": "CO-2026-002",
+      "field": "sweep_parameter",
+      "prior_value": "d",
+      "new_value": "window_chars",
+      "prior_definition": "Displayed as embedding or latent dimensionality.",
+      "new_definition": "Stimulus window length in characters.",
+      "reason": "The implementation slices response strings by character count.",
+      "affected_bundle": "historical dimensionality_sweep bundles",
+      "superseded": true,
+      "date": "2026-07-27",
+      "commit": null,
+      "audit_url": "/changelog",
+      "subject": "sweep_parameter",
+      "historical_parameter": "d",
+      "correct_parameter": "window_chars",
+      "hidden_dimension": false,
+      "projection_dimension": false,
+      "historical_alias_preserved": true,
+      "verdict_status": "suspended_pending_revision",
+      "replacement_thresholds_active": false
+    },
+    {
+      "correction_id": "CO-2026-003",
+      "field": "sweep_null_control",
+      "prior_value": null,
+      "new_value": "pointwise plus-one permutation inference at every window_chars value",
+      "prior_definition": "No sweep-point null control.",
+      "new_definition": "window_entropy_gap_pointwise_p.v1; standardized z primary; max-T candidate non-canonical",
+      "reason": "Raw decay cannot distinguish model response from estimator or stimulus effects.",
+      "affected_bundle": "historical dimensionality_sweep bundles",
+      "superseded": true,
+      "date": "2026-07-27",
+      "commit": null,
+      "audit_url": "/changelog",
+      "subject": "sweep_null_control",
+      "pointwise_definition": "window_entropy_gap_pointwise_p.v1",
+      "permutation_p_value": "(1 + exceedances) / (1 + B)",
+      "global_candidates": ["maxT_family_wise"],
+      "canonical_global_test": null,
+      "status": "pending_human_selection"
+    },
+    {
+      "correction_id": "CO-2026-004",
+      "field": "deepseek_series",
+      "prior_value": "retired model rows displayed beside July 2026 readings without an explicit break",
+      "new_value": "distinct retired R1/V3.1 and active V4 Pro series",
+      "prior_definition": "Implicit visual continuity.",
+      "new_definition": "No interpolation, backfill, or timestamp relabeling across provider/model identity changes.",
+      "reason": "The old identifiers are unavailable and V4 Pro is a different model identity.",
+      "affected_bundle": "model registry and model-series exports",
+      "superseded": true,
+      "date": "2026-07-27",
+      "commit": null,
+      "audit_url": "/changelog",
+      "subject": "deepseek_series",
+      "retired_series": [
+        {
+          "series_id": "deepseek-r1-0528",
+          "last_observed_date": "2026-05-10"
+        },
+        {
+          "series_id": "deepseek-v3-1",
+          "last_observed_date": "2026-05-10"
+        }
+      ],
+      "active_series": {
+        "series_id": "deepseek-v4-pro",
+        "first_bundle_date": "2026-07-26"
+      },
+      "interpolation": false,
+      "backfill": false
+    },
+    {
+      "correction_id": "CO-2026-005",
+      "field": "qwen_pipeline",
+      "prior_value": "pipeline failure",
+      "new_value": "bounded non-reasoning Together-compatible request",
+      "prior_definition": "Reasoning-enabled request with unbounded compounded retry behavior.",
+      "new_definition": "30-second request timeout, 256 output tokens, zero SDK retries, two explicit attempts.",
+      "reason": "The configured reasoning path failed to terminate compatibly.",
+      "affected_bundle": "provider runtime configuration",
+      "superseded": true,
+      "date": "2026-07-27",
+      "commit": null,
+      "audit_url": "/changelog",
+      "subject": "qwen_pipeline",
+      "model": "Qwen/Qwen3.5-9B",
+      "root_cause": "provider reasoning mode caused an incompatible or non-terminating response path",
+      "fix": {
+        "reasoning_enabled": false,
+        "request_timeout_seconds": 30,
+        "max_output_tokens": 256,
+        "sdk_max_retries": 0,
+        "bounded_attempts": 2
+      }
+    }
+  ]
+}

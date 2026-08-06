@@ -1,0 +1,22 @@
+schema_version: model-series.v1
+series:
+  deepseek-r1-0528:
+    model_id: deepseek-ai/DeepSeek-R1-0528
+    status: retired
+    last_observed_date: "2026-05-10"
+    successor_series: deepseek-v4-pro
+    continuity_rule: no_interpolation
+  deepseek-v3-1:
+    model_id: deepseek-ai/DeepSeek-V3.1
+    status: retired
+    last_observed_date: "2026-05-10"
+    successor_series: deepseek-v4-pro
+    continuity_rule: no_interpolation
+  deepseek-v4-pro:
+    model_id: deepseek-ai/DeepSeek-V4-Pro
+    status: active
+    first_observed_bundle_date: "2026-07-26"
+    predecessor_series:
+      - deepseek-r1-0528
+      - deepseek-v3-1
+    continuity_rule: new_series_no_backfill_no_interpolation

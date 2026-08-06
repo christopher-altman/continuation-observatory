@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Metric Definitions — Continuation Observatory{% endblock %}
+{% block description %}Pinned and versioned definitions for public Continuation Observatory metrics.{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Metric Definitions</h1>
+  <p class="subtitle">Pinned formulas, scopes, missing-data rules, and version identifiers.</p>
+</div>
+
+{% for definition_id, definition in metric_definitions.definitions.items() %}
+<div class="panel" id="{{ definition_id }}">
+  <h2><code>{{ definition_id }}</code></h2>
+  <dl class="definition-block">
+    <dt>Display name</dt><dd>{{ definition.display_name }}</dd>
+    <dt>Version</dt><dd>{{ definition.version }}</dd>
+    <dt>Formula</dt><dd><code>{{ definition.formula }}</code></dd>
+    <dt>Inputs</dt><dd>{{ definition.inputs | join(", ") }}</dd>
+    <dt>Unit</dt><dd>{{ definition.unit }}</dd>
+    <dt>Scope</dt><dd>{{ definition.scope }}</dd>
+    <dt>Missingness</dt><dd>{{ definition.missingness }}</dd>
+    <dt>Aggregation rule</dt><dd>{{ definition.aggregation_rule }}</dd>
+    <dt>Source bundle</dt><dd>{{ definition.source_bundle }}</dd>
+    <dt>Valid / excluded</dt><dd>
+      {% if definition.n_valid is none %}runtime-supplied{% else %}{{ definition.n_valid }}{% endif %}
+      /
+      {% if definition.n_excluded is none %}runtime-supplied{% else %}{{ definition.n_excluded }}{% endif %}
+    </dd>
+    {% if definition.status is defined %}<dt>Status</dt><dd>{{ definition.status }}</dd>{% endif %}
+  </dl>
+</div>
+{% endfor %}
+
+<p><a href="{{ metric_definitions_json_href }}">Download metric-definitions.v1 JSON</a></p>
+{% endblock %}
