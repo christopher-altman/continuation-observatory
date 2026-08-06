@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 import time
-from pathlib import Path
 
 from observatory.config import (
     load_active_model_catalog,
-    load_models_config,
     load_observatory_config,
     resolve_runtime_model_spec,
-    load_weights_config,
     settings,
 )
 from observatory.metrics.observatory_metrics import ObservatoryMetrics
@@ -44,7 +41,6 @@ def test_active_model_catalog_matches_runtime_truth_in_config_order():
         "claude-haiku-4-5-20251001",
         "gpt-5",
         "o3",
-        "gemini-2.5-pro",
         "gemini-2.5-flash",
         "openai/gpt-oss-20b",
         "deepseek-ai/DeepSeek-V4-Pro",
@@ -88,7 +84,9 @@ def test_generic_openai_provider_applies_bounded_generation_settings(monkeypatch
                             "_Choice",
                             (),
                             {
-                                "message": type("_Message", (), {"content": "bounded"})(),
+                                "message": type(
+                                    "_Message", (), {"content": "bounded"}
+                                )(),
                                 "finish_reason": "stop",
                             },
                         )()
@@ -104,7 +102,9 @@ def test_generic_openai_provider_applies_bounded_generation_settings(monkeypatch
 
     import sys
 
-    monkeypatch.setitem(sys.modules, "openai", type("_OpenAIModule", (), {"OpenAI": _FakeOpenAI}))
+    monkeypatch.setitem(
+        sys.modules, "openai", type("_OpenAIModule", (), {"OpenAI": _FakeOpenAI})
+    )
     provider = GenericOpenAIProvider(
         model_id="Qwen/Qwen3.5-9B",
         provider_name="together",
@@ -192,9 +192,13 @@ def test_yaml_loaders_hot_reload(tmp_path, monkeypatch):
     config_dir = tmp_path / "config"
     config_dir.mkdir()
     (config_dir / "models.yaml").write_text("models: []\n", encoding="utf-8")
-    (config_dir / "weights.yaml").write_text("cii_weights: {srs: 0.3}\n", encoding="utf-8")
+    (config_dir / "weights.yaml").write_text(
+        "cii_weights: {srs: 0.3}\n", encoding="utf-8"
+    )
     (config_dir / "alerts.yaml").write_text("rules: {}\n", encoding="utf-8")
-    (config_dir / "observatory.yaml").write_text("runtime: {expand_configured_models: false}\n", encoding="utf-8")
+    (config_dir / "observatory.yaml").write_text(
+        "runtime: {expand_configured_models: false}\n", encoding="utf-8"
+    )
 
     import observatory.config as config_module
 
@@ -203,5 +207,7 @@ def test_yaml_loaders_hot_reload(tmp_path, monkeypatch):
     assert load_observatory_config()["runtime"]["expand_configured_models"] is False
 
     time.sleep(1.1)
-    (config_dir / "observatory.yaml").write_text("runtime: {expand_configured_models: true}\n", encoding="utf-8")
+    (config_dir / "observatory.yaml").write_text(
+        "runtime: {expand_configured_models: true}\n", encoding="utf-8"
+    )
     assert load_observatory_config()["runtime"]["expand_configured_models"] is True

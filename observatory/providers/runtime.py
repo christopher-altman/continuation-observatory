@@ -1,11 +1,12 @@
 """Runtime provider expansion for configured model surfaces."""
+
 from __future__ import annotations
 
 from observatory.config import load_active_model_catalog, load_observatory_config
 from observatory.providers.anthropic_provider import AnthropicProvider
 from observatory.providers.base import BaseProvider
-from observatory.providers.generic_openai_provider import GenericOpenAIProvider
 from observatory.providers.gemini_provider import GeminiProvider
+from observatory.providers.generic_openai_provider import GenericOpenAIProvider
 from observatory.providers.hf_local_provider import HFLocalProvider
 from observatory.providers.openai_provider import OpenAIProvider
 from observatory.providers.registry import discover_providers
@@ -36,9 +37,13 @@ def build_runtime_providers() -> list[BaseProvider]:
             providers.append(
                 GenericOpenAIProvider(
                     model_id=model_id,
-                    provider_name=str(spec.get("effective_provider", "openai-compatible")),
+                    provider_name=str(
+                        spec.get("effective_provider", "openai-compatible")
+                    ),
                     base_url=spec.get("effective_base_url"),
-                    api_key_env=str(spec.get("effective_api_key_env", "OPENAI_API_KEY")),
+                    api_key_env=str(
+                        spec.get("effective_api_key_env", "OPENAI_API_KEY")
+                    ),
                     request_timeout_seconds=float(
                         spec.get("effective_request_timeout_seconds", 30.0)
                     ),
@@ -47,6 +52,4 @@ def build_runtime_providers() -> list[BaseProvider]:
                 )
             )
 
-    if not providers:
-        return discover_providers()
     return providers

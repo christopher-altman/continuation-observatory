@@ -74,6 +74,8 @@ _OPENAI_COMPATIBLE_BASE_URL_DEFAULTS = {
     "together": "https://api.together.xyz/v1",
     "xai": "https://api.x.ai/v1",
 }
+PRODUCTION_GEMINI_MODEL_ALLOWLIST = frozenset({"gemini-2.5-flash"})
+GEMINI_MAX_OUTPUT_TOKENS = 256
 
 
 def _load_yaml_file(filename: str) -> dict[str, Any]:
@@ -108,17 +110,21 @@ def load_observatory_config() -> dict[str, Any]:
     return _load_yaml_file("observatory.yaml")
 
 
-def get_probe_cycle_interval_hours(observatory_config: dict[str, Any] | None = None) -> int:
+def get_probe_cycle_interval_hours(
+    observatory_config: dict[str, Any] | None = None,
+) -> int:
     observatory_config = observatory_config or load_observatory_config()
     runtime_config = observatory_config.get("runtime", {})
     try:
-        value = int(runtime_config.get("probe_cycle_hours", 6))
+        value = int(runtime_config.get("probe_cycle_hours", 12))
     except (TypeError, ValueError):
-        value = 6
+        value = 12
     return max(1, value)
 
 
-def get_probe_cycle_interval_minutes(observatory_config: dict[str, Any] | None = None) -> int:
+def get_probe_cycle_interval_minutes(
+    observatory_config: dict[str, Any] | None = None,
+) -> int:
     return get_probe_cycle_interval_hours(observatory_config) * 60
 
 
@@ -144,21 +150,27 @@ def resolve_runtime_model_spec(
     resolved["effective_base_url"] = None
 
     if provider_kind == "openai-compatible":
-        compat_cfg = observatory_config.get("providers", {}).get("openai-compatible", {})
+        compat_cfg = observatory_config.get("providers", {}).get(
+            "openai-compatible", {}
+        )
         compat = compat_cfg.get(spec.get("id"), {})
         provider_name = str(compat.get("provider_name", "openai-compatible"))
         api_key_env = str(compat.get("api_key_env", "OPENAI_API_KEY"))
-        configured_base_url = compat.get("base_url") or _OPENAI_COMPATIBLE_BASE_URL_DEFAULTS.get(
-            provider_name
+        configured_base_url = compat.get(
+            "base_url"
+        ) or _OPENAI_COMPATIBLE_BASE_URL_DEFAULTS.get(provider_name)
+        base_url = (
+            os.getenv(_provider_base_url_env_name(provider_name)) or configured_base_url
         )
-        base_url = os.getenv(_provider_base_url_env_name(provider_name)) or configured_base_url
         resolved["effective_provider"] = provider_name
         resolved["effective_api_key_env"] = api_key_env
         resolved["effective_base_url"] = base_url
         resolved["effective_request_timeout_seconds"] = float(
             compat.get("request_timeout_seconds", 30.0)
         )
-        resolved["effective_max_output_tokens"] = int(compat.get("max_output_tokens", 256))
+        resolved["effective_max_output_tokens"] = int(
+            compat.get("max_output_tokens", 256)
+        )
         resolved["effective_extra_body"] = dict(compat.get("extra_body") or {})
 
     # Expose the effective provider label on the projected runtime record so
@@ -183,6 +195,12 @@ def load_active_model_catalog() -> tuple[list[dict[str, Any]], set[str]]:
     for spec in load_models_config().get("models", []):
         if not spec.get("enabled", False):
             continue
+        if spec.get("provider") == "gemini":
+            model_id = str(spec.get("model_string") or "")
+            if model_id not in PRODUCTION_GEMINI_MODEL_ALLOWLIST:
+                raise ValueError(
+                    f"Unknown active Gemini model in production configuration: {model_id!r}"
+                )
         if spec.get("provider") == "openai-compatible":
             compat = compat_cfg.get(spec.get("id"), {})
             if not compat.get("enabled", True):
@@ -193,6 +211,22 @@ def load_active_model_catalog() -> tuple[list[dict[str, Any]], set[str]]:
             active_model_ids.add(str(record["model_id"]))
 
     return active_models, active_model_ids
+
+
+def format_production_startup_summary() -> str:
+    """Return the positive, active-only production configuration summary."""
+    active_models, _ = load_active_model_catalog()
+    gemini_names = [
+        str(spec.get("display_name") or spec["model_id"])
+        for spec in active_models
+        if spec.get("provider_kind") == "gemini"
+    ]
+    rendered_models = "\n".join(f"    {name}" for name in gemini_names)
+    return (
+        f"Enabled Gemini models:\n{rendered_models}\n"
+        f"Probe cadence:\n    {get_probe_cycle_interval_hours()} hours\n"
+        f"Gemini max output tokens:\n    {GEMINI_MAX_OUTPUT_TOKENS}"
+    )
 
 
 def parse_cors_allowed_origins(raw: str) -> list[str]:

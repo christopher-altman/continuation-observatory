@@ -2,7 +2,7 @@ runtime:
   expand_configured_models: true
   hot_reload: true
   include_disabled_models_in_api: false
-  probe_cycle_hours: 6
+  probe_cycle_hours: 12
 constellation:
   similarity_window_days: 7
   edge_threshold: 0.60

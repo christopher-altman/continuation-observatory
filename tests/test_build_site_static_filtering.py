@@ -40,7 +40,9 @@ def _write_experiment(
                 "delta_gap_d500": 0.10,
             }
         )
-    (exp_dir / "results.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+    (exp_dir / "results.json").write_text(
+        json.dumps(result, indent=2), encoding="utf-8"
+    )
     (exp_dir / "config.yaml").write_text(
         yaml.safe_dump(
             {
@@ -63,7 +65,9 @@ def _write_experiment(
     }
 
 
-def test_build_filters_disabled_models_and_keeps_active_empty_states(tmp_path, monkeypatch):
+def test_build_filters_disabled_models_and_keeps_active_empty_states(
+    tmp_path, monkeypatch
+):
     manifest = {
         "last_updated": "2026-03-29T18:48:41.785841+00:00",
         "experiments": [
@@ -96,7 +100,9 @@ def test_build_filters_disabled_models_and_keeps_active_empty_states(tmp_path, m
     }
     results_dir = tmp_path / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
-    (results_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    (results_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2), encoding="utf-8"
+    )
 
     monkeypatch.setattr(
         build_site,
@@ -117,7 +123,12 @@ def test_build_filters_disabled_models_and_keeps_active_empty_states(tmp_path, m
             },
             "models": [{"model_id": model_id} for model_id in sorted(active_model_ids)],
             "events": [],
-            "constellation": {"nodes": [], "edges": [], "threshold": 0.60, "window_days": 7},
+            "constellation": {
+                "nodes": [],
+                "edges": [],
+                "threshold": 0.60,
+                "window_days": 7,
+            },
             "pcii_series": [],
             "cii_history": {},
         },
@@ -126,14 +137,28 @@ def test_build_filters_disabled_models_and_keeps_active_empty_states(tmp_path, m
     output_dir = tmp_path / "site-output"
     build_site.build(output_dir, results_dir=results_dir)
 
-    latest = json.loads((output_dir / "static" / "data" / "latest.json").read_text(encoding="utf-8"))
-    timeseries = json.loads((output_dir / "static" / "data" / "timeseries.json").read_text(encoding="utf-8"))
-    falsification = json.loads((output_dir / "static" / "data" / "falsification.json").read_text(encoding="utf-8"))
-    models_data = json.loads((output_dir / "static" / "data" / "models.json").read_text(encoding="utf-8"))
-    exports = json.loads(
-        (output_dir / "static" / "data" / "exports" / "all_metrics.json").read_text(encoding="utf-8")
+    latest = json.loads(
+        (output_dir / "static" / "data" / "latest.json").read_text(encoding="utf-8")
     )
-    csv_export = (output_dir / "static" / "data" / "exports" / "all_metrics.csv").read_text(encoding="utf-8")
+    timeseries = json.loads(
+        (output_dir / "static" / "data" / "timeseries.json").read_text(encoding="utf-8")
+    )
+    falsification = json.loads(
+        (output_dir / "static" / "data" / "falsification.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    models_data = json.loads(
+        (output_dir / "static" / "data" / "models.json").read_text(encoding="utf-8")
+    )
+    exports = json.loads(
+        (output_dir / "static" / "data" / "exports" / "all_metrics.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    csv_export = (
+        output_dir / "static" / "data" / "exports" / "all_metrics.csv"
+    ).read_text(encoding="utf-8")
     home_html = (output_dir / "index.html").read_text(encoding="utf-8")
     models_html = (output_dir / "models.html").read_text(encoding="utf-8")
     timeseries_html = (output_dir / "timeseries.html").read_text(encoding="utf-8")
@@ -177,7 +202,8 @@ def test_build_filters_disabled_models_and_keeps_active_empty_states(tmp_path, m
     assert "Qwen/Qwen3.5-9B" in models_html
     assert "grok-4-1-fast-reasoning" in models_html
     assert "gpt-5" in models_html
-    assert "gemini-2.5-pro" in models_html
+    assert "gemini-2.5-pro" not in models_html
+    assert "gemini-2.5-flash" in models_html
     assert "Current Readings" in models_html
     assert "No models currently meet the live-readout threshold." in models_html
     assert "Partial / Recent but Incomplete" in models_html
@@ -186,7 +212,9 @@ def test_build_filters_disabled_models_and_keeps_active_empty_states(tmp_path, m
     assert "No current sample" in models_html
 
 
-def test_build_renders_only_current_section_when_all_rows_are_current(tmp_path, monkeypatch):
+def test_build_renders_only_current_section_when_all_rows_are_current(
+    tmp_path, monkeypatch
+):
     timestamp = datetime.now(timezone.utc).isoformat()
     manifest = {
         "last_updated": timestamp,
@@ -204,7 +232,9 @@ def test_build_renders_only_current_section_when_all_rows_are_current(tmp_path, 
     }
     results_dir = tmp_path / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
-    (results_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    (results_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2), encoding="utf-8"
+    )
 
     monkeypatch.setattr(
         build_site,
@@ -241,7 +271,12 @@ def test_build_renders_only_current_section_when_all_rows_are_current(tmp_path, 
             },
             "models": [{"model_id": "o3"}],
             "events": [],
-            "constellation": {"nodes": [], "edges": [], "threshold": 0.60, "window_days": 7},
+            "constellation": {
+                "nodes": [],
+                "edges": [],
+                "threshold": 0.60,
+                "window_days": 7,
+            },
             "pcii_series": [],
             "cii_history": {},
         },
@@ -250,11 +285,16 @@ def test_build_renders_only_current_section_when_all_rows_are_current(tmp_path, 
     output_dir = tmp_path / "site-output"
     build_site.build(output_dir, results_dir=results_dir)
 
-    models_data = json.loads((output_dir / "static" / "data" / "models.json").read_text(encoding="utf-8"))
+    models_data = json.loads(
+        (output_dir / "static" / "data" / "models.json").read_text(encoding="utf-8")
+    )
     models_html = (output_dir / "models.html").read_text(encoding="utf-8")
 
     assert models_data["models"][0]["telemetry_state"] == "current"
     assert "Current Readings" in models_html
-    assert '<span class="panel-title">Partial / Recent but Incomplete</span>' not in models_html
+    assert (
+        '<span class="panel-title">Partial / Recent but Incomplete</span>'
+        not in models_html
+    )
     assert '<span class="panel-title">No Current Sample</span>' not in models_html
     assert "No models currently meet the live-readout threshold." not in models_html

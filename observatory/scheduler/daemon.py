@@ -8,6 +8,7 @@ Usage (via Makefile):
     make run-scheduler          # blocks forever
     DRY_RUN=true make run-scheduler   # dry-run mode
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -15,7 +16,11 @@ import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from observatory.config import get_probe_cycle_interval_hours, settings
+from observatory.config import (
+    format_production_startup_summary,
+    get_probe_cycle_interval_hours,
+    settings,
+)
 from observatory.scheduler.scheduler import run_cycle, run_sweep_cycle
 
 logger = logging.getLogger(__name__)
@@ -52,12 +57,8 @@ async def _run_daemon() -> None:
     )
 
     scheduler.start()
-    logger.info(
-        "Scheduler daemon started.  "
-        "Probe interval: every %s h | Sweep: Sunday 02:00 %s",
-        probe_cycle_hours,
-        settings.scheduler_timezone,
-    )
+    logger.info("Scheduler daemon started.\n%s", format_production_startup_summary())
+    logger.info("Sweep cadence: Sunday 02:00 %s", settings.scheduler_timezone)
 
     try:
         await asyncio.Event().wait()  # block until SIGTERM / KeyboardInterrupt

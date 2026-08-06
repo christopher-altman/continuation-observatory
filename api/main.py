@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import json
+import logging
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-import json
 from pathlib import Path
 from typing import Any
 
@@ -21,14 +22,22 @@ from api.routes.metrics import router as metrics_router
 from api.routes.observatory import router as observatory_router
 from api.routes.probes import router as probes_router
 from api.routes.websocket import router as websocket_router
-from observatory.config import get_cors_allowed_origins, settings, validate_live_configuration
+from observatory.config import (
+    format_production_startup_summary,
+    get_cors_allowed_origins,
+    load_active_model_catalog,
+    validate_live_configuration,
+)
 from observatory.live_exports import (
     build_export_summary,
     build_falsification_export,
     build_latest_export,
     build_models_export,
 )
-from observatory.metric_definitions import metric_definitions_export, summarize_entropy_delta
+from observatory.metric_definitions import (
+    metric_definitions_export,
+    summarize_entropy_delta,
+)
 from observatory.storage.sqlite_backend import init_db
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -43,22 +52,7 @@ templates.env.loader = ChoiceLoader(
         FileSystemLoader(str(BASE_DIR / "templates")),
     ]
 )
-
-
-LIVE_MARQUEE_MODELS = [
-    "Claude Haiku 4.5",
-    "GPT-5",
-    "OpenAI o3",
-    "Gemini 2.5 Pro",
-    "Gemini 2.5 Flash",
-    "Together GPT-OSS 20B",
-    "Together GPT-OSS 120B",
-    "Together DeepSeek V4 Pro",
-    "Together Llama 3.3 70B Turbo",
-    "Together Qwen 3.5 9B",
-    "Grok 4.1 Fast Reasoning",
-    "bootstrap-v0",
-]
+logger = logging.getLogger(__name__)
 
 
 LIVE_PAGE_PATHS = {
@@ -98,6 +92,11 @@ LIVE_PAGE_TITLES = {
     "links": "LINKS",
     "metric_definitions": "Metric Definitions",
 }
+
+
+def _active_model_display_names() -> list[str]:
+    active_models, _ = load_active_model_catalog()
+    return [str(spec.get("display_name") or spec["model_id"]) for spec in active_models]
 
 
 def _latest_static_asset_version() -> str:
@@ -142,7 +141,9 @@ def _bundle_context() -> dict[str, Any]:
         export_summary = build_export_summary()
         experiment_count = int(export_summary.get("experiment_count", 0))
         data_since = str(export_summary.get("data_since", ""))
-        build_stamp = str(export_summary.get("generated_at") or latest.get("generated_at") or "")
+        build_stamp = str(
+            export_summary.get("generated_at") or latest.get("generated_at") or ""
+        )
     except Exception:
         latest = _read_bundle_json("latest.json", {"models": []})
         models_data = _read_bundle_json("models.json", {"models": []})
@@ -158,7 +159,9 @@ def _bundle_context() -> dict[str, Any]:
             },
         )
         exports = _read_bundle_json("exports/all_metrics.json", [])
-        timestamps = [row.get("timestamp", "") for row in exports if row.get("timestamp")]
+        timestamps = [
+            row.get("timestamp", "") for row in exports if row.get("timestamp")
+        ]
         experiment_count = len(exports)
         data_since = min(timestamps)[:10] if timestamps else ""
 
@@ -169,7 +172,9 @@ def _bundle_context() -> dict[str, Any]:
             build_time = 0
 
         if build_time:
-            build_stamp = datetime.fromtimestamp(build_time / 1_000_000_000, tz=timezone.utc).isoformat()
+            build_stamp = datetime.fromtimestamp(
+                build_time / 1_000_000_000, tz=timezone.utc
+            ).isoformat()
         else:
             build_stamp = ""
 
@@ -188,7 +193,11 @@ def _bundle_context() -> dict[str, Any]:
         "model_count": len(models_data.get("models", [])),
         "experiment_count": experiment_count,
         "data_since": data_since,
-        "marquee_models": [entry.get("model_id", "") for entry in models_data.get("models", []) if entry.get("model_id")],
+        "marquee_models": [
+            entry.get("model_id", "")
+            for entry in models_data.get("models", [])
+            if entry.get("model_id")
+        ],
         "home_signal_score": home_metric_summary["value"],
         "home_metric_summary": home_metric_summary,
     }
@@ -218,9 +227,11 @@ def page_context(page_name: str) -> dict[str, Any]:
         "asset_version": _latest_static_asset_version(),
         # Keep the live Models page on the same bundled data surface as the
         # static mirror so grouped telemetry state does not diverge at runtime.
-        "models_data_url": "/static/data/models.json" if page_name == "models" else "/api/observatory/models",
+        "models_data_url": "/static/data/models.json"
+        if page_name == "models"
+        else "/api/observatory/models",
         "figures_prefix": "/static/figures/",
-        "marquee_models": LIVE_MARQUEE_MODELS,
+        "marquee_models": _active_model_display_names(),
         "home_signal_score": 0.0,
         "github_href": "https://github.com/christopher-altman/persistence-signal-detector",
         "paper_href": "https://arxiv.org/abs/2603.11382",
@@ -236,12 +247,14 @@ def page_context(page_name: str) -> dict[str, Any]:
     }
     context.update(_bundle_context())
     if not context.get("marquee_models"):
-        context["marquee_models"] = LIVE_MARQUEE_MODELS
+        context["marquee_models"] = _active_model_display_names()
     return context
 
 
 def render_page(request: Request, template_name: str, page_name: str):
-    response = templates.TemplateResponse(request, template_name, page_context(page_name))
+    response = templates.TemplateResponse(
+        request, template_name, page_context(page_name)
+    )
     response.headers["Cache-Control"] = "no-store, max-age=0, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
@@ -260,6 +273,9 @@ def redirect_no_store(url: str, status_code: int = 308) -> RedirectResponse:
 async def lifespan(app: FastAPI):
     validate_live_configuration()
     init_db()
+    logger.info(
+        "Active production configuration:\n%s", format_production_startup_summary()
+    )
     yield
 
 
